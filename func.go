@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -80,4 +81,21 @@ func (f *Func) Errors() (rv map[string]int64) {
 
 func (f *Func) Parents(cb func(f *Func)) {
 	f.parents.Iterate(cb)
+}
+
+func (f *Func) Stats(cb func(name string, val float64)) {
+	cb("current", float64(f.Current()))
+	cb("success", float64(f.Success()))
+	cb("panics", float64(f.Panics()))
+	for errname, count := range f.Errors() {
+		cb(fmt.Sprintf("error %s", errname), float64(count))
+	}
+	for _, quantile := range ObservedQuantiles {
+		cb(fmt.Sprintf("success_time %.02f", quantile),
+			f.SuccessTimes.Query(quantile))
+	}
+	for _, quantile := range ObservedQuantiles {
+		cb(fmt.Sprintf("failure_time %.02f", quantile),
+			f.FailureTimes.Query(quantile))
+	}
 }

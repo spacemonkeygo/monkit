@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -27,7 +28,7 @@ func (r *Registry) PackageNamed(name string) *Scope {
 	if exists {
 		return s
 	}
-	s = newScope(r)
+	s = newScope(r, name)
 	r.scopes[name] = s
 	return s
 }
@@ -69,8 +70,18 @@ func (r *Registry) Scopes(cb func(s *Scope)) {
 }
 
 func (r *Registry) Funcs(cb func(f *Func)) {
+	r.Scopes(func(s *Scope) { s.Funcs(cb) })
+}
+
+func (r *Registry) Meters(cb func(*Meter)) {
+	r.Scopes(func(s *Scope) { s.Meters(cb) })
+}
+
+func (r *Registry) Stats(cb func(name string, val float64)) {
 	r.Scopes(func(s *Scope) {
-		s.Funcs(cb)
+		s.Stats(func(name string, val float64) {
+			cb(fmt.Sprintf("%s.%s", s.Name, name), val)
+		})
 	})
 }
 
@@ -78,4 +89,9 @@ var (
 	Default      = NewRegistry()
 	Package      = Default.Package
 	PackageNamed = Default.PackageNamed
+	LiveTraces   = Default.LiveTraces
+	Scopes       = Default.Scopes
+	Funcs        = Default.Funcs
+	Meters       = Default.Meters
+	Stats        = Default.Stats
 )

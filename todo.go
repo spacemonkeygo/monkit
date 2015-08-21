@@ -29,12 +29,6 @@ package monitor
 //func (t *Timer) Start() *TimerCtx { return &TimerCtx{} }
 //func (t *TimerCtx) Stop()         {}
 
-//type Meter struct{}
-
-//func (s *Scope) Meter(name string) *Meter { return &Meter{} }
-
-//func (e *Meter) Mark(amount int) {}
-
 //func (s *Scope) Crit(ctx context.Context)   {}
 //func (s *Scope) Debug(ctx context.Context)  {}
 //func (s *Scope) Info(ctx context.Context)   {}
