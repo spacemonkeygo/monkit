@@ -1,12 +1,11 @@
 package monitor
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
 	"time"
-
-	"github.com/bmizerany/perks/quantile"
 )
 
 type PresentationFunc func(*Registry, io.Writer) error
@@ -16,8 +15,8 @@ func escapeDotLabel(format string, args ...interface{}) string {
 	var rv []byte
 	for _, b := range []byte(val) {
 		switch {
-		case ('A' <= b && b <= 'Z') || ('a' <= b && b <= 'z') ||
-			('0' <= b && b <= '9') || 128 <= b || ' ' == b:
+		case 'A' <= b && b <= 'Z', 'a' <= b && b <= 'z', '0' <= b && b <= '9',
+			128 <= b, ' ' == b:
 			rv = append(rv, b)
 		case b == '\n':
 			rv = append(rv, []byte(`\l`)...)
@@ -32,7 +31,7 @@ func outputDotSpan(w io.Writer, s *Span) error {
 	_, err := fmt.Fprintf(w,
 		" f%d [label=\"%s\"];\n",
 		s.Id, escapeDotLabel("%s(%s)\nelapsed: %s\n",
-			s.Func.Name, strings.Join(s.Args(), ", "), s.Duration()))
+			s.Func.Name(), strings.Join(s.Args(), ", "), s.Duration()))
 	if err != nil {
 		return err
 	}
@@ -72,7 +71,7 @@ func PresentSpansDot(r *Registry, w io.Writer) error {
 
 func outputTextSpan(w io.Writer, s *Span, indent string) (err error) {
 	_, err = fmt.Fprintf(w, "%s[%d] %s(%s) (elapsed: %s)\n",
-		indent, s.Id, s.Func.Name, strings.Join(s.Args(), ", "), s.Duration())
+		indent, s.Id, s.Func.Name(), strings.Join(s.Args(), ", "), s.Duration())
 	if err != nil {
 		return err
 	}
@@ -99,7 +98,7 @@ func PresentSpansText(r *Registry, w io.Writer) (err error) {
 	return err
 }
 
-func formatDist(d *quantile.Stream, indent string) (result string) {
+func formatDist(d *Dist, indent string) (result string) {
 	for _, q := range ObservedQuantiles {
 		result += fmt.Sprintf("%s%.02f: %s\n", indent, q, time.Duration(
 			d.Query(q)*float64(time.Second)))
@@ -118,19 +117,28 @@ func PresentFuncsDot(r *Registry, w io.Writer) (err error) {
 		}
 		success := f.Success()
 		panics := f.Panics()
-		_, err = fmt.Fprintf(w, " f%d [label=\"%s", f.Id,
-			escapeDotLabel("%s\ncurrent: %d, success: %d, panics: %d\n", f.Name,
-				f.Current(), success, panics))
-		if err != nil {
-			return
-		}
+
+		var err_out bytes.Buffer
 		total_errors := int64(0)
 		for errname, count := range f.Errors() {
-			_, err = fmt.Fprint(w, escapeDotLabel("error %s: %d\n", errname, count))
+			_, err = fmt.Fprint(&err_out, escapeDotLabel("error %s: %d\n", errname,
+				count))
 			if err != nil {
 				return
 			}
 			total_errors += count
+		}
+
+		_, err = fmt.Fprintf(w, " f%d [label=\"%s", f.Id,
+			escapeDotLabel("%s\ncurrent: %d, success: %d, errors: %d, panics: %d\n",
+				f.Name(), f.Current(), success, total_errors, panics))
+		if err != nil {
+			return
+		}
+
+		_, err = err_out.WriteTo(w)
+		if err != nil {
+			return
 		}
 
 		if success > 0 {
@@ -184,7 +192,7 @@ func PresentFuncsText(r *Registry, w io.Writer) (err error) {
 		if err != nil {
 			return
 		}
-		_, err = fmt.Fprintf(w, "[%d] %s\n  parents: ", f.Id, f.Name)
+		_, err = fmt.Fprintf(w, "[%d] %s\n  parents: ", f.Id, f.Name())
 		if err != nil {
 			return
 		}
@@ -213,15 +221,24 @@ func PresentFuncsText(r *Registry, w io.Writer) (err error) {
 				}
 			}
 		})
-		_, err = fmt.Fprintf(w, "\n  current: %d, success: %d, panics: %d\n", f.Current(), f.Success(), f.Panics())
-		if err != nil {
-			return
-		}
+		var err_out bytes.Buffer
+		total_errors := int64(0)
 		for errname, count := range f.Errors() {
-			_, err = fmt.Fprintf(w, "  error %s: %d\n", errname, count)
+			_, err = fmt.Fprintf(&err_out, "  error %s: %d\n", errname, count)
 			if err != nil {
 				return
 			}
+			total_errors += count
+		}
+		_, err = fmt.Fprintf(w,
+			"\n  current: %d, success: %d, errors: %d, panics: %d\n",
+			f.Current(), f.Success(), total_errors, f.Panics())
+		if err != nil {
+			return
+		}
+		_, err = err_out.WriteTo(w)
+		if err != nil {
+			return
 		}
 		_, err = fmt.Fprintf(w, "  success times:\n%s  failure times:\n%s\n",
 			formatDist(f.SuccessTimes, "    "), formatDist(f.FailureTimes, "    "))
@@ -251,6 +268,9 @@ func PresentationFromPath(path string) (
 			return PresentFuncsDot, "text/plain; charset=utf-8", true
 		}
 
+	case "stats":
+		return PresentStatsText, "text/plain; charset=utf-8", true
+
 	}
 	return nil, "", false
 }
@@ -262,4 +282,14 @@ func shift(path string) (dir, left string) {
 		return path, ""
 	}
 	return path[:split], path[split:]
+}
+
+func PresentStatsText(r *Registry, w io.Writer) (err error) {
+	r.Stats(func(name string, val float64) {
+		if err != nil {
+			return
+		}
+		_, err = fmt.Fprintf(w, "%s\t%f\n", name, val)
+	})
+	return err
 }

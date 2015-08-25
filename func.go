@@ -5,12 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bmizerany/perks/quantile"
 	"github.com/spacemonkeygo/errors"
-)
-
-var (
-	ObservedQuantiles = []float64{0, .25, .5, .75, .90, .95, .99, 1}
 )
 
 type Func struct {
@@ -23,9 +18,9 @@ type Func struct {
 	// constructor things
 	Id           int64
 	Scope        *Scope
-	Name         string
-	SuccessTimes *quantile.Stream
-	FailureTimes *quantile.Stream
+	name         string
+	SuccessTimes *Dist
+	FailureTimes *Dist
 
 	// mutex things (reusing the parents mutex)
 	errors map[string]int64
@@ -35,10 +30,10 @@ func newFunc(s *Scope, name string) *Func {
 	return &Func{
 		Id:           newId(),
 		Scope:        s,
-		Name:         name,
+		name:         name,
 		errors:       make(map[string]int64),
-		SuccessTimes: quantile.NewTargeted(ObservedQuantiles...),
-		FailureTimes: quantile.NewTargeted(ObservedQuantiles...),
+		SuccessTimes: newDist(),
+		FailureTimes: newDist(),
 	}
 }
 
@@ -69,6 +64,10 @@ func (f *Func) Current() int64 { return atomic.LoadInt64(&f.current) }
 func (f *Func) Success() int64 { return atomic.LoadInt64(&f.success) }
 func (f *Func) Panics() int64  { return atomic.LoadInt64(&f.panics) }
 
+func (f *Func) Name() string {
+	return fmt.Sprintf("%s.%s", f.Scope.Name, f.name)
+}
+
 func (f *Func) Errors() (rv map[string]int64) {
 	f.parents.Lock()
 	rv = make(map[string]int64, len(f.errors))
@@ -86,16 +85,14 @@ func (f *Func) Parents(cb func(f *Func)) {
 func (f *Func) Stats(cb func(name string, val float64)) {
 	cb("current", float64(f.Current()))
 	cb("success", float64(f.Success()))
-	cb("panics", float64(f.Panics()))
 	for errname, count := range f.Errors() {
 		cb(fmt.Sprintf("error %s", errname), float64(count))
 	}
-	for _, quantile := range ObservedQuantiles {
-		cb(fmt.Sprintf("success_time %.02f", quantile),
-			f.SuccessTimes.Query(quantile))
-	}
-	for _, quantile := range ObservedQuantiles {
-		cb(fmt.Sprintf("failure_time %.02f", quantile),
-			f.FailureTimes.Query(quantile))
-	}
+	cb("panics", float64(f.Panics()))
+	f.SuccessTimes.Stats(func(name string, val float64) {
+		cb("success time "+name, val)
+	})
+	f.FailureTimes.Stats(func(name string, val float64) {
+		cb("failure time "+name, val)
+	})
 }

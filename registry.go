@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 )
 
@@ -47,24 +48,26 @@ func (r *Registry) traceEnd(s *Span) {
 
 func (r *Registry) LiveTraces(cb func(s *Span)) {
 	r.mtx.Lock()
-	c := make(map[*Span]struct{}, len(r.liveTraces))
+	c := make([]*Span, 0, len(r.liveTraces))
 	for s := range r.liveTraces {
-		c[s] = struct{}{}
+		c = append(c, s)
 	}
 	r.mtx.Unlock()
-	for s := range c {
+	sort.Sort(spanSorter(c))
+	for _, s := range c {
 		cb(s)
 	}
 }
 
 func (r *Registry) Scopes(cb func(s *Scope)) {
 	r.mtx.Lock()
-	c := make(map[*Scope]struct{}, len(r.scopes))
+	c := make([]*Scope, 0, len(r.scopes))
 	for _, s := range r.scopes {
-		c[s] = struct{}{}
+		c = append(c, s)
 	}
 	r.mtx.Unlock()
-	for s := range c {
+	sort.Sort(scopeSorter(c))
+	for _, s := range c {
 		cb(s)
 	}
 }
@@ -87,7 +90,6 @@ func (r *Registry) Stats(cb func(name string, val float64)) {
 
 var (
 	Default      = NewRegistry()
-	Package      = Default.Package
 	PackageNamed = Default.PackageNamed
 	LiveTraces   = Default.LiveTraces
 	Scopes       = Default.Scopes
@@ -95,3 +97,22 @@ var (
 	Meters       = Default.Meters
 	Stats        = Default.Stats
 )
+
+func Package() *Scope {
+	return PackageNamed(callerPackage(1))
+}
+
+type spanSorter []*Span
+
+func (s spanSorter) Len() int      { return len(s) }
+func (s spanSorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func (s spanSorter) Less(i, j int) bool {
+	return s[i].Func.Name() < s[j].Func.Name() && s[i].Id < s[j].Id
+}
+
+type scopeSorter []*Scope
+
+func (s scopeSorter) Len() int           { return len(s) }
+func (s scopeSorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s scopeSorter) Less(i, j int) bool { return s[i].Name < s[j].Name }

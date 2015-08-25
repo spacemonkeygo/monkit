@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 
 	"golang.org/x/net/context"
@@ -110,12 +111,26 @@ func (s *Scope) Meters(cb func(m *Meter)) {
 
 func (s *Scope) Stats(cb func(name string, val float64)) {
 	s.mtx.Lock()
-	sources := make(map[StatSource]struct{}, len(s.sources))
-	for _, source := range s.sources {
-		sources[source] = struct{}{}
+	sources := make([]namedSource, 0, len(s.sources))
+	for name, source := range s.sources {
+		sources = append(sources, namedSource{name: name, source: source})
 	}
 	s.mtx.Unlock()
-	for source := range sources {
-		source.Stats(cb)
+	sort.Sort(namedSourceList(sources))
+	for _, namedSource := range sources {
+		namedSource.source.Stats(func(name string, val float64) {
+			cb(fmt.Sprintf("%s.%s", namedSource.name, name), val)
+		})
 	}
 }
+
+type namedSource struct {
+	name   string
+	source StatSource
+}
+
+type namedSourceList []namedSource
+
+func (l namedSourceList) Len() int           { return len(l) }
+func (l namedSourceList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+func (l namedSourceList) Less(i, j int) bool { return l[i].name < l[j].name }

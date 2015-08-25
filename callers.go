@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"runtime"
+	"strings"
 )
 
 func callerPackage(frames int) string {
@@ -13,7 +14,7 @@ func callerPackage(frames int) string {
 	if f == nil {
 		return "unknown"
 	}
-	return f.Name()
+	return strings.TrimSuffix(f.Name(), ".init")
 }
 
 func callerFunc(frames int) string {
@@ -25,5 +26,7 @@ func callerFunc(frames int) string {
 	if f == nil {
 		return "unknown"
 	}
-	return f.Name()
+	slash_pieces := strings.Split(f.Name(), "/")
+	dot_pieces := strings.SplitN(slash_pieces[len(slash_pieces)-1], ".", 2)
+	return dot_pieces[len(dot_pieces)-1]
 }

@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"sort"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -62,7 +63,12 @@ func (b *spanBag) Iterate(cb func(s *Span)) {
 	if s != nil {
 		uniq[s] = struct{}{}
 	}
+	s_sorted := make([]*Span, 0, len(uniq))
 	for s := range uniq {
+		s_sorted = append(s_sorted, s)
+	}
+	sort.Sort(spanSorter(s_sorted))
+	for _, s := range s_sorted {
 		cb(s)
 	}
 }
