@@ -7,15 +7,17 @@ import (
 )
 
 type Registry struct {
-	mtx        sync.Mutex
-	scopes     map[string]*Scope
-	liveTraces map[*Span]struct{}
+	scopeMtx, traceMtx, orphanMtx sync.Mutex
+	scopes                        map[string]*Scope
+	traces                        map[*Span]struct{}
+	orphans                       map[*Span]struct{}
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		scopes:     map[string]*Scope{},
-		liveTraces: map[*Span]struct{}{}}
+		scopes:  map[string]*Scope{},
+		traces:  map[*Span]struct{}{},
+		orphans: map[*Span]struct{}{}}
 }
 
 func (r *Registry) Package() *Scope {
@@ -23,8 +25,8 @@ func (r *Registry) Package() *Scope {
 }
 
 func (r *Registry) PackageNamed(name string) *Scope {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
+	r.scopeMtx.Lock()
+	defer r.scopeMtx.Unlock()
 	s, exists := r.scopes[name]
 	if exists {
 		return s
@@ -35,37 +37,56 @@ func (r *Registry) PackageNamed(name string) *Scope {
 }
 
 func (r *Registry) traceStart(s *Span) {
-	r.mtx.Lock()
-	r.liveTraces[s] = struct{}{}
-	r.mtx.Unlock()
+	r.traceMtx.Lock()
+	r.traces[s] = struct{}{}
+	r.traceMtx.Unlock()
 }
 
 func (r *Registry) traceEnd(s *Span) {
-	r.mtx.Lock()
-	delete(r.liveTraces, s)
-	r.mtx.Unlock()
+	r.traceMtx.Lock()
+	delete(r.traces, s)
+	r.traceMtx.Unlock()
+}
+
+func (r *Registry) orphanedSpan(s *Span) {
+	r.orphanMtx.Lock()
+	r.orphans[s] = struct{}{}
+	r.orphanMtx.Unlock()
+}
+
+func (r *Registry) orphanEnd(s *Span) {
+	r.orphanMtx.Lock()
+	r.orphans[s] = struct{}{}
+	r.orphanMtx.Unlock()
 }
 
 func (r *Registry) LiveTraces(cb func(s *Span)) {
-	r.mtx.Lock()
-	c := make([]*Span, 0, len(r.liveTraces))
-	for s := range r.liveTraces {
-		c = append(c, s)
+	r.traceMtx.Lock()
+	traces := make([]*Span, 0, len(r.traces))
+	for s := range r.traces {
+		traces = append(traces, s)
 	}
-	r.mtx.Unlock()
-	sort.Sort(spanSorter(c))
-	for _, s := range c {
+	r.traceMtx.Unlock()
+	r.orphanMtx.Lock()
+	orphans := make([]*Span, 0, len(r.orphans))
+	for s := range r.orphans {
+		orphans = append(orphans, s)
+	}
+	r.orphanMtx.Unlock()
+	traces = append(traces, orphans...)
+	sort.Sort(spanSorter(traces))
+	for _, s := range traces {
 		cb(s)
 	}
 }
 
 func (r *Registry) Scopes(cb func(s *Scope)) {
-	r.mtx.Lock()
+	r.scopeMtx.Lock()
 	c := make([]*Scope, 0, len(r.scopes))
 	for _, s := range r.scopes {
 		c = append(c, s)
 	}
-	r.mtx.Unlock()
+	r.scopeMtx.Unlock()
 	sort.Sort(scopeSorter(c))
 	for _, s := range c {
 		cb(s)

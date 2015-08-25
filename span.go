@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/spacemonkeygo/monotime"
@@ -15,16 +16,20 @@ const (
 )
 
 type Span struct {
-	// stuff with sync/atomic
-	children spanBag
+	// sync/atomic things
+	mtx spinLock
 
 	// immutable things from construction
-	Id     int64
-	start  time.Duration
-	Func   *Func
-	Parent *Span
-	args   []interface{}
+	Id    int64
+	start time.Duration
+	Func  *Func
+	args  []interface{}
 	context.Context
+
+	// protected by mtx
+	done     bool
+	orphaned bool
+	children spanBag
 }
 
 func SpanFromCtx(ctx context.Context) *Span {
@@ -51,13 +56,12 @@ func newSpan(ctx context.Context, f *Func, args []interface{}) (
 		Id:      newId(),
 		start:   monotime.Monotonic(),
 		Func:    f,
-		Parent:  parent,
 		args:    args,
 		Context: ctx}
 
 	if parent != nil {
 		f.start(parent.Func)
-		parent.children.Add(s)
+		parent.addChild(s)
 	} else {
 		f.start(nil)
 		f.Scope.r.traceStart(s)
@@ -67,21 +71,58 @@ func newSpan(ctx context.Context, f *Func, args []interface{}) (
 		rec := recover()
 		panicked := rec != nil
 
+		f.end(errptr, panicked, monotime.Monotonic()-s.start)
+
+		var children []*Span
+		s.mtx.Lock()
+		s.done = true
+		orphaned := s.orphaned
+		s.children.Iterate(func(child *Span) {
+			children = append(children, child)
+		})
+		s.mtx.Unlock()
+		for _, child := range children {
+			child.orphan()
+		}
+
 		if parent != nil {
-			parent.children.Remove(s)
+			parent.removeChild(s)
+			if orphaned {
+				f.Scope.r.orphanEnd(s)
+			}
 		} else {
 			f.Scope.r.traceEnd(s)
 		}
-
-		f.end(errptr, panicked, monotime.Monotonic()-s.start)
-
-		// try to help the garbage collector
-		s.Parent = nil
 
 		if panicked {
 			panic(rec)
 		}
 	}
+}
+
+func (s *Span) addChild(child *Span) {
+	s.mtx.Lock()
+	s.children.Add(child)
+	done := s.done
+	s.mtx.Unlock()
+	if done {
+		child.orphan()
+	}
+}
+
+func (s *Span) removeChild(child *Span) {
+	s.mtx.Lock()
+	s.children.Remove(child)
+	s.mtx.Unlock()
+}
+
+func (s *Span) orphan() {
+	s.mtx.Lock()
+	if !s.done && !s.orphaned {
+		s.orphaned = true
+		s.Func.Scope.r.orphanedSpan(s)
+	}
+	s.mtx.Unlock()
 }
 
 func (s *Span) Duration() time.Duration {
@@ -101,7 +142,20 @@ func (s *Span) String() string {
 }
 
 func (s *Span) Children(cb func(s *Span)) {
-	s.children.Iterate(cb, true)
+	found := map[*Span]bool{}
+	var sorter []*Span
+	s.mtx.Lock()
+	s.children.Iterate(func(s *Span) {
+		if !found[s] {
+			found[s] = true
+			sorter = append(sorter, s)
+		}
+	})
+	s.mtx.Unlock()
+	sort.Sort(spanSorter(sorter))
+	for _, s := range sorter {
+		cb(s)
+	}
 }
 
 func (s *Span) Args() (rv []string) {
