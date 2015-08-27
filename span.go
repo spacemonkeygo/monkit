@@ -101,7 +101,7 @@ func (s *Span) String() string {
 }
 
 func (s *Span) Children(cb func(s *Span)) {
-	s.children.Iterate(cb)
+	s.children.Iterate(cb, true)
 }
 
 func (s *Span) Args() (rv []string) {

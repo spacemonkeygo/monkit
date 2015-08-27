@@ -10,20 +10,20 @@ import (
 
 type Func struct {
 	// sync/atomic things
-	current int64
-	success int64
-	panics  int64
-	parents funcSet
+	current         int64
+	parentsAndMutex funcSet
 
 	// constructor things
-	Id           int64
-	Scope        *Scope
-	name         string
-	SuccessTimes *Dist
-	FailureTimes *Dist
+	Id    int64
+	Scope *Scope
+	name  string
 
-	// mutex things (reusing the parents mutex)
-	errors map[string]int64
+	// mutex things (reuses mutex from parents)
+	success      int64
+	successTimes dist
+	errors       map[string]int64
+	panics       int64
+	failureTimes dist
 }
 
 func newFunc(s *Scope, name string) *Func {
@@ -32,67 +32,108 @@ func newFunc(s *Scope, name string) *Func {
 		Scope:        s,
 		name:         name,
 		errors:       make(map[string]int64),
-		SuccessTimes: newDist(),
-		FailureTimes: newDist(),
+		successTimes: newDist(),
+		failureTimes: newDist(),
 	}
 }
 
 func (f *Func) start(parent *Func) {
-	f.parents.Add(parent)
+	f.parentsAndMutex.Add(parent)
 	atomic.AddInt64(&f.current, 1)
 }
 
 func (f *Func) end(errptr *error, panicked bool, duration time.Duration) {
+	dur := duration.Seconds()
 	atomic.AddInt64(&f.current, -1)
+	f.parentsAndMutex.Lock()
 	if panicked {
-		atomic.AddInt64(&f.panics, 1)
-		f.FailureTimes.Insert(duration.Seconds())
+		f.panics -= 1
+		f.failureTimes.Insert(dur)
+		f.parentsAndMutex.Unlock()
 		return
 	}
 	if errptr == nil || *errptr == nil {
-		atomic.AddInt64(&f.success, 1)
-		f.SuccessTimes.Insert(duration.Seconds())
+		f.success += 1
+		f.successTimes.Insert(dur)
+		f.parentsAndMutex.Unlock()
 		return
 	}
-	f.FailureTimes.Insert(duration.Seconds())
-	f.parents.Lock()
+	f.failureTimes.Insert(dur)
 	f.errors[errors.GetClass(*errptr).String()] += 1
-	f.parents.Unlock()
+	f.parentsAndMutex.Unlock()
 }
 
 func (f *Func) Current() int64 { return atomic.LoadInt64(&f.current) }
-func (f *Func) Success() int64 { return atomic.LoadInt64(&f.success) }
-func (f *Func) Panics() int64  { return atomic.LoadInt64(&f.panics) }
+
+func (f *Func) Success() (rv int64) {
+	f.parentsAndMutex.Lock()
+	rv = f.success
+	f.parentsAndMutex.Unlock()
+	return rv
+}
+
+func (f *Func) Panics() (rv int64) {
+	f.parentsAndMutex.Lock()
+	rv = f.panics
+	f.parentsAndMutex.Unlock()
+	return rv
+}
 
 func (f *Func) Name() string {
 	return fmt.Sprintf("%s.%s", f.Scope.Name, f.name)
 }
 
 func (f *Func) Errors() (rv map[string]int64) {
-	f.parents.Lock()
+	f.parentsAndMutex.Lock()
 	rv = make(map[string]int64, len(f.errors))
 	for errname, count := range f.errors {
 		rv[errname] = count
 	}
-	f.parents.Unlock()
+	f.parentsAndMutex.Unlock()
 	return rv
 }
 
 func (f *Func) Parents(cb func(f *Func)) {
-	f.parents.Iterate(cb)
+	f.parentsAndMutex.Iterate(cb)
 }
 
 func (f *Func) Stats(cb func(name string, val float64)) {
 	cb("current", float64(f.Current()))
-	cb("success", float64(f.Success()))
-	for errname, count := range f.Errors() {
+	f.parentsAndMutex.Lock()
+	success, panics := f.success, f.panics
+	errs := make(map[string]int64, len(f.errors))
+	for errname, count := range f.errors {
+		errs[errname] = count
+	}
+	s_min, s_med, s_max, s_recent := f.successTimes.Stats()
+	f_min, f_med, f_max, f_recent := f.failureTimes.Stats()
+	f.parentsAndMutex.Unlock()
+
+	cb("success", float64(success))
+	for errname, count := range errs {
 		cb(fmt.Sprintf("error %s", errname), float64(count))
 	}
-	cb("panics", float64(f.Panics()))
-	f.SuccessTimes.Stats(func(name string, val float64) {
-		cb("success time "+name, val)
-	})
-	f.FailureTimes.Stats(func(name string, val float64) {
-		cb("failure time "+name, val)
-	})
+	cb("panics", float64(panics))
+	cb("success times min", s_min)
+	cb("success times med", s_med)
+	cb("success times max", s_max)
+	cb("success times recent", s_recent)
+	cb("failure times min", f_min)
+	cb("failure times med", f_med)
+	cb("failure times max", f_max)
+	cb("failure times recent", f_recent)
+}
+
+func (f *Func) SuccessTimeQuantile(quantile float64) (rv float64) {
+	f.parentsAndMutex.Lock()
+	rv = f.successTimes.Query(quantile)
+	f.parentsAndMutex.Unlock()
+	return rv
+}
+
+func (f *Func) FailureTimeQuantile(quantile float64) (rv float64) {
+	f.parentsAndMutex.Lock()
+	rv = f.failureTimes.Query(quantile)
+	f.parentsAndMutex.Unlock()
+	return rv
 }

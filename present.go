@@ -98,10 +98,10 @@ func PresentSpansText(r *Registry, w io.Writer) (err error) {
 	return err
 }
 
-func formatDist(d *Dist, indent string) (result string) {
+func formatDist(querier func(float64) float64, indent string) (result string) {
 	for _, q := range ObservedQuantiles {
 		result += fmt.Sprintf("%s%.02f: %s\n", indent, q, time.Duration(
-			d.Query(q)*float64(time.Second)))
+			querier(q)*float64(time.Second)))
 	}
 	return result
 }
@@ -143,7 +143,7 @@ func PresentFuncsDot(r *Registry, w io.Writer) (err error) {
 
 		if success > 0 {
 			_, err = fmt.Fprint(w, escapeDotLabel(
-				"success times:\n%s", formatDist(f.SuccessTimes, "        ")))
+				"success times:\n%s", formatDist(f.SuccessTimeQuantile, "        ")))
 			if err != nil {
 				return
 			}
@@ -151,7 +151,7 @@ func PresentFuncsDot(r *Registry, w io.Writer) (err error) {
 
 		if total_errors+panics > 0 {
 			_, err = fmt.Fprint(w, escapeDotLabel(
-				"failure times:\n%s", formatDist(f.FailureTimes, "        ")))
+				"failure times:\n%s", formatDist(f.FailureTimeQuantile, "        ")))
 			if err != nil {
 				return
 			}
@@ -241,7 +241,8 @@ func PresentFuncsText(r *Registry, w io.Writer) (err error) {
 			return
 		}
 		_, err = fmt.Fprintf(w, "  success times:\n%s  failure times:\n%s\n",
-			formatDist(f.SuccessTimes, "    "), formatDist(f.FailureTimes, "    "))
+			formatDist(f.SuccessTimeQuantile, "    "),
+			formatDist(f.FailureTimeQuantile, "    "))
 	})
 	return err
 }

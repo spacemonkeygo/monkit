@@ -1,32 +1,100 @@
 package monitor
 
 import (
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/spacemonkeygo/monotime"
 )
 
+const (
+	ticksToKeep = 4
+	timePerTick = time.Minute
+)
+
+var (
+	defaultTicker = ticker{}
+)
+
 type Meter struct {
-	// sync/atomic things
-	lastTime   int64
-	totalCount int64
-	sliceCount int64
+	mtx       sync.Mutex
+	total     int64
+	last_tick time.Duration
+	slices    [ticksToKeep]int64
 }
 
 func newMeter() *Meter {
-	return &Meter{lastTime: int64(monotime.Monotonic())}
+	rv := &Meter{last_tick: monotime.Monotonic()}
+	defaultTicker.register(rv)
+	return rv
 }
 
-func (e *Meter) Stats(cb func(name string, val float64)) {
-	currentTime := int64(monotime.Monotonic())
-	lastTime := atomic.SwapInt64(&e.lastTime, currentTime)
-	sliceCount := atomic.SwapInt64(&e.sliceCount, 0)
-	totalCount := atomic.AddInt64(&e.totalCount, sliceCount)
-	cb("rate", float64(sliceCount)/time.Duration(currentTime-lastTime).Seconds())
-	cb("total", float64(totalCount))
+func (e *Meter) SetTotal(total int64) {
+	e.mtx.Lock()
+	e.total = total
+	e.mtx.Unlock()
 }
 
 func (e *Meter) Mark(amount int) {
-	atomic.AddInt64(&e.sliceCount, int64(amount))
+	e.mtx.Lock()
+	e.slices[ticksToKeep-1] += int64(amount)
+	e.mtx.Unlock()
+}
+
+func (e *Meter) tick(now time.Duration) {
+	e.mtx.Lock()
+	e.total += e.slices[0]
+	copy(e.slices[:], e.slices[1:])
+	e.slices[ticksToKeep-1] = 0
+	e.last_tick = now
+	e.mtx.Unlock()
+}
+
+func (e *Meter) stats(now time.Duration) (rate float64, total int64) {
+	current := int64(0)
+	e.mtx.Lock()
+	start := e.last_tick - (timePerTick * (ticksToKeep - 1))
+	for i := 0; i < ticksToKeep; i++ {
+		current += e.slices[i]
+	}
+	total = e.total
+	e.mtx.Unlock()
+	total += current
+	rate = float64(current) / (now - start).Seconds()
+	return rate, total
+}
+
+func (e *Meter) Stats(cb func(name string, val float64)) {
+	rate, total := e.stats(monotime.Monotonic())
+	cb("rate", rate)
+	cb("total", float64(total))
+}
+
+type ticker struct {
+	mtx     sync.Mutex
+	started bool
+	meters  []*Meter
+}
+
+func (t *ticker) register(m *Meter) {
+	t.mtx.Lock()
+	if !t.started {
+		t.started = true
+		go t.run()
+	}
+	t.meters = append(t.meters, m)
+	t.mtx.Unlock()
+}
+
+func (t *ticker) run() {
+	for {
+		time.Sleep(timePerTick)
+		t.mtx.Lock()
+		meters := t.meters // this is safe since we only use append
+		t.mtx.Unlock()
+		now := monotime.Monotonic()
+		for _, m := range meters {
+			m.tick(now)
+		}
+	}
 }
