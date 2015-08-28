@@ -115,7 +115,7 @@ func (r *Registry) orphanedSpan(s *Span) {
 
 func (r *Registry) orphanEnd(s *Span) {
 	r.orphanMtx.Lock()
-	r.orphans[s] = struct{}{}
+	delete(r.orphans, s)
 	r.orphanMtx.Unlock()
 }
 
@@ -183,7 +183,9 @@ func (s spanSorter) Len() int      { return len(s) }
 func (s spanSorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 func (s spanSorter) Less(i, j int) bool {
-	return s[i].f.FullName() < s[j].f.FullName() && s[i].id < s[j].id
+	ispan, jspan := s[i], s[j]
+	iname, jname := ispan.f.FullName(), jspan.f.FullName()
+	return (iname < jname) || (iname == jname && ispan.id < jspan.id)
 }
 
 type scopeSorter []*Scope

@@ -43,9 +43,20 @@ func escapeDotLabel(format string, args ...interface{}) string {
 
 func outputDotSpan(w io.Writer, s *Span) error {
 	_, err := fmt.Fprintf(w,
-		" f%d [label=\"%s\"];\n",
+		" f%d [label=\"%s",
 		s.Id(), escapeDotLabel("%s(%s)\nelapsed: %s\n",
 			s.Func().FullName(), strings.Join(s.Args(), ", "), s.Duration()))
+	if err != nil {
+		return err
+	}
+	for _, annotation := range s.Annotations() {
+		_, err = fmt.Fprint(w, escapeDotLabel("%s: %s\n",
+			annotation.Name, annotation.Value))
+		if err != nil {
+			return err
+		}
+	}
+	_, err = fmt.Fprint(w, "\"];\n")
 	if err != nil {
 		return err
 	}
@@ -89,6 +100,13 @@ func outputTextSpan(w io.Writer, s *Span, indent string) (err error) {
 		s.Duration())
 	if err != nil {
 		return err
+	}
+	for _, annotation := range s.Annotations() {
+		_, err = fmt.Fprintf(w, "%s  %s: %s\n", indent,
+			annotation.Name, annotation.Value)
+		if err != nil {
+			return err
+		}
 	}
 	s.Children(func(s *Span) {
 		if err != nil {
