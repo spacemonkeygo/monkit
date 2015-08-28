@@ -1,16 +1,28 @@
+// Copyright (C) 2015 Space Monkey, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package monitor
 
 import (
 	"fmt"
 	"sort"
 	"sync"
-
-	"golang.org/x/net/context"
 )
 
 type Scope struct {
 	r       *Registry
-	Name    string
+	name    string
 	mtx     sync.Mutex
 	sources map[string]StatSource
 }
@@ -18,36 +30,15 @@ type Scope struct {
 func newScope(r *Registry, name string) *Scope {
 	return &Scope{
 		r:       r,
-		Name:    name,
+		name:    name,
 		sources: map[string]StatSource{}}
 }
 
-func (s *Scope) Func() (
-	rv func(ctx *context.Context, args ...interface{}) func(*error)) {
-	var initOnce sync.Once
-	var f *Func
-	init := func() {
-		f = s.function(callerFunc(3))
-	}
-	return func(ctx *context.Context, args ...interface{}) func(*error) {
-		initOnce.Do(init)
-		s, exit := newSpan(*ctx, f, args)
-		*ctx = s
-		return exit
-	}
+func (s *Scope) Func() *Func {
+	return s.FuncNamed(callerFunc(1))
 }
 
-func (s *Scope) FuncNamed(name string) (
-	rv func(ctx *context.Context, args ...interface{}) func(*error)) {
-	f := s.function(name)
-	return func(ctx *context.Context, args ...interface{}) func(*error) {
-		s, exit := newSpan(*ctx, f, args)
-		*ctx = s
-		return exit
-	}
-}
-
-func (s *Scope) function(name string) *Func {
+func (s *Scope) FuncNamed(name string) *Func {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	source, exists := s.sources[name]
@@ -93,20 +84,6 @@ func (s *Scope) Meter(name string) *Meter {
 			name, source))
 	}
 	return m
-}
-
-func (s *Scope) Meters(cb func(m *Meter)) {
-	s.mtx.Lock()
-	meters := make(map[*Meter]struct{}, len(s.sources))
-	for _, source := range s.sources {
-		if m, ok := source.(*Meter); ok {
-			meters[m] = struct{}{}
-		}
-	}
-	s.mtx.Unlock()
-	for m := range meters {
-		cb(m)
-	}
 }
 
 func (s *Scope) Stats(cb func(name string, val float64)) {

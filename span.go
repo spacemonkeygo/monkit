@@ -1,3 +1,17 @@
+// Copyright (C) 2015 Space Monkey, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package monitor
 
 import (
@@ -15,21 +29,29 @@ const (
 	spanKey ctxKey = iota
 )
 
+type Annotation struct {
+	Name  string
+	Value string
+}
+
 type Span struct {
 	// sync/atomic things
 	mtx spinLock
 
 	// immutable things from construction
-	Id    int64
-	start time.Duration
-	Func  *Func
-	args  []interface{}
+	id     int64
+	start  time.Time
+	f      *Func
+	trace  *Trace
+	parent *Span
+	args   []interface{}
 	context.Context
 
 	// protected by mtx
-	done     bool
-	orphaned bool
-	children spanBag
+	done        bool
+	orphaned    bool
+	children    spanBag
+	annotations []Annotation
 }
 
 func SpanFromCtx(ctx context.Context) *Span {
@@ -41,37 +63,54 @@ func SpanFromCtx(ctx context.Context) *Span {
 	return nil
 }
 
-func newSpan(ctx context.Context, f *Func, args []interface{}) (
-	s *Span, exit func(*error)) {
+func newSpan(ctx context.Context, f *Func, args []interface{},
+	id int64, trace *Trace) (s *Span, exit func(*error)) {
 
 	var parent *Span
 	if s, ok := ctx.(*Span); ok && s != nil {
-		parent = s
 		ctx = s.Context
+		if trace == nil {
+			parent = s
+			trace = parent.trace
+		}
 	} else if s, ok := ctx.Value(spanKey).(*Span); ok && s != nil {
-		parent = s
+		if trace == nil {
+			parent = s
+			trace = parent.trace
+		}
+	} else if trace == nil {
+		trace = NewTrace(id)
+		f.scope.r.observeTrace(trace)
 	}
 
 	s = &Span{
-		Id:      newId(),
-		start:   monotime.Monotonic(),
-		Func:    f,
+		id:      id,
+		start:   monotime.Now(),
+		f:       f,
+		trace:   trace,
+		parent:  parent,
 		args:    args,
 		Context: ctx}
 
 	if parent != nil {
-		f.start(parent.Func)
+		f.start(parent.f)
 		parent.addChild(s)
 	} else {
 		f.start(nil)
-		f.Scope.r.traceStart(s)
+		f.scope.r.rootSpanStart(s)
 	}
 
 	return s, func(errptr *error) {
 		rec := recover()
 		panicked := rec != nil
 
-		f.end(errptr, panicked, monotime.Monotonic()-s.start)
+		finish := monotime.Now()
+
+		var err error
+		if errptr != nil {
+			err = *errptr
+		}
+		s.f.end(err, panicked, finish.Sub(s.start))
 
 		var children []*Span
 		s.mtx.Lock()
@@ -85,14 +124,16 @@ func newSpan(ctx context.Context, f *Func, args []interface{}) (
 			child.orphan()
 		}
 
-		if parent != nil {
-			parent.removeChild(s)
+		if s.parent != nil {
+			s.parent.removeChild(s)
 			if orphaned {
-				f.Scope.r.orphanEnd(s)
+				s.f.scope.r.orphanEnd(s)
 			}
 		} else {
-			f.Scope.r.traceEnd(s)
+			s.f.scope.r.rootSpanEnd(s)
 		}
+
+		s.trace.observe(s, err, panicked, finish)
 
 		if panicked {
 			panic(rec)
@@ -120,13 +161,17 @@ func (s *Span) orphan() {
 	s.mtx.Lock()
 	if !s.done && !s.orphaned {
 		s.orphaned = true
-		s.Func.Scope.r.orphanedSpan(s)
+		s.f.scope.r.orphanedSpan(s)
 	}
 	s.mtx.Unlock()
 }
 
 func (s *Span) Duration() time.Duration {
-	return monotime.Monotonic() - s.start
+	return monotime.Now().Sub(s.start)
+}
+
+func (s *Span) Start() time.Time {
+	return s.start
 }
 
 func (s *Span) Value(key interface{}) interface{} {
@@ -164,4 +209,22 @@ func (s *Span) Args() (rv []string) {
 		rv = append(rv, fmt.Sprintf("%#v", arg))
 	}
 	return rv
+}
+
+func (s *Span) Id() int64     { return s.id }
+func (s *Span) Func() *Func   { return s.f }
+func (s *Span) Trace() *Trace { return s.trace }
+func (s *Span) Parent() *Span { return s.parent }
+
+func (s *Span) Annotations() []Annotation {
+	s.mtx.Lock()
+	annotations := s.annotations // okay cause we only ever append to this slice
+	s.mtx.Unlock()
+	return append([]Annotation(nil), annotations...)
+}
+
+func (s *Span) Annotate(name, val string) {
+	s.mtx.Lock()
+	s.annotations = append(s.annotations, Annotation{Name: name, Value: val})
+	s.mtx.Unlock()
 }

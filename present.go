@@ -1,3 +1,17 @@
+// Copyright (C) 2015 Space Monkey, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package monitor
 
 import (
@@ -30,8 +44,8 @@ func escapeDotLabel(format string, args ...interface{}) string {
 func outputDotSpan(w io.Writer, s *Span) error {
 	_, err := fmt.Fprintf(w,
 		" f%d [label=\"%s\"];\n",
-		s.Id, escapeDotLabel("%s(%s)\nelapsed: %s\n",
-			s.Func.Name(), strings.Join(s.Args(), ", "), s.Duration()))
+		s.Id(), escapeDotLabel("%s(%s)\nelapsed: %s\n",
+			s.Func().FullName(), strings.Join(s.Args(), ", "), s.Duration()))
 	if err != nil {
 		return err
 	}
@@ -43,7 +57,7 @@ func outputDotSpan(w io.Writer, s *Span) error {
 		if err != nil {
 			return
 		}
-		_, err = fmt.Fprintf(w, " f%d -> f%d;\n", s.Id, child.Id)
+		_, err = fmt.Fprintf(w, " f%d -> f%d;\n", s.Id(), child.Id())
 		if err != nil {
 			return
 		}
@@ -56,7 +70,7 @@ func PresentSpansDot(r *Registry, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	r.LiveTraces(func(s *Span) {
+	r.LiveSpans(func(s *Span) {
 		if err != nil {
 			return
 		}
@@ -71,7 +85,8 @@ func PresentSpansDot(r *Registry, w io.Writer) error {
 
 func outputTextSpan(w io.Writer, s *Span, indent string) (err error) {
 	_, err = fmt.Fprintf(w, "%s[%d] %s(%s) (elapsed: %s)\n",
-		indent, s.Id, s.Func.Name(), strings.Join(s.Args(), ", "), s.Duration())
+		indent, s.Id(), s.Func().FullName(), strings.Join(s.Args(), ", "),
+		s.Duration())
 	if err != nil {
 		return err
 	}
@@ -85,7 +100,7 @@ func outputTextSpan(w io.Writer, s *Span, indent string) (err error) {
 }
 
 func PresentSpansText(r *Registry, w io.Writer) (err error) {
-	r.LiveTraces(func(s *Span) {
+	r.LiveSpans(func(s *Span) {
 		if err != nil {
 			return
 		}
@@ -129,9 +144,9 @@ func PresentFuncsDot(r *Registry, w io.Writer) (err error) {
 			total_errors += count
 		}
 
-		_, err = fmt.Fprintf(w, " f%d [label=\"%s", f.Id,
+		_, err = fmt.Fprintf(w, " f%d [label=\"%s", f.Id(),
 			escapeDotLabel("%s\ncurrent: %d, success: %d, errors: %d, panics: %d\n",
-				f.Name(), f.Current(), success, total_errors, panics))
+				f.FullName(), f.Current(), success, total_errors, panics))
 		if err != nil {
 			return
 		}
@@ -167,13 +182,13 @@ func PresentFuncsDot(r *Registry, w io.Writer) (err error) {
 				return
 			}
 			if parent != nil {
-				_, err = fmt.Fprintf(w, " f%d -> f%d;\n", parent.Id, f.Id)
+				_, err = fmt.Fprintf(w, " f%d -> f%d;\n", parent.Id(), f.Id())
 				if err != nil {
 					return
 				}
 			} else {
 				_, err = fmt.Fprintf(w, " r%d [label=\"entry\"];\n r%d -> f%d;\n",
-					f.Id, f.Id, f.Id)
+					f.Id(), f.Id(), f.Id())
 				if err != nil {
 					return
 				}
@@ -192,7 +207,7 @@ func PresentFuncsText(r *Registry, w io.Writer) (err error) {
 		if err != nil {
 			return
 		}
-		_, err = fmt.Fprintf(w, "[%d] %s\n  parents: ", f.Id, f.Name())
+		_, err = fmt.Fprintf(w, "[%d] %s\n  parents: ", f.Id(), f.FullName())
 		if err != nil {
 			return
 		}
@@ -210,7 +225,7 @@ func PresentFuncsText(r *Registry, w io.Writer) (err error) {
 				printed = true
 			}
 			if parent != nil {
-				_, err = fmt.Fprintf(w, "%d", parent.Id)
+				_, err = fmt.Fprintf(w, "%d", parent.Id())
 				if err != nil {
 					return
 				}

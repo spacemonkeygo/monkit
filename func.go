@@ -1,3 +1,17 @@
+// Copyright (C) 2015 Space Monkey, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package monitor
 
 import (
@@ -14,8 +28,8 @@ type Func struct {
 	parentsAndMutex funcSet
 
 	// constructor things
-	Id    int64
-	Scope *Scope
+	id    int64
+	scope *Scope
 	name  string
 
 	// mutex things (reuses mutex from parents)
@@ -28,8 +42,8 @@ type Func struct {
 
 func newFunc(s *Scope, name string) *Func {
 	return &Func{
-		Id:           newId(),
-		Scope:        s,
+		id:           NewId(),
+		scope:        s,
 		name:         name,
 		errors:       make(map[string]int64),
 		successTimes: newDist(),
@@ -42,7 +56,7 @@ func (f *Func) start(parent *Func) {
 	atomic.AddInt64(&f.current, 1)
 }
 
-func (f *Func) end(errptr *error, panicked bool, duration time.Duration) {
+func (f *Func) end(err error, panicked bool, duration time.Duration) {
 	dur := duration.Seconds()
 	atomic.AddInt64(&f.current, -1)
 	f.parentsAndMutex.Lock()
@@ -52,14 +66,14 @@ func (f *Func) end(errptr *error, panicked bool, duration time.Duration) {
 		f.parentsAndMutex.Unlock()
 		return
 	}
-	if errptr == nil || *errptr == nil {
+	if err == nil {
 		f.success += 1
 		f.successTimes.Insert(dur)
 		f.parentsAndMutex.Unlock()
 		return
 	}
 	f.failureTimes.Insert(dur)
-	f.errors[errors.GetClass(*errptr).String()] += 1
+	f.errors[errors.GetClass(err).String()] += 1
 	f.parentsAndMutex.Unlock()
 }
 
@@ -79,8 +93,10 @@ func (f *Func) Panics() (rv int64) {
 	return rv
 }
 
-func (f *Func) Name() string {
-	return fmt.Sprintf("%s.%s", f.Scope.Name, f.name)
+func (f *Func) ShortName() string { return f.name }
+
+func (f *Func) FullName() string {
+	return fmt.Sprintf("%s.%s", f.scope.name, f.name)
 }
 
 func (f *Func) Errors() (rv map[string]int64) {
@@ -137,3 +153,6 @@ func (f *Func) FailureTimeQuantile(quantile float64) (rv float64) {
 	f.parentsAndMutex.Unlock()
 	return rv
 }
+
+func (f *Func) Id() int64     { return f.id }
+func (f *Func) Scope() *Scope { return f.scope }
