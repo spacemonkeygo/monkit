@@ -83,6 +83,8 @@ func newSpan(ctx context.Context, f *Func, args []interface{},
 		f.scope.r.observeTrace(trace)
 	}
 
+	observer := trace.getObserver()
+
 	s = &Span{
 		id:      id,
 		start:   monotime.Now(),
@@ -98,6 +100,10 @@ func newSpan(ctx context.Context, f *Func, args []interface{},
 	} else {
 		f.start(nil)
 		f.scope.r.rootSpanStart(s)
+	}
+
+	if observer != nil {
+		observer.Start(s)
 	}
 
 	return s, func(errptr *error) {
@@ -133,7 +139,9 @@ func newSpan(ctx context.Context, f *Func, args []interface{},
 			s.f.scope.r.rootSpanEnd(s)
 		}
 
-		s.trace.observe(s, err, panicked, finish)
+		if observer != nil {
+			observer.Finish(s, err, panicked, finish)
+		}
 
 		if panicked {
 			panic(rec)
@@ -227,4 +235,11 @@ func (s *Span) Annotate(name, val string) {
 	s.mtx.Lock()
 	s.annotations = append(s.annotations, Annotation{Name: name, Value: val})
 	s.mtx.Unlock()
+}
+
+func (s *Span) Orphaned() (rv bool) {
+	s.mtx.Lock()
+	rv = s.orphaned
+	s.mtx.Unlock()
+	return rv
 }

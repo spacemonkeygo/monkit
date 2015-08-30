@@ -21,13 +21,31 @@ import (
 	"unsafe"
 )
 
-type spanWatcherRef struct {
-	watcher func(s *Span, err error, panicked bool, finish time.Time)
+type SpanObserver interface {
+	Start(s *Span)
+	Finish(s *Span, err error, panicked bool, finish time.Time)
+}
+
+type spanObserverTuple struct{ first, second SpanObserver }
+
+func (l spanObserverTuple) Start(s *Span) {
+	l.first.Start(s)
+	l.second.Start(s)
+}
+
+func (l spanObserverTuple) Finish(s *Span, err error, panicked bool,
+	finish time.Time) {
+	l.first.Finish(s, err, panicked, finish)
+	l.second.Finish(s, err, panicked, finish)
+}
+
+type spanObserverRef struct {
+	observer SpanObserver
 }
 
 type Trace struct {
 	// sync/atomic things
-	spanWatcher unsafe.Pointer
+	spanObserver unsafe.Pointer
 
 	// immutable things from construction
 	id int64
@@ -41,34 +59,28 @@ func NewTrace(id int64) *Trace {
 	return &Trace{id: id}
 }
 
-func (t *Trace) observe(s *Span, err error, panicked bool, finish time.Time) {
-	watcher := (*spanWatcherRef)(atomic.LoadPointer(&t.spanWatcher))
-	if watcher != nil {
-		watcher.watcher(s, err, panicked, finish)
+func (t *Trace) getObserver() SpanObserver {
+	observer := (*spanObserverRef)(atomic.LoadPointer(&t.spanObserver))
+	if observer == nil {
+		return nil
 	}
+	return observer.observer
 }
 
-func (t *Trace) ObserveSpans(
-	cb func(s *Span, err error, panicked bool, finish time.Time)) {
-	if cb == nil {
-		return
-	}
+func (t *Trace) ObserveSpans(observer SpanObserver) {
 	for {
-		existing := (*spanWatcherRef)(atomic.LoadPointer(&t.spanWatcher))
+		existing := (*spanObserverRef)(atomic.LoadPointer(&t.spanObserver))
 		if existing == nil {
-			if atomic.CompareAndSwapPointer(&t.spanWatcher, nil,
-				unsafe.Pointer(&spanWatcherRef{watcher: cb})) {
+			if atomic.CompareAndSwapPointer(&t.spanObserver, nil,
+				unsafe.Pointer(&spanObserverRef{observer: observer})) {
 				break
 			}
 		} else {
-			other_cb := existing.watcher
-			if atomic.CompareAndSwapPointer(&t.spanWatcher,
+			otherObserver := existing.observer
+			if atomic.CompareAndSwapPointer(&t.spanObserver,
 				unsafe.Pointer(existing),
-				unsafe.Pointer(&spanWatcherRef{watcher: func(
-					s *Span, err error, panicked bool, finish time.Time) {
-					other_cb(s, err, panicked, finish)
-					cb(s, err, panicked, finish)
-				}})) {
+				unsafe.Pointer(&spanObserverRef{observer: spanObserverTuple{
+					first: otherObserver, second: observer}})) {
 				break
 			}
 		}

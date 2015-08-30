@@ -12,18 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitor
+package present
 
 import (
 	"net/http"
+
+	"github.com/spacemonkeygo/errors/errhttp"
+	"gopkg.in/spacemonkeygo/monitor.v2"
 )
 
-func (r *Registry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	p, contentType, found := PresentationFromPath(req.URL.Path)
-	if !found {
-		http.Error(w, "not found", 404)
+type handler struct {
+	Registry *monitor.Registry
+}
+
+func RegistryHandler(r *monitor.Registry) http.Handler {
+	return handler{Registry: r}
+}
+
+func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	p, contentType, err := FromRequest(h.Registry, req.URL.Path, req.URL.Query())
+	if err != nil {
+		http.Error(w, errhttp.GetErrorBody(err), errhttp.GetStatusCode(err, 500))
 		return
 	}
 	w.Header().Set("Content-Type", contentType)
-	p(r, w)
+	p(w)
 }

@@ -101,6 +101,8 @@ func (s *Scope) Stats(cb func(name string, val float64)) {
 	}
 }
 
+func (s *Scope) Name() string { return s.name }
+
 type namedSource struct {
 	name   string
 	source StatSource

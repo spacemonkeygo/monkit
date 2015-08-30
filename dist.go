@@ -45,3 +45,5 @@ func (d *dist) Insert(val float64) {
 func (d *dist) Query(quantile float64) (rv float64) {
 	return d.q.Query(quantile)
 }
+
+func (d *dist) Recent() float64 { return d.recent }

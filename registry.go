@@ -30,6 +30,10 @@ type Registry struct {
 	// sync/atomic things
 	traceWatcher unsafe.Pointer
 
+	watcherMtx     sync.Mutex
+	watcherCounter int64
+	traceWatchers  map[int64]func(*Trace)
+
 	scopeMtx sync.Mutex
 	scopes   map[string]*Scope
 
@@ -42,9 +46,10 @@ type Registry struct {
 
 func NewRegistry() *Registry {
 	return &Registry{
-		scopes:  map[string]*Scope{},
-		spans:   map[*Span]struct{}{},
-		orphans: map[*Span]struct{}{}}
+		traceWatchers: map[int64]func(*Trace){},
+		scopes:        map[string]*Scope{},
+		spans:         map[*Span]struct{}{},
+		orphans:       map[*Span]struct{}{}}
 }
 
 func (r *Registry) Package() *Scope {
@@ -70,28 +75,44 @@ func (r *Registry) observeTrace(t *Trace) {
 	}
 }
 
-func (r *Registry) ObserveTraces(cb func(*Trace)) {
-	if cb == nil {
-		return
+func (r *Registry) updateWatcher() {
+	cbs := make([]func(*Trace), 0, len(r.traceWatchers))
+	for _, cb := range r.traceWatchers {
+		cbs = append(cbs, cb)
 	}
-	for {
-		existing := (*traceWatcherRef)(atomic.LoadPointer(&r.traceWatcher))
-		if existing == nil {
-			if atomic.CompareAndSwapPointer(&r.traceWatcher, nil,
-				unsafe.Pointer(&traceWatcherRef{watcher: cb})) {
-				break
-			}
-		} else {
-			other_cb := existing.watcher
-			if atomic.CompareAndSwapPointer(&r.traceWatcher,
-				unsafe.Pointer(existing),
-				unsafe.Pointer(&traceWatcherRef{watcher: func(t *Trace) {
-					other_cb(t)
+	switch len(cbs) {
+	case 0:
+		atomic.StorePointer(&r.traceWatcher, nil)
+	case 1:
+		atomic.StorePointer(&r.traceWatcher,
+			unsafe.Pointer(&traceWatcherRef{watcher: cbs[0]}))
+	default:
+		atomic.StorePointer(&r.traceWatcher,
+			unsafe.Pointer(&traceWatcherRef{watcher: func(t *Trace) {
+				for _, cb := range cbs {
 					cb(t)
-				}})) {
-				break
-			}
-		}
+				}
+			}}))
+	}
+}
+
+func (r *Registry) ObserveTraces(cb func(*Trace)) (cancel func()) {
+	// even though observeTrace doesn't get a mutex, it's only ever loading
+	// the traceWatcher pointer, so we can use this mutex here to safely
+	// coordinate the setting of the traceWatcher pointer.
+	r.watcherMtx.Lock()
+	defer r.watcherMtx.Unlock()
+
+	cbId := r.watcherCounter
+	r.watcherCounter += 1
+	r.traceWatchers[cbId] = cb
+	r.updateWatcher()
+
+	return func() {
+		r.watcherMtx.Lock()
+		defer r.watcherMtx.Unlock()
+		delete(r.traceWatchers, cbId)
+		r.updateWatcher()
 	}
 }
 
@@ -119,7 +140,7 @@ func (r *Registry) orphanEnd(s *Span) {
 	r.orphanMtx.Unlock()
 }
 
-func (r *Registry) LiveSpans(cb func(s *Span)) {
+func (r *Registry) RootSpans(cb func(s *Span)) {
 	r.spanMtx.Lock()
 	spans := make([]*Span, 0, len(r.spans))
 	for s := range r.spans {
@@ -137,6 +158,17 @@ func (r *Registry) LiveSpans(cb func(s *Span)) {
 	for _, s := range spans {
 		cb(s)
 	}
+}
+
+func walkSpan(s *Span, cb func(s *Span)) {
+	cb(s)
+	s.Children(func(s *Span) {
+		walkSpan(s, cb)
+	})
+}
+
+func (r *Registry) AllSpans(cb func(s *Span)) {
+	r.RootSpans(func(s *Span) { walkSpan(s, cb) })
 }
 
 func (r *Registry) Scopes(cb func(s *Scope)) {
@@ -167,7 +199,7 @@ func (r *Registry) Stats(cb func(name string, val float64)) {
 var (
 	Default      = NewRegistry()
 	PackageNamed = Default.PackageNamed
-	LiveSpans    = Default.LiveSpans
+	RootSpans    = Default.RootSpans
 	Scopes       = Default.Scopes
 	Funcs        = Default.Funcs
 	Stats        = Default.Stats

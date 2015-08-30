@@ -140,9 +140,23 @@ func (f *Func) Stats(cb func(name string, val float64)) {
 	cb("failure times recent", f_recent)
 }
 
+func (f *Func) SuccessTimeRecent() (rv float64) {
+	f.parentsAndMutex.Lock()
+	rv = f.successTimes.Recent()
+	f.parentsAndMutex.Unlock()
+	return rv
+}
+
 func (f *Func) SuccessTimeQuantile(quantile float64) (rv float64) {
 	f.parentsAndMutex.Lock()
 	rv = f.successTimes.Query(quantile)
+	f.parentsAndMutex.Unlock()
+	return rv
+}
+
+func (f *Func) FailureTimeRecent() (rv float64) {
+	f.parentsAndMutex.Lock()
+	rv = f.failureTimes.Recent()
 	f.parentsAndMutex.Unlock()
 	return rv
 }

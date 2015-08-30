@@ -35,7 +35,11 @@ func (f LazyTask) Func() (out *Func) {
 	// never be) that controls what other behavior we want.
 	// in this case, if arg[0] is taskGetFunc, then f will place the func in the
 	// out location.
-	f(nil, taskGetFunc, &out)
+	// since someone can cast any function of this signature to a lazy task,
+	// let's make sure we got roughly expected behavior and panic otherwise
+	if f(nil, taskGetFunc, &out) != nil || out == nil {
+		panic("Func() called on a non-LazyTask function")
+	}
 	return out
 }
 
@@ -94,6 +98,18 @@ func (f *Func) RemoteTrace(ctx *context.Context, spanId int64, trace *Trace,
 		f.scope.r.observeTrace(trace)
 	}
 	s, exit := newSpan(*ctx, f, args, spanId, trace)
+	*ctx = s
+	return exit
+}
+
+func (f *Func) ResetTrace(ctx *context.Context,
+	args ...interface{}) func(*error) {
+	if ctx == nil && taskArgs(f, args) {
+		return nil
+	}
+	trace := NewTrace(NewId())
+	f.scope.r.observeTrace(trace)
+	s, exit := newSpan(*ctx, f, args, trace.Id(), trace)
 	*ctx = s
 	return exit
 }
