@@ -15,6 +15,7 @@
 package present
 
 import (
+	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -22,6 +23,13 @@ import (
 	"golang.org/x/net/context"
 	"gopkg.in/spacemonkeygo/monitor.v2"
 )
+
+type FinishedSpan struct {
+	Span     *monitor.Span
+	Err      error
+	Panicked bool
+	Finish   time.Time
+}
 
 // WatchForSpans will watch for traces that cross functions that 'matcher'
 // returns true for. As soon as a trace generates a span for a matched
@@ -33,9 +41,9 @@ import (
 // every trace that is started while this function is running. This only really
 // affects long-running traces.
 func WatchForSpans(ctx context.Context, r *monitor.Registry,
-	matcher func(f *monitor.Func) bool,
-	observe func(s *monitor.Span, err error, panicked bool, finish time.Time)) {
-	collector := newSpanCollector(matcher, observe)
+	matcher func(f *monitor.Func) bool) (rootSpan *FinishedSpan,
+	spansByParent map[*monitor.Span][]*FinishedSpan) {
+	collector := newSpanCollector(matcher)
 	canceler := r.ObserveTraces(func(t *monitor.Trace) {
 		t.ObserveSpans(collector)
 	})
@@ -44,27 +52,32 @@ func WatchForSpans(ctx context.Context, r *monitor.Registry,
 	select {
 	case <-ctx.Done():
 		collector.Stop()
+		return nil, nil
 	case <-collector.Done():
+		return collector.Spans()
 	}
 }
 
 type spanCollector struct {
 	// sync/atomic
-	span unsafe.Pointer
+	check unsafe.Pointer
 
 	// construction
 	matcher func(f *monitor.Func) bool
-	observe func(s *monitor.Span, err error, panicked bool, finish time.Time)
 	done    chan struct{}
+
+	// mtx protected
+	mtx           sync.Mutex
+	root          *FinishedSpan
+	spansByParent map[*monitor.Span][]*FinishedSpan
 }
 
-func newSpanCollector(matcher func(f *monitor.Func) bool,
-	observe func(s *monitor.Span, err error, panicked bool, finish time.Time)) (
-	rv *spanCollector) {
+func newSpanCollector(matcher func(f *monitor.Func) bool) (rv *spanCollector) {
 	return &spanCollector{
-		matcher: matcher,
-		observe: observe,
-		done:    make(chan struct{})}
+		matcher:       matcher,
+		done:          make(chan struct{}),
+		spansByParent: map[*monitor.Span][]*FinishedSpan{},
+	}
 }
 
 func (c *spanCollector) Done() <-chan struct{} {
@@ -80,26 +93,42 @@ var (
 )
 
 func (c *spanCollector) Start(s *monitor.Span) {
-	if atomic.LoadPointer(&c.span) != nil || !c.matcher(s.Func()) {
+	if atomic.LoadPointer(&c.check) != nil || !c.matcher(s.Func()) {
 		return
 	}
-	atomic.CompareAndSwapPointer(&c.span, nil, unsafe.Pointer(s))
+	atomic.CompareAndSwapPointer(&c.check, nil, unsafe.Pointer(s))
 }
 
 func (c *spanCollector) Finish(s *monitor.Span, err error, panicked bool,
 	finish time.Time) {
-	existing := atomic.LoadPointer(&c.span)
+	existing := atomic.LoadPointer(&c.check)
 	if existing == donePointer || existing == nil ||
 		((*monitor.Span)(existing)).Trace() != s.Trace() {
 		return
 	}
-	c.observe(s, err, panicked, finish)
+	fs := &FinishedSpan{Span: s, Err: err, Panicked: panicked, Finish: finish}
+	c.mtx.Lock()
+	if c.root != nil {
+		c.mtx.Unlock()
+		return
+	}
+	c.spansByParent[s.Parent()] = append(c.spansByParent[s.Parent()], fs)
 	if (*monitor.Span)(existing) == s {
+		c.root = fs
+		c.mtx.Unlock()
 		c.Stop()
+	} else {
+		c.mtx.Unlock()
 	}
 }
 
 func (c *spanCollector) Stop() {
-	atomic.StorePointer(&c.span, donePointer)
+	atomic.StorePointer(&c.check, donePointer)
 	close(c.done)
+}
+
+func (c *spanCollector) Spans() (rootSpan *FinishedSpan,
+	spansByParent map[*monitor.Span][]*FinishedSpan) {
+	// shouldn't need a mutex at this point
+	return c.root, c.spansByParent
 }

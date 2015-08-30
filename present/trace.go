@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"sync"
 	"time"
 
 	"golang.org/x/net/context"
@@ -44,7 +43,8 @@ func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
 		return err
 	}
 
-	spans, err := traceQuery(reg, w, matcher, []byte(" "))
+	spans, err := watchForSpansWithKeepalive(
+		reg, w, matcher, []byte(" "))
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,8 @@ func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
 func TraceQueryJSON(reg *monitor.Registry, w io.Writer,
 	matcher func(*monitor.Func) bool) (write_err error) {
 
-	spans, err := traceQuery(reg, w, matcher, []byte(" "))
+	spans, err := watchForSpansWithKeepalive(
+		reg, w, matcher, []byte(" "))
 	if err != nil {
 		return err
 	}
@@ -110,20 +111,20 @@ func TraceQueryJSON(reg *monitor.Registry, w io.Writer,
 	return lw.done()
 }
 
-func traceQuery(reg *monitor.Registry, w io.Writer,
-	matcher func(f *monitor.Func) bool,
-	keepalive []byte) (spans []*finishedSpan, write_err error) {
+func watchForSpansWithKeepalive(reg *monitor.Registry, w io.Writer,
+	matcher func(f *monitor.Func) bool, keepalive []byte) (
+	spans []*finishedSpan, write_err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	abort_ch := make(chan struct{})
-	var abort_ch_closed bool
-	abort := func() {
-		if !abort_ch_closed {
-			abort_ch_closed = true
-			close(abort_ch)
+	abortTimerCh := make(chan struct{})
+	var abortTimerChClosed bool
+	abortTimer := func() {
+		if !abortTimerChClosed {
+			abortTimerChClosed = true
+			close(abortTimerCh)
 		}
 	}
-	defer abort()
+	defer abortTimer()
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
@@ -134,31 +135,32 @@ func traceQuery(reg *monitor.Registry, w io.Writer,
 				if write_err != nil {
 					cancel()
 				}
-			case <-abort_ch:
+			case <-abortTimerCh:
 				return
 			}
 		}
 	}()
 
-	var mtx sync.Mutex
+	rootSpan, spansByParent := WatchForSpans(ctx, reg, matcher)
 
-	WatchForSpans(ctx, reg, matcher,
-		func(s *monitor.Span, err error, panicked bool, finish time.Time) {
-			mtx.Lock()
-			spans = append(spans,
-				&finishedSpan{
-					Span:     s,
-					Err:      &err,
-					Panicked: &panicked,
-					Finish:   &finish})
-			mtx.Unlock()
-		})
-
-	abort()
-	if write_err != nil {
+	abortTimer()
+	if write_err != nil || rootSpan == nil {
 		return nil, write_err
 	}
 
+	var walkSpans func(s *FinishedSpan)
+	walkSpans = func(s *FinishedSpan) {
+		spans = append(spans, &finishedSpan{
+			Span:     s.Span,
+			Err:      &s.Err,
+			Panicked: &s.Panicked,
+			Finish:   &s.Finish})
+		children := spansByParent[s.Span]
+		for _, child := range children {
+			walkSpans(child)
+		}
+	}
+	walkSpans(rootSpan)
 	return spans, nil
 }
 
