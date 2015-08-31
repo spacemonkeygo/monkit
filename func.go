@@ -25,6 +25,7 @@ import (
 type Func struct {
 	// sync/atomic things
 	current         int64
+	highwater       int64
 	parentsAndMutex funcSet
 
 	// constructor things
@@ -53,7 +54,14 @@ func newFunc(s *Scope, name string) *Func {
 
 func (f *Func) start(parent *Func) {
 	f.parentsAndMutex.Add(parent)
-	atomic.AddInt64(&f.current, 1)
+	current := atomic.AddInt64(&f.current, 1)
+	for {
+		highwater := atomic.LoadInt64(&f.highwater)
+		if current <= highwater ||
+			atomic.CompareAndSwapInt64(&f.highwater, highwater, current) {
+			break
+		}
+	}
 }
 
 func (f *Func) end(err error, panicked bool, duration time.Duration) {
@@ -77,7 +85,8 @@ func (f *Func) end(err error, panicked bool, duration time.Duration) {
 	f.parentsAndMutex.Unlock()
 }
 
-func (f *Func) Current() int64 { return atomic.LoadInt64(&f.current) }
+func (f *Func) Current() int64   { return atomic.LoadInt64(&f.current) }
+func (f *Func) Highwater() int64 { return atomic.LoadInt64(&f.highwater) }
 
 func (f *Func) Success() (rv int64) {
 	f.parentsAndMutex.Lock()

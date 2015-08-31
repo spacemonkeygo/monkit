@@ -55,8 +55,9 @@ func FuncsDot(r *monitor.Registry, w io.Writer) (err error) {
 		}
 
 		_, err = fmt.Fprintf(w, " f%d [label=\"%s", f.Id(),
-			escapeDotLabel("%s\ncurrent: %d, success: %d, errors: %d, panics: %d\n",
-				f.FullName(), f.Current(), success, total_errors, panics))
+			escapeDotLabel("%s\ncurrent: %d, highwater: %d, success: %d, "+
+				"errors: %d, panics: %d\n", f.FullName(), f.Current(), f.Highwater(),
+				success, total_errors, panics))
 		if err != nil {
 			return
 		}
@@ -156,8 +157,8 @@ func FuncsText(r *monitor.Registry, w io.Writer) (err error) {
 			total_errors += count
 		}
 		_, err = fmt.Fprintf(w,
-			"\n  current: %d, success: %d, errors: %d, panics: %d\n",
-			f.Current(), f.Success(), total_errors, f.Panics())
+			"\n  current: %d, highwater: %d, success: %d, errors: %d, panics: %d\n",
+			f.Current(), f.Highwater(), f.Success(), total_errors, f.Panics())
 		if err != nil {
 			return
 		}

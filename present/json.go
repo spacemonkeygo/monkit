@@ -91,6 +91,7 @@ func formatFunc(f *monitor.Func) interface{} {
 		Package      string           `json:"package"`
 		Name         string           `json:"name"`
 		Current      int64            `json:"current"`
+		Highwater    int64            `json:"highwater"`
 		Success      int64            `json:"success"`
 		Panics       int64            `json:"panics"`
 		Entry        bool             `json:"entry"`
@@ -116,6 +117,7 @@ func formatFunc(f *monitor.Func) interface{} {
 	js.Package = f.Scope().Name()
 	js.Name = f.ShortName()
 	js.Current = f.Current()
+	js.Highwater = f.Highwater()
 	js.Success = f.Success()
 	js.Panics = f.Panics()
 	js.Errors = f.Errors()
