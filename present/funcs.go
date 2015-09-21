@@ -23,10 +23,9 @@ import (
 	"gopkg.in/spacemonkeygo/monitor.v2"
 )
 
-func formatDist(querier func(float64) float64, indent string) (result string) {
+func formatDist(querier func(float64) time.Duration, indent string) (result string) {
 	for _, q := range monitor.ObservedQuantiles {
-		result += fmt.Sprintf("%s%.02f: %s\n", indent, q, time.Duration(
-			querier(q)*float64(time.Second)))
+		result += fmt.Sprintf("%s%.02f: %s\n", indent, q, querier(q))
 	}
 	return result
 }

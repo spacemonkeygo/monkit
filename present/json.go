@@ -97,12 +97,12 @@ func formatFunc(f *monitor.Func) interface{} {
 		Entry        bool             `json:"entry"`
 		Errors       map[string]int64 `json:"errors"`
 		SuccessTimes struct {
-			Recent    float64            `json:"recent"`
-			Quantiles map[string]float64 `json:"quantiles"`
+			Recent    time.Duration            `json:"recent"`
+			Quantiles map[string]time.Duration `json:"quantiles"`
 		} `json:"success_times"`
 		FailureTimes struct {
-			Recent    float64            `json:"recent"`
-			Quantiles map[string]float64 `json:"quantiles"`
+			Recent    time.Duration            `json:"recent"`
+			Quantiles map[string]time.Duration `json:"quantiles"`
 		} `json:"failure_times"`
 	}{}
 
@@ -122,10 +122,10 @@ func formatFunc(f *monitor.Func) interface{} {
 	js.Panics = f.Panics()
 	js.Errors = f.Errors()
 	js.SuccessTimes.Recent = f.SuccessTimeRecent()
-	js.SuccessTimes.Quantiles = make(map[string]float64,
+	js.SuccessTimes.Quantiles = make(map[string]time.Duration,
 		len(monitor.ObservedQuantiles))
 	js.FailureTimes.Recent = f.FailureTimeRecent()
-	js.FailureTimes.Quantiles = make(map[string]float64,
+	js.FailureTimes.Quantiles = make(map[string]time.Duration,
 		len(monitor.ObservedQuantiles))
 	for _, quantile := range monitor.ObservedQuantiles {
 		name := fmt.Sprintf("%.02f", quantile)

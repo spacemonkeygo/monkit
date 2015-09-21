@@ -65,22 +65,21 @@ func (f *Func) start(parent *Func) {
 }
 
 func (f *Func) end(err error, panicked bool, duration time.Duration) {
-	dur := duration.Seconds()
 	atomic.AddInt64(&f.current, -1)
 	f.parentsAndMutex.Lock()
 	if panicked {
 		f.panics -= 1
-		f.failureTimes.Insert(dur)
+		f.failureTimes.Insert(duration)
 		f.parentsAndMutex.Unlock()
 		return
 	}
 	if err == nil {
 		f.success += 1
-		f.successTimes.Insert(dur)
+		f.successTimes.Insert(duration)
 		f.parentsAndMutex.Unlock()
 		return
 	}
-	f.failureTimes.Insert(dur)
+	f.failureTimes.Insert(duration)
 	f.errors[errors.GetClass(err).String()] += 1
 	f.parentsAndMutex.Unlock()
 }
@@ -130,8 +129,8 @@ func (f *Func) Stats(cb func(name string, val float64)) {
 	for errname, count := range f.errors {
 		errs[errname] = count
 	}
-	s_min, s_med, s_max, s_recent := f.successTimes.Stats()
-	f_min, f_med, f_max, f_recent := f.failureTimes.Stats()
+	s_min, s_avg, s_max, s_recent := f.successTimes.Stats()
+	f_min, f_avg, f_max, f_recent := f.failureTimes.Stats()
 	f.parentsAndMutex.Unlock()
 
 	cb("success", float64(success))
@@ -139,38 +138,38 @@ func (f *Func) Stats(cb func(name string, val float64)) {
 		cb(fmt.Sprintf("error %s", errname), float64(count))
 	}
 	cb("panics", float64(panics))
-	cb("success times min", s_min)
-	cb("success times med", s_med)
-	cb("success times max", s_max)
-	cb("success times recent", s_recent)
-	cb("failure times min", f_min)
-	cb("failure times med", f_med)
-	cb("failure times max", f_max)
-	cb("failure times recent", f_recent)
+	cb("success times min", s_min.Seconds())
+	cb("success times avg", s_avg.Seconds())
+	cb("success times max", s_max.Seconds())
+	cb("success times recent", s_recent.Seconds())
+	cb("failure times min", f_min.Seconds())
+	cb("failure times avg", f_avg.Seconds())
+	cb("failure times max", f_max.Seconds())
+	cb("failure times recent", f_recent.Seconds())
 }
 
-func (f *Func) SuccessTimeRecent() (rv float64) {
+func (f *Func) SuccessTimeRecent() (rv time.Duration) {
 	f.parentsAndMutex.Lock()
 	rv = f.successTimes.Recent()
 	f.parentsAndMutex.Unlock()
 	return rv
 }
 
-func (f *Func) SuccessTimeQuantile(quantile float64) (rv float64) {
+func (f *Func) SuccessTimeQuantile(quantile float64) (rv time.Duration) {
 	f.parentsAndMutex.Lock()
 	rv = f.successTimes.Query(quantile)
 	f.parentsAndMutex.Unlock()
 	return rv
 }
 
-func (f *Func) FailureTimeRecent() (rv float64) {
+func (f *Func) FailureTimeRecent() (rv time.Duration) {
 	f.parentsAndMutex.Lock()
 	rv = f.failureTimes.Recent()
 	f.parentsAndMutex.Unlock()
 	return rv
 }
 
-func (f *Func) FailureTimeQuantile(quantile float64) (rv float64) {
+func (f *Func) FailureTimeQuantile(quantile float64) (rv time.Duration) {
 	f.parentsAndMutex.Lock()
 	rv = f.failureTimes.Query(quantile)
 	f.parentsAndMutex.Unlock()

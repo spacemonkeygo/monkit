@@ -15,35 +15,59 @@
 package monitor
 
 import (
-	"github.com/bmizerany/perks/quantile"
+	"time"
 )
 
 var (
-	// need to make sure to have 0, .5, and 1
-	ObservedQuantiles = []float64{0, .25, .5, .75, .90, .95, .99, 1}
+	ObservedQuantiles = []float64{0, 1}
 )
 
 // dist is not threadsafe
 type dist struct {
-	q      *quantile.Stream
-	recent float64
+	low, high   time.Duration
+	recent      time.Duration
+	totalValues int64
+	sum         time.Duration
 }
 
 func newDist() dist {
-	return dist{q: quantile.NewTargeted(ObservedQuantiles...)}
+	return dist{}
 }
 
-func (d *dist) Stats() (min, med, max, recent float64) {
-	return d.q.Query(0), d.q.Query(.5), d.q.Query(1), d.recent
+func (d *dist) Stats() (min, avg, max, recent time.Duration) {
+	return d.low, d.Average(), d.high, d.recent
 }
 
-func (d *dist) Insert(val float64) {
-	d.q.Insert(val)
+func (d *dist) Insert(val time.Duration) {
+	if d.totalValues != 0 {
+		if val < d.low {
+			d.low = val
+		}
+		if val > d.high {
+			d.high = val
+		}
+	} else {
+		d.low = val
+		d.high = val
+	}
 	d.recent = val
+	d.totalValues += 1
+	d.sum += val
 }
 
-func (d *dist) Query(quantile float64) (rv float64) {
-	return d.q.Query(quantile)
+func (d *dist) Average() time.Duration {
+	if d.totalValues > 0 {
+		return d.sum / time.Duration(d.totalValues)
+	} else {
+		return 0
+	}
+}
+func (d *dist) Query(quantile float64) (rv time.Duration) {
+	if quantile < .5 {
+		return d.low
+	} else {
+		return d.high
+	}
 }
 
-func (d *dist) Recent() float64 { return d.recent }
+func (d *dist) Recent() time.Duration { return d.recent }
