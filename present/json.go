@@ -97,10 +97,12 @@ func formatFunc(f *monitor.Func) interface{} {
 		Entry        bool             `json:"entry"`
 		Errors       map[string]int64 `json:"errors"`
 		SuccessTimes struct {
+			Average   time.Duration            `json:"average"`
 			Recent    time.Duration            `json:"recent"`
 			Quantiles map[string]time.Duration `json:"quantiles"`
 		} `json:"success_times"`
 		FailureTimes struct {
+			Average   time.Duration            `json:"average"`
 			Recent    time.Duration            `json:"recent"`
 			Quantiles map[string]time.Duration `json:"quantiles"`
 		} `json:"failure_times"`
@@ -121,9 +123,11 @@ func formatFunc(f *monitor.Func) interface{} {
 	js.Success = f.Success()
 	js.Panics = f.Panics()
 	js.Errors = f.Errors()
+	js.SuccessTimes.Average = f.SuccessTimeAverage()
 	js.SuccessTimes.Recent = f.SuccessTimeRecent()
 	js.SuccessTimes.Quantiles = make(map[string]time.Duration,
 		len(monitor.ObservedQuantiles))
+	js.FailureTimes.Average = f.FailureTimeAverage()
 	js.FailureTimes.Recent = f.FailureTimeRecent()
 	js.FailureTimes.Quantiles = make(map[string]time.Duration,
 		len(monitor.ObservedQuantiles))

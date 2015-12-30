@@ -148,6 +148,13 @@ func (f *Func) Stats(cb func(name string, val float64)) {
 	cb("failure times recent", f_recent.Seconds())
 }
 
+func (f *Func) SuccessTimeAverage() (rv time.Duration) {
+	f.parentsAndMutex.Lock()
+	rv = f.successTimes.Average()
+	f.parentsAndMutex.Unlock()
+	return rv
+}
+
 func (f *Func) SuccessTimeRecent() (rv time.Duration) {
 	f.parentsAndMutex.Lock()
 	rv = f.successTimes.Recent()
@@ -158,6 +165,13 @@ func (f *Func) SuccessTimeRecent() (rv time.Duration) {
 func (f *Func) SuccessTimeQuantile(quantile float64) (rv time.Duration) {
 	f.parentsAndMutex.Lock()
 	rv = f.successTimes.Query(quantile)
+	f.parentsAndMutex.Unlock()
+	return rv
+}
+
+func (f *Func) FailureTimeAverage() (rv time.Duration) {
+	f.parentsAndMutex.Lock()
+	rv = f.failureTimes.Average()
 	f.parentsAndMutex.Unlock()
 	return rv
 }
