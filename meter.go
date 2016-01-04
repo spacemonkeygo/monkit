@@ -30,15 +30,23 @@ var (
 	defaultTicker = ticker{}
 )
 
+type meterBucket struct {
+	count int64
+	start time.Duration
+}
+
 type Meter struct {
-	mtx       sync.Mutex
-	total     int64
-	last_tick time.Duration
-	slices    [ticksToKeep]int64
+	mtx    sync.Mutex
+	total  int64
+	slices [ticksToKeep]meterBucket
 }
 
 func newMeter() *Meter {
-	rv := &Meter{last_tick: monotime.Monotonic()}
+	rv := &Meter{}
+	now := monotime.Monotonic()
+	for i := 0; i < ticksToKeep; i++ {
+		rv.slices[i].start = now
+	}
 	defaultTicker.register(rv)
 	return rv
 }
@@ -51,25 +59,28 @@ func (e *Meter) SetTotal(total int64) {
 
 func (e *Meter) Mark(amount int) {
 	e.mtx.Lock()
-	e.slices[ticksToKeep-1] += int64(amount)
+	e.slices[ticksToKeep-1].count += int64(amount)
 	e.mtx.Unlock()
 }
 
 func (e *Meter) tick(now time.Duration) {
 	e.mtx.Lock()
-	e.total += e.slices[0]
-	copy(e.slices[:], e.slices[1:])
-	e.slices[ticksToKeep-1] = 0
-	e.last_tick = now
+	// only advance meter buckets if something happened. otherwise
+	// rare events will always just have zero rates.
+	if e.slices[ticksToKeep-1].count != 0 {
+		e.total += e.slices[0].count
+		copy(e.slices[:], e.slices[1:])
+		e.slices[ticksToKeep-1] = meterBucket{count: 0, start: now}
+	}
 	e.mtx.Unlock()
 }
 
 func (e *Meter) stats(now time.Duration) (rate float64, total int64) {
 	current := int64(0)
 	e.mtx.Lock()
-	start := e.last_tick - (timePerTick * (ticksToKeep - 1))
+	start := e.slices[0].start
 	for i := 0; i < ticksToKeep; i++ {
-		current += e.slices[i]
+		current += e.slices[i].count
 	}
 	total = e.total
 	e.mtx.Unlock()

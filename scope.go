@@ -86,6 +86,10 @@ func (s *Scope) Meter(name string) *Meter {
 	return m
 }
 
+func (s *Scope) Event(name string) {
+	s.Meter(name).Mark(1)
+}
+
 func (s *Scope) Stats(cb func(name string, val float64)) {
 	s.mtx.Lock()
 	sources := make([]namedSource, 0, len(s.sources))
