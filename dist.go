@@ -98,6 +98,10 @@ func (d *dist) Query(quantile float64) time.Duration {
 		rlen = int(d.totalValues)
 	}
 
+	if rlen < 2 {
+	  return time.Duration(d.reservoir[0])
+	}
+
 	idx_float := quantile * float64(rlen-1)
 	idx := int(idx_float)
 
