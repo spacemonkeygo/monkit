@@ -32,8 +32,7 @@ const (
 	fontOffset = int(barHeight * .2)
 )
 
-func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
-	matcher func(*monitor.Func) bool) error {
+func SpansToSVG(w io.Writer, spans []*FinishedSpan) error {
 	_, err := fmt.Fprint(w, `<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -43,16 +42,10 @@ func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
 		return err
 	}
 
-	spans, err := watchForSpansWithKeepalive(
-		reg, w, matcher, []byte(" "))
-	if err != nil {
-		return err
-	}
-
 	var minStart, maxEnd time.Time
 	for _, s := range spans {
 		start := s.Span.Start()
-		finish := *s.Finish
+		finish := s.Finish
 		if minStart.IsZero() || start.Before(minStart) {
 			minStart = start
 		}
@@ -60,7 +53,7 @@ func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
 			maxEnd = finish
 		}
 	}
-	sort.Sort(startTimeSorter(spans))
+	StartTimeSorter(spans).Sort()
 
 	timeToX := func(t time.Time) int64 {
 		return ((t.UnixNano() - minStart.UnixNano()) * graphWidth) /
@@ -83,7 +76,7 @@ func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
     <rect x="%d" y="%d" width="%d" height="%d" fill="rgb(128,128,255)" />
     <text x="0" y="%d" fill="rgb(0,0,0)" font-size="%d">%s (%s)</text>
   </g>`, timeToX(s.Span.Start()), id*(barHeight+barSep),
-			timeToX(*s.Finish)-timeToX(s.Span.Start()), barHeight,
+			timeToX(s.Finish)-timeToX(s.Span.Start()), barHeight,
 			(id+1)*(barHeight+barSep)-barSep-fontOffset, fontSize,
 			s.Span.Func().FullName(), s.Finish.Sub(s.Span.Start()))
 		if err != nil {
@@ -95,15 +88,31 @@ func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
 	return err
 }
 
-func TraceQueryJSON(reg *monitor.Registry, w io.Writer,
-	matcher func(*monitor.Func) bool) (write_err error) {
-
+func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
+	matcher func(*monitor.Func) bool) error {
 	spans, err := watchForSpansWithKeepalive(
-		reg, w, matcher, []byte(" "))
+		reg, w, matcher, []byte("\n"))
 	if err != nil {
 		return err
 	}
 
+	return SpansToSVG(w, spans)
+
+}
+
+func TraceQueryJSON(reg *monitor.Registry, w io.Writer,
+	matcher func(*monitor.Func) bool) (write_err error) {
+
+	spans, err := watchForSpansWithKeepalive(
+		reg, w, matcher, []byte("\n"))
+	if err != nil {
+		return err
+	}
+
+	return SpansToJSON(w, spans)
+}
+
+func SpansToJSON(w io.Writer, spans []*FinishedSpan) error {
 	lw := newListWriter(w)
 	for _, s := range spans {
 		lw.elem(formatFinishedSpan(s))
@@ -113,7 +122,7 @@ func TraceQueryJSON(reg *monitor.Registry, w io.Writer,
 
 func watchForSpansWithKeepalive(reg *monitor.Registry, w io.Writer,
 	matcher func(f *monitor.Func) bool, keepalive []byte) (
-	spans []*finishedSpan, write_err error) {
+	spans []*FinishedSpan, write_err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	abortTimerCh := make(chan struct{})
@@ -141,34 +150,23 @@ func watchForSpansWithKeepalive(reg *monitor.Registry, w io.Writer,
 		}
 	}()
 
-	rootSpan, spansByParent := WatchForSpans(ctx, reg, matcher)
+	spans, err := WatchForSpans(ctx, reg, matcher)
 
 	abortTimer()
-	if write_err != nil || rootSpan == nil {
+	if write_err != nil {
 		return nil, write_err
 	}
 
-	var walkSpans func(s *FinishedSpan)
-	walkSpans = func(s *FinishedSpan) {
-		spans = append(spans, &finishedSpan{
-			Span:     s.Span,
-			Err:      &s.Err,
-			Panicked: &s.Panicked,
-			Finish:   &s.Finish})
-		children := spansByParent[s.Span]
-		for _, child := range children {
-			walkSpans(child)
-		}
-	}
-	walkSpans(rootSpan)
-	return spans, nil
+	return spans, err
 }
 
-type startTimeSorter []*finishedSpan
+type StartTimeSorter []*FinishedSpan
 
-func (s startTimeSorter) Len() int      { return len(s) }
-func (s startTimeSorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s StartTimeSorter) Len() int      { return len(s) }
+func (s StartTimeSorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
-func (s startTimeSorter) Less(i, j int) bool {
+func (s StartTimeSorter) Less(i, j int) bool {
 	return s[i].Span.Start().UnixNano() < s[j].Span.Start().UnixNano()
 }
+
+func (s StartTimeSorter) Sort() { sort.Sort(s) }

@@ -15,6 +15,7 @@
 package present
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,9 +42,9 @@ type FinishedSpan struct {
 // every trace that is started while this function is running. This only really
 // affects long-running traces.
 func WatchForSpans(ctx context.Context, r *monitor.Registry,
-	matcher func(f *monitor.Func) bool) (rootSpan *FinishedSpan,
-	spansByParent map[*monitor.Span][]*FinishedSpan) {
+	matcher func(f *monitor.Func) bool) (spans []*FinishedSpan, err error) {
 	collector := newSpanCollector(matcher)
+	defer collector.Stop()
 	canceler := r.ObserveTraces(func(t *monitor.Trace) {
 		t.ObserveSpans(collector)
 	})
@@ -51,11 +52,33 @@ func WatchForSpans(ctx context.Context, r *monitor.Registry,
 
 	select {
 	case <-ctx.Done():
-		collector.Stop()
-		return nil, nil
+		return nil, ctx.Err()
 	case <-collector.Done():
-		return collector.Spans()
+		return collector.Spans(), nil
 	}
+}
+
+// CollectSpans is kind of like WatchForSpans, except that it uses the current
+// span to figure out which trace to collect. It calls work(), then collects
+// from the current trace until work() returns.
+func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
+	spans []*FinishedSpan) {
+	s := monitor.SpanFromCtx(ctx)
+	if s == nil {
+		work(ctx)
+		return nil
+	}
+	collector := newSpanCollector(func(*monitor.Func) bool { return false })
+	defer collector.Stop()
+	s.Trace().ObserveSpans(collector)
+	f := s.Func()
+	newF := f.Scope().FuncNamed(fmt.Sprintf("%s-TRACED", f.ShortName()))
+	func() {
+		defer newF.Task(&ctx)(nil)
+		collector.ForceStart(monitor.SpanFromCtx(ctx))
+		work(ctx)
+	}()
+	return collector.Spans()
 }
 
 type spanCollector struct {
@@ -72,7 +95,8 @@ type spanCollector struct {
 	spansByParent map[*monitor.Span][]*FinishedSpan
 }
 
-func newSpanCollector(matcher func(f *monitor.Func) bool) (rv *spanCollector) {
+func newSpanCollector(matcher func(f *monitor.Func) bool) (
+	rv *spanCollector) {
 	return &spanCollector{
 		matcher:       matcher,
 		done:          make(chan struct{}),
@@ -91,6 +115,10 @@ type nonce struct {
 var (
 	donePointer = unsafe.Pointer(&nonce{})
 )
+
+func (c *spanCollector) ForceStart(endSpan *monitor.Span) {
+	atomic.CompareAndSwapPointer(&c.check, nil, unsafe.Pointer(endSpan))
+}
 
 func (c *spanCollector) Start(s *monitor.Span) {
 	if atomic.LoadPointer(&c.check) != nil || !c.matcher(s.Func()) {
@@ -112,23 +140,34 @@ func (c *spanCollector) Finish(s *monitor.Span, err error, panicked bool,
 		c.mtx.Unlock()
 		return
 	}
-	c.spansByParent[s.Parent()] = append(c.spansByParent[s.Parent()], fs)
 	if (*monitor.Span)(existing) == s {
 		c.root = fs
 		c.mtx.Unlock()
 		c.Stop()
 	} else {
+		c.spansByParent[s.Parent()] = append(c.spansByParent[s.Parent()], fs)
 		c.mtx.Unlock()
 	}
 }
 
 func (c *spanCollector) Stop() {
-	atomic.StorePointer(&c.check, donePointer)
-	close(c.done)
+	if atomic.SwapPointer(&c.check, donePointer) != donePointer {
+		close(c.done)
+	}
 }
 
-func (c *spanCollector) Spans() (rootSpan *FinishedSpan,
-	spansByParent map[*monitor.Span][]*FinishedSpan) {
-	// shouldn't need a mutex at this point
-	return c.root, c.spansByParent
+func (c *spanCollector) Spans() (spans []*FinishedSpan) {
+	var walkSpans func(s *FinishedSpan)
+	walkSpans = func(s *FinishedSpan) {
+		spans = append(spans, s)
+		for _, child := range c.spansByParent[s.Span] {
+			walkSpans(child)
+		}
+	}
+	c.mtx.Lock()
+	if c.root != nil {
+		walkSpans(c.root)
+	}
+	c.mtx.Unlock()
+	return spans
 }

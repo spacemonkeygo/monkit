@@ -23,18 +23,7 @@ import (
 	"gopkg.in/spacemonkeygo/monitor.v2"
 )
 
-type finishedSpan struct {
-	Span     *monitor.Span
-	Err      *error
-	Panicked *bool
-	Finish   *time.Time
-}
-
 func formatSpan(s *monitor.Span) interface{} {
-	return formatFinishedSpan(&finishedSpan{Span: s})
-}
-
-func formatFinishedSpan(s *finishedSpan) interface{} {
 	js := struct {
 		Id       int64  `json:"id"`
 		ParentId *int64 `json:"parent_id,omitempty"`
@@ -46,10 +35,48 @@ func formatFinishedSpan(s *finishedSpan) interface{} {
 			Id int64 `json:"id"`
 		} `json:"trace"`
 		Start       int64      `json:"start"`
-		Finish      *int64     `json:"finish,omitempty"`
 		Orphaned    bool       `json:"orphaned"`
-		Err         *string    `json:"err,omitempty"`
-		Panicked    *bool      `json:"panicked,omitempty"`
+		Args        []string   `json:"args"`
+		Annotations [][]string `json:"annotations"`
+	}{}
+	js.Id = s.Id()
+	if s.Parent() != nil {
+		parent_id := s.Parent().Id()
+		js.ParentId = &parent_id
+	}
+	js.Func.Package = s.Func().Scope().Name()
+	js.Func.Name = s.Func().ShortName()
+	js.Trace.Id = s.Trace().Id()
+	js.Start = s.Start().UnixNano()
+	js.Orphaned = s.Orphaned()
+	js.Args = make([]string, 0, len(s.Args()))
+	for _, arg := range s.Args() {
+		js.Args = append(js.Args, fmt.Sprint("%#v", arg))
+	}
+	js.Annotations = make([][]string, 0, len(s.Annotations()))
+	for _, annotation := range s.Annotations() {
+		js.Annotations = append(js.Annotations,
+			[]string{annotation.Name, annotation.Value})
+	}
+	return js
+}
+
+func formatFinishedSpan(s *FinishedSpan) interface{} {
+	js := struct {
+		Id       int64  `json:"id"`
+		ParentId *int64 `json:"parent_id,omitempty"`
+		Func     struct {
+			Package string `json:"package"`
+			Name    string `json:"name"`
+		} `json:"func"`
+		Trace struct {
+			Id int64 `json:"id"`
+		} `json:"trace"`
+		Start       int64      `json:"start"`
+		Finish      int64      `json:"finish"`
+		Orphaned    bool       `json:"orphaned"`
+		Err         string     `json:"err"`
+		Panicked    bool       `json:"panicked"`
 		Args        []string   `json:"args"`
 		Annotations [][]string `json:"annotations"`
 	}{}
@@ -62,14 +89,11 @@ func formatFinishedSpan(s *finishedSpan) interface{} {
 	js.Func.Name = s.Span.Func().ShortName()
 	js.Trace.Id = s.Span.Trace().Id()
 	js.Start = s.Span.Start().UnixNano()
-	if s.Finish != nil {
-		finish := s.Finish.UnixNano()
-		js.Finish = &finish
-	}
+	js.Finish = s.Finish.UnixNano()
 	js.Orphaned = s.Span.Orphaned()
-	if s.Err != nil && *s.Err != nil {
-		errstr := (*s.Err).Error()
-		js.Err = &errstr
+	if s.Err != nil {
+		errstr := s.Err.Error()
+		js.Err = errstr
 	}
 	js.Panicked = s.Panicked
 	js.Args = make([]string, 0, len(s.Span.Args()))
