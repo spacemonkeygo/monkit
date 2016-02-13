@@ -89,7 +89,7 @@ func SpansToSVG(w io.Writer, spans []*FinishedSpan) error {
 }
 
 func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
-	matcher func(*monitor.Func) bool) error {
+	matcher func(*monitor.Span) bool) error {
 	spans, err := watchForSpansWithKeepalive(
 		reg, w, matcher, []byte("\n"))
 	if err != nil {
@@ -101,7 +101,7 @@ func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
 }
 
 func TraceQueryJSON(reg *monitor.Registry, w io.Writer,
-	matcher func(*monitor.Func) bool) (write_err error) {
+	matcher func(*monitor.Span) bool) (write_err error) {
 
 	spans, err := watchForSpansWithKeepalive(
 		reg, w, matcher, []byte("\n"))
@@ -121,7 +121,7 @@ func SpansToJSON(w io.Writer, spans []*FinishedSpan) error {
 }
 
 func watchForSpansWithKeepalive(reg *monitor.Registry, w io.Writer,
-	matcher func(f *monitor.Func) bool, keepalive []byte) (
+	matcher func(s *monitor.Span) bool, keepalive []byte) (
 	spans []*FinishedSpan, write_err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 

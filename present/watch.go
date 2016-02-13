@@ -42,8 +42,8 @@ type FinishedSpan struct {
 // every trace that is started while this function is running. This only really
 // affects long-running traces.
 func WatchForSpans(ctx context.Context, r *monitor.Registry,
-	matcher func(f *monitor.Func) bool) (spans []*FinishedSpan, err error) {
-	collector := newSpanCollector(matcher)
+	matcher func(s *monitor.Span) bool) (spans []*FinishedSpan, err error) {
+	collector := NewSpanCollector(matcher)
 	defer collector.Stop()
 	canceler := r.ObserveTraces(func(t *monitor.Trace) {
 		t.ObserveSpans(collector)
@@ -68,7 +68,7 @@ func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
 		work(ctx)
 		return nil
 	}
-	collector := newSpanCollector(func(*monitor.Func) bool { return false })
+	collector := NewSpanCollector(nil)
 	defer collector.Stop()
 	s.Trace().ObserveSpans(collector)
 	f := s.Func()
@@ -81,12 +81,12 @@ func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
 	return collector.Spans()
 }
 
-type spanCollector struct {
+type SpanCollector struct {
 	// sync/atomic
 	check unsafe.Pointer
 
 	// construction
-	matcher func(f *monitor.Func) bool
+	matcher func(s *monitor.Span) bool
 	done    chan struct{}
 
 	// mtx protected
@@ -95,16 +95,24 @@ type spanCollector struct {
 	spansByParent map[*monitor.Span][]*FinishedSpan
 }
 
-func newSpanCollector(matcher func(f *monitor.Func) bool) (
-	rv *spanCollector) {
-	return &spanCollector{
+// NewSpanCollector takes a matcher that will return true when a span is found
+// that should start collection. matcher can be nil if you intend to use
+// ForceStart instead.
+func NewSpanCollector(matcher func(s *monitor.Span) bool) (
+	rv *SpanCollector) {
+	if matcher == nil {
+		matcher = func(*monitor.Span) bool { return false }
+	}
+	return &SpanCollector{
 		matcher:       matcher,
 		done:          make(chan struct{}),
 		spansByParent: map[*monitor.Span][]*FinishedSpan{},
 	}
 }
 
-func (c *spanCollector) Done() <-chan struct{} {
+// Done returns a channel that's closed when the SpanCollector has collected
+// everything.
+func (c *SpanCollector) Done() <-chan struct{} {
 	return c.done
 }
 
@@ -116,18 +124,24 @@ var (
 	donePointer = unsafe.Pointer(&nonce{})
 )
 
-func (c *spanCollector) ForceStart(endSpan *monitor.Span) {
+// ForceStart starts the span collector collecting spans, stopping when endSpan
+// finishes
+func (c *SpanCollector) ForceStart(endSpan *monitor.Span) {
 	atomic.CompareAndSwapPointer(&c.check, nil, unsafe.Pointer(endSpan))
 }
 
-func (c *spanCollector) Start(s *monitor.Span) {
-	if atomic.LoadPointer(&c.check) != nil || !c.matcher(s.Func()) {
+// Start is to implement the monitor.SpanObserver interface. Start is called
+// whenever a Span starts.
+func (c *SpanCollector) Start(s *monitor.Span) {
+	if atomic.LoadPointer(&c.check) != nil || !c.matcher(s) {
 		return
 	}
 	atomic.CompareAndSwapPointer(&c.check, nil, unsafe.Pointer(s))
 }
 
-func (c *spanCollector) Finish(s *monitor.Span, err error, panicked bool,
+// Finish is to implement the monitor.SpanObserver interface. Finish is called
+// whenever a Span finishes.
+func (c *SpanCollector) Finish(s *monitor.Span, err error, panicked bool,
 	finish time.Time) {
 	existing := atomic.LoadPointer(&c.check)
 	if existing == donePointer || existing == nil ||
@@ -150,13 +164,16 @@ func (c *spanCollector) Finish(s *monitor.Span, err error, panicked bool,
 	}
 }
 
-func (c *spanCollector) Stop() {
+// Stop stops the SpanCollector from collecting.
+func (c *SpanCollector) Stop() {
 	if atomic.SwapPointer(&c.check, donePointer) != donePointer {
 		close(c.done)
 	}
 }
 
-func (c *spanCollector) Spans() (spans []*FinishedSpan) {
+// Spans returns all spans found, rooted from the Span the collector started
+// on.
+func (c *SpanCollector) Spans() (spans []*FinishedSpan) {
 	var walkSpans func(s *FinishedSpan)
 	walkSpans = func(s *FinishedSpan) {
 		spans = append(spans, s)

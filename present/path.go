@@ -101,14 +101,15 @@ func FromRequest(reg *monitor.Registry, path string, query url.Values) (
 			}
 			matcher = func(f *monitor.Func) bool { return funcs[f] }
 		}
+		spanMatcher := func(s *monitor.Span) bool { return matcher(s.Func()) }
 		switch second {
 		case "svg":
 			return func(w io.Writer) error {
-				return TraceQuerySVG(reg, w, matcher)
+				return TraceQuerySVG(reg, w, spanMatcher)
 			}, "image/svg+xml; charset=utf-8", nil
 		case "json":
 			return func(w io.Writer) error {
-				return TraceQueryJSON(reg, w, matcher)
+				return TraceQueryJSON(reg, w, spanMatcher)
 			}, "application/json; charset=utf-8", nil
 		}
 	}
