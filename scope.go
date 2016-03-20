@@ -114,6 +114,16 @@ func (s *Scope) BoolVal(name string) *BoolVal {
 	return m
 }
 
+func (s *Scope) Counter(name string) *Counter {
+	source := s.newSource(name, newCounter)
+	m, ok := source.(*Counter)
+	if !ok {
+		panic(fmt.Sprintf("%s already used for another stats source: %#v",
+			name, source))
+	}
+	return m
+}
+
 func (s *Scope) Event(name string) {
 	s.Meter(name).Mark(1)
 }
