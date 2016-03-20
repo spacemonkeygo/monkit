@@ -84,6 +84,10 @@ func (s *Scope) Meter(name string) *Meter {
 	return m
 }
 
+func (s *Scope) Event(name string) {
+	s.Meter(name).Mark(1)
+}
+
 func (s *Scope) IntVal(name string) *IntVal {
 	source := s.newSource(name, newIntVal)
 	m, ok := source.(*IntVal)
@@ -124,8 +128,30 @@ func (s *Scope) Counter(name string) *Counter {
 	return m
 }
 
-func (s *Scope) Event(name string) {
-	s.Meter(name).Mark(1)
+func (s *Scope) Gauge(name string, cb func() float64) {
+	// gauges allow overwriting
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	if source, exists := s.sources[name]; exists {
+		if _, ok := source.(gauge); !ok {
+			panic(fmt.Sprintf("%s already used for another stats source: %#v",
+				name, source))
+		}
+	}
+	s.sources[name] = gauge{cb: cb}
+}
+
+func (s *Scope) Chain(name string, source StatSource) {
+	// chains allow overwriting
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	if source, exists := s.sources[name]; exists {
+		if _, ok := source.(chain); !ok {
+			panic(fmt.Sprintf("%s already used for another stats source: %#v",
+				name, source))
+		}
+	}
+	s.sources[name] = chain{source: source}
 }
 
 func (s *Scope) Stats(cb func(name string, val float64)) {

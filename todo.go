@@ -18,13 +18,6 @@ package monitor
 //	"golang.org/x/net/context"
 //)
 
-//func (s *Scope) Gauge(name string, cb func() float64) {
-//}
-
-//func (s *Scope) Chain(
-//	prefix string, data func(cb func(key string, val float64))) {
-//}
-
 //type Timer struct{}
 
 //func (s *Scope) Timer(name string) *Timer { return &Timer{} }
@@ -41,12 +34,8 @@ package monitor
 //func (s *Scope) Notice(ctx context.Context) {}
 //func (s *Scope) Warn(ctx context.Context)   {}
 
-//// Gauge - register a function
 //// Timer - distribution/meter
 
-//// Chain - register a subgroup
 //// Data - observe a tuple
-//// Event/Meter
-//// Task
 
 //// Log
