@@ -36,12 +36,13 @@ func (v *IntVal) Add(val int64) {
 
 func (v *IntVal) Stats(cb func(name string, val float64)) {
 	v.mtx.Lock()
-	min, avg, max, recent := v.dist.Stats()
+	min, avg, max, recent, sum := v.dist.Stats()
 	v.mtx.Unlock()
 	cb("avg", float64(avg))
 	cb("max", float64(max))
 	cb("min", float64(min))
 	cb("recent", float64(recent))
+	cb("sum", float64(sum))
 }
 
 func (v *IntVal) Quantile(quantile float64) (rv int64) {
@@ -68,12 +69,13 @@ func (v *FloatVal) Add(val float64) {
 
 func (v *FloatVal) Stats(cb func(name string, val float64)) {
 	v.mtx.Lock()
-	min, avg, max, recent := v.dist.Stats()
+	min, avg, max, recent, sum := v.dist.Stats()
 	v.mtx.Unlock()
 	cb("avg", avg)
 	cb("max", max)
 	cb("min", min)
 	cb("recent", recent)
+	cb("sum", sum)
 }
 
 func (v *FloatVal) Quantile(quantile float64) (rv float64) {

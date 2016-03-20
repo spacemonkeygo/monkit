@@ -41,8 +41,8 @@ func newIntDist() intDist {
 	return intDist{lcg: newLCG()}
 }
 
-func (d *intDist) Stats() (min, avg, max, recent int64) {
-	return d.low, d.Average(), d.high, d.recent
+func (d *intDist) Stats() (min, avg, max, recent, sum int64) {
+	return d.low, d.Average(), d.high, d.recent, d.sum
 }
 
 func (d *intDist) Insert(val int64) {
@@ -131,8 +131,8 @@ func newFloatDist() floatDist {
 	return floatDist{lcg: newLCG()}
 }
 
-func (d *floatDist) Stats() (min, avg, max, recent float64) {
-	return d.low, d.Average(), d.high, d.recent
+func (d *floatDist) Stats() (min, avg, max, recent, sum float64) {
+	return d.low, d.Average(), d.high, d.recent, d.sum
 }
 
 func (d *floatDist) Insert(val float64) {

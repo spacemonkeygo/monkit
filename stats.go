@@ -17,3 +17,13 @@ package monitor
 type StatSource interface {
 	Stats(cb func(name string, val float64))
 }
+
+// Collect takes something that implements the StatSource interface and returns
+// a key/value map.
+func Collect(mon StatSource) map[string]float64 {
+	rv := make(map[string]float64)
+	mon.Stats(func(name string, val float64) {
+		rv[name] = val
+	})
+	return rv
+}

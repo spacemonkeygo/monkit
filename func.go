@@ -129,8 +129,8 @@ func (f *Func) Stats(cb func(name string, val float64)) {
 	for errname, count := range f.errors {
 		errs[errname] = count
 	}
-	s_min, s_avg, s_max, s_recent := f.successTimes.Stats()
-	f_min, f_avg, f_max, f_recent := f.failureTimes.Stats()
+	s_min, s_avg, s_max, s_recent, _ := f.successTimes.Stats()
+	f_min, f_avg, f_max, f_recent, _ := f.failureTimes.Stats()
 	f.parentsAndMutex.Unlock()
 
 	cb("success", float64(success))
