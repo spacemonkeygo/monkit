@@ -88,6 +88,16 @@ func (s *Scope) Event(name string) {
 	s.Meter(name).Mark(1)
 }
 
+func (s *Scope) DiffMeter(name string, m1, m2 *Meter) {
+	source := s.newSource(name, func() StatSource {
+		return newDiffMeter(m1, m2)
+	})
+	if _, ok := source.(*DiffMeter); !ok {
+		panic(fmt.Sprintf("%s already used for another stats source: %#v",
+			name, source))
+	}
+}
+
 func (s *Scope) IntVal(name string) *IntVal {
 	source := s.newSource(name, newIntVal)
 	m, ok := source.(*IntVal)

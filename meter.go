@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	ticksToKeep = 4
-	timePerTick = time.Minute
+	ticksToKeep = 24
+	timePerTick = 10 * time.Minute
 )
 
 var (
@@ -93,6 +93,22 @@ func (e *Meter) Stats(cb func(name string, val float64)) {
 	rate, total := e.stats(monotime.Monotonic())
 	cb("rate", rate)
 	cb("total", float64(total))
+}
+
+type DiffMeter struct {
+	meter1, meter2 *Meter
+}
+
+func newDiffMeter(meter1, meter2 *Meter) *DiffMeter {
+	return &DiffMeter{meter1: meter1, meter2: meter2}
+}
+
+func (m *DiffMeter) Stats(cb func(name string, val float64)) {
+	now := monotime.Monotonic()
+	rate1, total1 := m.meter1.stats(now)
+	rate2, total2 := m.meter2.stats(now)
+	cb("rate", rate1-rate2)
+	cb("total", float64(total1-total2))
 }
 
 type ticker struct {
