@@ -35,10 +35,10 @@ type Func struct {
 
 	// mutex things (reuses mutex from parents)
 	success      int64
-	successTimes dist
+	successTimes intDist
 	errors       map[string]int64
 	panics       int64
-	failureTimes dist
+	failureTimes intDist
 }
 
 func newFunc(s *Scope, name string) *Func {
@@ -47,8 +47,8 @@ func newFunc(s *Scope, name string) *Func {
 		scope:        s,
 		name:         name,
 		errors:       make(map[string]int64),
-		successTimes: newDist(),
-		failureTimes: newDist(),
+		successTimes: newIntDist(),
+		failureTimes: newIntDist(),
 	}
 }
 
@@ -69,17 +69,17 @@ func (f *Func) end(err error, panicked bool, duration time.Duration) {
 	f.parentsAndMutex.Lock()
 	if panicked {
 		f.panics -= 1
-		f.failureTimes.Insert(duration)
+		f.failureTimes.Insert(int64(duration))
 		f.parentsAndMutex.Unlock()
 		return
 	}
 	if err == nil {
 		f.success += 1
-		f.successTimes.Insert(duration)
+		f.successTimes.Insert(int64(duration))
 		f.parentsAndMutex.Unlock()
 		return
 	}
-	f.failureTimes.Insert(duration)
+	f.failureTimes.Insert(int64(duration))
 	f.errors[errors.GetClass(err).String()] += 1
 	f.parentsAndMutex.Unlock()
 }
@@ -138,54 +138,54 @@ func (f *Func) Stats(cb func(name string, val float64)) {
 		cb(fmt.Sprintf("error %s", errname), float64(count))
 	}
 	cb("panics", float64(panics))
-	cb("success times min", s_min.Seconds())
-	cb("success times avg", s_avg.Seconds())
-	cb("success times max", s_max.Seconds())
-	cb("success times recent", s_recent.Seconds())
-	cb("failure times min", f_min.Seconds())
-	cb("failure times avg", f_avg.Seconds())
-	cb("failure times max", f_max.Seconds())
-	cb("failure times recent", f_recent.Seconds())
+	cb("success times min", time.Duration(s_min).Seconds())
+	cb("success times avg", time.Duration(s_avg).Seconds())
+	cb("success times max", time.Duration(s_max).Seconds())
+	cb("success times recent", time.Duration(s_recent).Seconds())
+	cb("failure times min", time.Duration(f_min).Seconds())
+	cb("failure times avg", time.Duration(f_avg).Seconds())
+	cb("failure times max", time.Duration(f_max).Seconds())
+	cb("failure times recent", time.Duration(f_recent).Seconds())
 }
 
 func (f *Func) SuccessTimeAverage() (rv time.Duration) {
 	f.parentsAndMutex.Lock()
-	rv = f.successTimes.Average()
+	rv = time.Duration(f.successTimes.Average())
 	f.parentsAndMutex.Unlock()
 	return rv
 }
 
 func (f *Func) SuccessTimeRecent() (rv time.Duration) {
 	f.parentsAndMutex.Lock()
-	rv = f.successTimes.Recent()
+	rv = time.Duration(f.successTimes.Recent())
 	f.parentsAndMutex.Unlock()
 	return rv
 }
 
 func (f *Func) SuccessTimeQuantile(quantile float64) (rv time.Duration) {
 	f.parentsAndMutex.Lock()
-	rv = f.successTimes.Query(quantile)
+	rv = time.Duration(f.successTimes.Query(quantile))
 	f.parentsAndMutex.Unlock()
 	return rv
 }
 
 func (f *Func) FailureTimeAverage() (rv time.Duration) {
 	f.parentsAndMutex.Lock()
-	rv = f.failureTimes.Average()
+	rv = time.Duration(f.failureTimes.Average())
 	f.parentsAndMutex.Unlock()
 	return rv
 }
 
 func (f *Func) FailureTimeRecent() (rv time.Duration) {
 	f.parentsAndMutex.Lock()
-	rv = f.failureTimes.Recent()
+	rv = time.Duration(f.failureTimes.Recent())
 	f.parentsAndMutex.Unlock()
 	return rv
 }
 
 func (f *Func) FailureTimeQuantile(quantile float64) (rv time.Duration) {
 	f.parentsAndMutex.Lock()
-	rv = f.failureTimes.Query(quantile)
+	rv = time.Duration(f.failureTimes.Query(quantile))
 	f.parentsAndMutex.Unlock()
 	return rv
 }

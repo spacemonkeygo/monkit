@@ -41,7 +41,7 @@ type Meter struct {
 	slices [ticksToKeep]meterBucket
 }
 
-func newMeter() *Meter {
+func newMeter() StatSource {
 	rv := &Meter{}
 	now := monotime.Monotonic()
 	for i := 0; i < ticksToKeep; i++ {

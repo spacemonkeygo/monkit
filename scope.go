@@ -38,15 +38,20 @@ func (s *Scope) Func() *Func {
 	return s.FuncNamed(callerFunc(1))
 }
 
-func (s *Scope) FuncNamed(name string) *Func {
+func (s *Scope) newSource(name string, constructor func() StatSource) (
+	rv StatSource) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	source, exists := s.sources[name]
-	if !exists {
-		f := newFunc(s, name)
-		s.sources[name] = f
-		return f
+	if source, exists := s.sources[name]; exists {
+		return source
 	}
+	ss := constructor()
+	s.sources[name] = ss
+	return ss
+}
+
+func (s *Scope) FuncNamed(name string) *Func {
+	source := s.newSource(name, func() StatSource { return newFunc(s, name) })
 	f, ok := source.(*Func)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -70,15 +75,38 @@ func (s *Scope) Funcs(cb func(f *Func)) {
 }
 
 func (s *Scope) Meter(name string) *Meter {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-	source, exists := s.sources[name]
-	if !exists {
-		m := newMeter()
-		s.sources[name] = m
-		return m
-	}
+	source := s.newSource(name, newMeter)
 	m, ok := source.(*Meter)
+	if !ok {
+		panic(fmt.Sprintf("%s already used for another stats source: %#v",
+			name, source))
+	}
+	return m
+}
+
+func (s *Scope) IntVal(name string) *IntVal {
+	source := s.newSource(name, newIntVal)
+	m, ok := source.(*IntVal)
+	if !ok {
+		panic(fmt.Sprintf("%s already used for another stats source: %#v",
+			name, source))
+	}
+	return m
+}
+
+func (s *Scope) FloatVal(name string) *FloatVal {
+	source := s.newSource(name, newFloatVal)
+	m, ok := source.(*FloatVal)
+	if !ok {
+		panic(fmt.Sprintf("%s already used for another stats source: %#v",
+			name, source))
+	}
+	return m
+}
+
+func (s *Scope) BoolVal(name string) *BoolVal {
+	source := s.newSource(name, newBoolVal)
+	m, ok := source.(*BoolVal)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
 			name, source))

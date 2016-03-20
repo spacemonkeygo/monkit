@@ -16,7 +16,6 @@ package monitor
 
 import (
 	"sort"
-	"time"
 )
 
 const (
@@ -27,26 +26,26 @@ var (
 	ObservedQuantiles = []float64{0, .1, .25, .5, .75, .9, .95, 1}
 )
 
-// dist is not threadsafe
-type dist struct {
-	low, high   time.Duration
-	recent      time.Duration
+// intDist is not threadsafe
+type intDist struct {
+	low, high   int64
+	recent      int64
 	totalValues int64
-	sum         time.Duration
+	sum         int64
 	reservoir   [reservoirSize]float32
 	lcg         lcg
 	sorted      bool
 }
 
-func newDist() dist {
-	return dist{lcg: newLCG()}
+func newIntDist() intDist {
+	return intDist{lcg: newLCG()}
 }
 
-func (d *dist) Stats() (min, avg, max, recent time.Duration) {
+func (d *intDist) Stats() (min, avg, max, recent int64) {
 	return d.low, d.Average(), d.high, d.recent
 }
 
-func (d *dist) Insert(val time.Duration) {
+func (d *intDist) Insert(val int64) {
 	if d.totalValues != 0 {
 		if val < d.low {
 			d.low = val
@@ -77,15 +76,15 @@ func (d *dist) Insert(val time.Duration) {
 	}
 }
 
-func (d *dist) Average() time.Duration {
+func (d *intDist) Average() int64 {
 	if d.totalValues > 0 {
-		return d.sum / time.Duration(d.totalValues)
+		return d.sum / d.totalValues
 	} else {
 		return 0
 	}
 }
 
-func (d *dist) Query(quantile float64) time.Duration {
+func (d *intDist) Query(quantile float64) int64 {
 	if quantile <= 0 {
 		return d.low
 	}
@@ -99,7 +98,7 @@ func (d *dist) Query(quantile float64) time.Duration {
 	}
 
 	if rlen < 2 {
-	  return time.Duration(d.reservoir[0])
+		return int64(d.reservoir[0])
 	}
 
 	idx_float := quantile * float64(rlen-1)
@@ -112,10 +111,104 @@ func (d *dist) Query(quantile float64) time.Duration {
 	}
 	diff := idx_float - float64(idx)
 	prior := float64(reservoir[idx])
-	return time.Duration(prior + diff*(float64(reservoir[idx+1])-prior))
+	return int64(prior + diff*(float64(reservoir[idx+1])-prior))
 }
 
-func (d *dist) Recent() time.Duration { return d.recent }
+func (d *intDist) Recent() int64 { return d.recent }
+
+// floatDist is not threadsafe
+type floatDist struct {
+	low, high   float64
+	recent      float64
+	totalValues int64
+	sum         float64
+	reservoir   [reservoirSize]float32
+	lcg         lcg
+	sorted      bool
+}
+
+func newFloatDist() floatDist {
+	return floatDist{lcg: newLCG()}
+}
+
+func (d *floatDist) Stats() (min, avg, max, recent float64) {
+	return d.low, d.Average(), d.high, d.recent
+}
+
+func (d *floatDist) Insert(val float64) {
+	if val != val {
+		// NaN
+		return
+	}
+	if d.totalValues != 0 {
+		if val < d.low {
+			d.low = val
+		}
+		if val > d.high {
+			d.high = val
+		}
+	} else {
+		d.low = val
+		d.high = val
+	}
+	d.recent = val
+	d.sum += val
+
+	index := d.totalValues
+	d.totalValues += 1
+
+	if index < reservoirSize {
+		d.reservoir[index] = float32(val)
+		d.sorted = false
+	} else {
+		// fast, but kind of biased. probably okay
+		j := d.lcg.Uint64() % uint64(d.totalValues)
+		if j < reservoirSize {
+			d.reservoir[int(j)] = float32(val)
+			d.sorted = false
+		}
+	}
+}
+
+func (d *floatDist) Average() float64 {
+	if d.totalValues > 0 {
+		return d.sum / float64(d.totalValues)
+	} else {
+		return 0
+	}
+}
+
+func (d *floatDist) Query(quantile float64) float64 {
+	if quantile <= 0 {
+		return d.low
+	}
+	if quantile >= 1 {
+		return d.high
+	}
+
+	rlen := int(reservoirSize)
+	if int64(rlen) > d.totalValues {
+		rlen = int(d.totalValues)
+	}
+
+	if rlen < 2 {
+		return float64(d.reservoir[0])
+	}
+
+	idx_float := quantile * float64(rlen-1)
+	idx := int(idx_float)
+
+	reservoir := d.reservoir[:rlen]
+	if !d.sorted {
+		sort.Sort(float32Slice(reservoir))
+		d.sorted = true
+	}
+	diff := idx_float - float64(idx)
+	prior := float64(reservoir[idx])
+	return float64(prior + diff*(float64(reservoir[idx+1])-prior))
+}
+
+func (d *floatDist) Recent() float64 { return d.recent }
 
 type float32Slice []float32
 

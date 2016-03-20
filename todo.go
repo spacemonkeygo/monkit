@@ -57,7 +57,6 @@ package monitor
 //// Chain - register a subgroup
 //// Data - observe a tuple
 //// Event/Meter
-//// Val
 //// Task
 
 //// Log
