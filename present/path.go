@@ -73,35 +73,60 @@ func FromRequest(reg *monitor.Registry, path string, query url.Values) (
 			return curry(reg, StatsJSON), "application/json; charset=utf-8", nil
 		}
 	case "trace":
-		re, err := regexp.Compile(query.Get("regex"))
-		if err != nil {
-			return nil, "", BadRequest.New("invalid regex %#v: %v",
-				query.Get("regex"), err)
+		regexStr := query.Get("regex")
+		traceIdStr := query.Get("trace_id")
+		if regexStr == "" && traceIdStr == "" {
+			return nil, "", BadRequest.New("at least one of 'regex' or 'trace_id' " +
+				"query parameters required")
 		}
-		preselect := true
-		if query.Get("preselect") != "" {
-			preselect, err = strconv.ParseBool(query.Get("preselect"))
+		fnMatcher := func(*monitor.Func) bool { return true }
+
+		if regexStr != "" {
+			re, err := regexp.Compile(regexStr)
 			if err != nil {
-				return nil, "", BadRequest.New("invalid preselect %#v: %v",
-					query.Get("preselect"), err)
+				return nil, "", BadRequest.New("invalid regex %#v: %v",
+					regexStr, err)
 			}
-		}
-		matcher := func(f *monitor.Func) bool {
-			return re.MatchString(f.FullName())
-		}
-		if preselect {
-			funcs := map[*monitor.Func]bool{}
-			reg.Funcs(func(f *monitor.Func) {
-				if matcher(f) {
-					funcs[f] = true
+			fnMatcher = func(f *monitor.Func) bool {
+				return re.MatchString(f.FullName())
+			}
+
+			preselect := true
+			if query.Get("preselect") != "" {
+				preselect, err = strconv.ParseBool(query.Get("preselect"))
+				if err != nil {
+					return nil, "", BadRequest.New("invalid preselect %#v: %v",
+						query.Get("preselect"), err)
 				}
-			})
-			if len(funcs) <= 0 {
-				return nil, "", BadRequest.New("regex preselect matches 0 functions")
 			}
-			matcher = func(f *monitor.Func) bool { return funcs[f] }
+			if preselect {
+				funcs := map[*monitor.Func]bool{}
+				reg.Funcs(func(f *monitor.Func) {
+					if fnMatcher(f) {
+						funcs[f] = true
+					}
+				})
+				if len(funcs) <= 0 {
+					return nil, "", BadRequest.New("regex preselect matches 0 functions")
+				}
+
+				fnMatcher = func(f *monitor.Func) bool { return funcs[f] }
+			}
 		}
-		spanMatcher := func(s *monitor.Span) bool { return matcher(s.Func()) }
+
+		spanMatcher := func(s *monitor.Span) bool { return fnMatcher(s.Func()) }
+
+		if traceIdStr != "" {
+			traceId, err := strconv.ParseUint(traceIdStr, 16, 64)
+			if err != nil {
+				return nil, "", BadRequest.New(
+					"trace_id expected to be hex unsigned 64 bit number: %#v", traceIdStr)
+			}
+			spanMatcher = func(s *monitor.Span) bool {
+				return s.Trace().Id() == int64(traceId) && fnMatcher(s.Func())
+			}
+		}
+
 		switch second {
 		case "svg":
 			return func(w io.Writer) error {

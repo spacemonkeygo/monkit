@@ -32,11 +32,10 @@ type FinishedSpan struct {
 	Finish   time.Time
 }
 
-// WatchForSpans will watch for traces that cross functions that 'matcher'
-// returns true for. As soon as a trace generates a span for a matched
-// function, all spans from that trace that finish from that point on are
-// collected until the matching function span completes. Those spans are
-// returned.
+// WatchForSpans will watch for spans that 'matcher' returns true for. As soon
+// as a trace generates a matched span, all spans from that trace that finish
+// from that point on are collected until the matching span completes. All
+// collected spans are returned.
 // To cancel this operation, simply cancel the ctx argument.
 // There is a small but permanent amount of overhead added by this function to
 // every trace that is started while this function is running. This only really
