@@ -28,7 +28,7 @@ func newIntVal() StatSource {
 	return &IntVal{dist: newIntDist()}
 }
 
-func (v *IntVal) Add(val int64) {
+func (v *IntVal) Observe(val int64) {
 	v.mtx.Lock()
 	v.dist.Insert(val)
 	v.mtx.Unlock()
@@ -61,7 +61,7 @@ func newFloatVal() StatSource {
 	return &FloatVal{dist: newFloatDist()}
 }
 
-func (v *FloatVal) Add(val float64) {
+func (v *FloatVal) Observe(val float64) {
 	v.mtx.Lock()
 	v.dist.Insert(val)
 	v.mtx.Unlock()
@@ -94,7 +94,7 @@ func newBoolVal() StatSource {
 	return &BoolVal{}
 }
 
-func (v *BoolVal) Add(val bool) {
+func (v *BoolVal) Observe(val bool) {
 	if val {
 		atomic.AddInt64(&v.trues, 1)
 	} else {
