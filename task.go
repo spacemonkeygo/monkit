@@ -16,28 +16,38 @@ package monitor
 
 import (
 	"sync"
+	"time"
 
 	"golang.org/x/net/context"
 )
 
 type taskKey int
 
-const (
-	taskGetFunc taskKey = 0
-)
+const taskGetFunc taskKey = 0
+
+type lazyTaskSecretT struct{}
+
+func (*lazyTaskSecretT) Value(key interface{}) interface{} { return nil }
+func (*lazyTaskSecretT) Done() <-chan struct{}             { return nil }
+func (*lazyTaskSecretT) Err() error                        { return nil }
+func (*lazyTaskSecretT) Deadline() (time.Time, bool) {
+	return time.Time{}, false
+}
+
+var lazyTaskSecret context.Context = &lazyTaskSecretT{}
 
 type LazyTask func(ctx *context.Context, args ...interface{}) func(*error)
 
 func (f LazyTask) Func() (out *Func) {
 	// we're doing crazy things to make a function have methods that do other
 	// things with internal state. basically, we have a secret argument we can
-	// pass to the function that is only checked if ctx is nil (which it should
-	// never be) that controls what other behavior we want.
+	// pass to the function that is only checked if ctx is lazyTaskSecret (
+	// which it should never be) that controls what other behavior we want.
 	// in this case, if arg[0] is taskGetFunc, then f will place the func in the
 	// out location.
 	// since someone can cast any function of this signature to a lazy task,
 	// let's make sure we got roughly expected behavior and panic otherwise
-	if f(nil, taskGetFunc, &out) != nil || out == nil {
+	if f(&lazyTaskSecret, taskGetFunc, &out) != nil || out == nil {
 		panic("Func() called on a non-LazyTask function")
 	}
 	return out
@@ -69,10 +79,12 @@ func (s *Scope) Task() LazyTask {
 	}
 	return LazyTask(func(ctx *context.Context,
 		args ...interface{}) func(*error) {
-		initOnce.Do(init)
-		if ctx == nil && taskArgs(f, args) {
+		if ctx == nil {
+			ctx = emptyCtx()
+		} else if ctx == &lazyTaskSecret && taskArgs(f, args) {
 			return nil
 		}
+		initOnce.Do(init)
 		s, exit := newSpan(*ctx, f, args, NewId(), nil)
 		*ctx = s
 		return exit
@@ -84,7 +96,9 @@ func (s *Scope) TaskNamed(name string) LazyTask {
 }
 
 func (f *Func) Task(ctx *context.Context, args ...interface{}) func(*error) {
-	if ctx == nil && taskArgs(f, args) {
+	if ctx == nil {
+		ctx = emptyCtx()
+	} else if ctx == &lazyTaskSecret && taskArgs(f, args) {
 		return nil
 	}
 	s, exit := newSpan(*ctx, f, args, NewId(), nil)
@@ -94,6 +108,9 @@ func (f *Func) Task(ctx *context.Context, args ...interface{}) func(*error) {
 
 func (f *Func) RemoteTrace(ctx *context.Context, spanId int64, trace *Trace,
 	args ...interface{}) func(*error) {
+	if ctx == nil {
+		ctx = emptyCtx()
+	}
 	if trace != nil {
 		f.scope.r.observeTrace(trace)
 	}
@@ -104,7 +121,9 @@ func (f *Func) RemoteTrace(ctx *context.Context, spanId int64, trace *Trace,
 
 func (f *Func) ResetTrace(ctx *context.Context,
 	args ...interface{}) func(*error) {
-	if ctx == nil && taskArgs(f, args) {
+	if ctx == nil {
+		ctx = emptyCtx()
+	} else if ctx == &lazyTaskSecret && taskArgs(f, args) {
 		return nil
 	}
 	trace := NewTrace(NewId())
@@ -112,4 +131,11 @@ func (f *Func) ResetTrace(ctx *context.Context,
 	s, exit := newSpan(*ctx, f, args, trace.Id(), trace)
 	*ctx = s
 	return exit
+}
+
+func emptyCtx() *context.Context {
+	// TODO: maybe we should generate some special parent for these unparented
+	// spans
+	ctx := context.Background()
+	return &ctx
 }
