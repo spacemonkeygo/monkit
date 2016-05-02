@@ -18,17 +18,15 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"time"
 
 	"gopkg.in/spacemonkeygo/monitor.v2"
 )
 
-func formatDist(avg time.Duration, querier func(float64) time.Duration,
-	indent string) (result string) {
+func formatDist(data *monitor.DurationDist, indent string) (result string) {
 	for _, q := range monitor.ObservedQuantiles {
-		result += fmt.Sprintf("%s%.02f: %s\n", indent, q, querier(q))
+		result += fmt.Sprintf("%s%.02f: %s\n", indent, q, data.Query(q))
 	}
-	result += fmt.Sprintf("%savg: %s\n", indent, avg)
+	result += fmt.Sprintf("%savg: %s\n", indent, data.Average())
 	return result
 }
 
@@ -70,8 +68,7 @@ func FuncsDot(r *monitor.Registry, w io.Writer) (err error) {
 
 		if success > 0 {
 			_, err = fmt.Fprint(w, escapeDotLabel(
-				"success times:\n%s", formatDist(f.SuccessTimeAverage(),
-					f.SuccessTimeQuantile, "        ")))
+				"success times:\n%s", formatDist(f.SuccessTimes(), "        ")))
 			if err != nil {
 				return
 			}
@@ -79,8 +76,7 @@ func FuncsDot(r *monitor.Registry, w io.Writer) (err error) {
 
 		if total_errors+panics > 0 {
 			_, err = fmt.Fprint(w, escapeDotLabel(
-				"failure times:\n%s", formatDist(f.FailureTimeAverage(),
-					f.FailureTimeQuantile, "        ")))
+				"failure times:\n%s", formatDist(f.FailureTimes(), "        ")))
 			if err != nil {
 				return
 			}
@@ -170,8 +166,8 @@ func FuncsText(r *monitor.Registry, w io.Writer) (err error) {
 			return
 		}
 		_, err = fmt.Fprintf(w, "  success times:\n%s  failure times:\n%s\n",
-			formatDist(f.SuccessTimeAverage(), f.SuccessTimeQuantile, "    "),
-			formatDist(f.FailureTimeAverage(), f.FailureTimeQuantile, "    "))
+			formatDist(f.SuccessTimes(), "    "),
+			formatDist(f.FailureTimes(), "    "))
 	})
 	return err
 }

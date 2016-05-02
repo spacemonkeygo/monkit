@@ -21,11 +21,11 @@ import (
 
 type IntVal struct {
 	mtx  sync.Mutex
-	dist intDist
+	dist IntDist
 }
 
 func newIntVal() StatSource {
-	return &IntVal{dist: newIntDist()}
+	return &IntVal{dist: *NewIntDist()}
 }
 
 func (v *IntVal) Observe(val int64) {
@@ -36,9 +36,11 @@ func (v *IntVal) Observe(val int64) {
 
 func (v *IntVal) Stats(cb func(name string, val float64)) {
 	v.mtx.Lock()
-	min, avg, max, recent, sum := v.dist.Stats()
+	vd := v.dist
+	min, max, recent, sum, count := vd.Low, vd.High, vd.Recent, vd.Sum, vd.Count
 	v.mtx.Unlock()
-	cb("avg", float64(avg))
+	cb("avg", float64(sum/count))
+	cb("count", float64(count))
 	cb("max", float64(max))
 	cb("min", float64(min))
 	cb("recent", float64(recent))
@@ -54,11 +56,11 @@ func (v *IntVal) Quantile(quantile float64) (rv int64) {
 
 type FloatVal struct {
 	mtx  sync.Mutex
-	dist floatDist
+	dist FloatDist
 }
 
 func newFloatVal() StatSource {
-	return &FloatVal{dist: newFloatDist()}
+	return &FloatVal{dist: *NewFloatDist()}
 }
 
 func (v *FloatVal) Observe(val float64) {
@@ -69,9 +71,11 @@ func (v *FloatVal) Observe(val float64) {
 
 func (v *FloatVal) Stats(cb func(name string, val float64)) {
 	v.mtx.Lock()
-	min, avg, max, recent, sum := v.dist.Stats()
+	vd := v.dist
+	min, max, recent, sum, count := vd.Low, vd.High, vd.Recent, vd.Sum, vd.Count
 	v.mtx.Unlock()
-	cb("avg", avg)
+	cb("avg", sum/float64(count))
+	cb("count", float64(count))
 	cb("max", max)
 	cb("min", min)
 	cb("recent", recent)

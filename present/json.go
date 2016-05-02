@@ -108,6 +108,23 @@ func formatFinishedSpan(s *FinishedSpan) interface{} {
 	return js
 }
 
+type durationStats struct {
+	Average   time.Duration            `json:"average"`
+	Recent    time.Duration            `json:"recent"`
+	Quantiles map[string]time.Duration `json:"quantiles"`
+}
+
+func formatDuration(d *monitor.DurationDist, out *durationStats) {
+	out.Average = d.Average()
+	out.Recent = d.Recent
+	out.Quantiles = make(map[string]time.Duration,
+		len(monitor.ObservedQuantiles))
+	for _, quantile := range monitor.ObservedQuantiles {
+		name := fmt.Sprintf("%.02f", quantile)
+		out.Quantiles[name] = d.Query(quantile)
+	}
+}
+
 func formatFunc(f *monitor.Func) interface{} {
 	js := struct {
 		Id           int64            `json:"id"`
@@ -120,16 +137,8 @@ func formatFunc(f *monitor.Func) interface{} {
 		Panics       int64            `json:"panics"`
 		Entry        bool             `json:"entry"`
 		Errors       map[string]int64 `json:"errors"`
-		SuccessTimes struct {
-			Average   time.Duration            `json:"average"`
-			Recent    time.Duration            `json:"recent"`
-			Quantiles map[string]time.Duration `json:"quantiles"`
-		} `json:"success_times"`
-		FailureTimes struct {
-			Average   time.Duration            `json:"average"`
-			Recent    time.Duration            `json:"recent"`
-			Quantiles map[string]time.Duration `json:"quantiles"`
-		} `json:"failure_times"`
+		SuccessTimes durationStats    `json:"success_times"`
+		FailureTimes durationStats    `json:"failure_times"`
 	}{}
 
 	js.Id = f.Id()
@@ -147,19 +156,8 @@ func formatFunc(f *monitor.Func) interface{} {
 	js.Success = f.Success()
 	js.Panics = f.Panics()
 	js.Errors = f.Errors()
-	js.SuccessTimes.Average = f.SuccessTimeAverage()
-	js.SuccessTimes.Recent = f.SuccessTimeRecent()
-	js.SuccessTimes.Quantiles = make(map[string]time.Duration,
-		len(monitor.ObservedQuantiles))
-	js.FailureTimes.Average = f.FailureTimeAverage()
-	js.FailureTimes.Recent = f.FailureTimeRecent()
-	js.FailureTimes.Quantiles = make(map[string]time.Duration,
-		len(monitor.ObservedQuantiles))
-	for _, quantile := range monitor.ObservedQuantiles {
-		name := fmt.Sprintf("%.02f", quantile)
-		js.SuccessTimes.Quantiles[name] = f.SuccessTimeQuantile(quantile)
-		js.FailureTimes.Quantiles[name] = f.FailureTimeQuantile(quantile)
-	}
+	formatDuration(f.SuccessTimes(), &js.SuccessTimes)
+	formatDuration(f.FailureTimes(), &js.FailureTimes)
 	return js
 }
 
