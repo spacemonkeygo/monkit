@@ -34,21 +34,22 @@ type Func struct {
 	name  string
 
 	// mutex things (reuses mutex from parents)
-	successTimes DurationDist
 	errors       map[string]int64
 	panics       int64
+	successTimes DurationDist
 	failureTimes DurationDist
 }
 
-func newFunc(s *Scope, name string) *Func {
-	return &Func{
-		id:           NewId(),
-		scope:        s,
-		name:         name,
-		errors:       make(map[string]int64),
-		successTimes: *NewDurationDist(),
-		failureTimes: *NewDurationDist(),
+func newFunc(s *Scope, name string) (f *Func) {
+	f = &Func{
+		id:     NewId(),
+		scope:  s,
+		name:   name,
+		errors: make(map[string]int64),
 	}
+	initDurationDist(&f.successTimes)
+	initDurationDist(&f.failureTimes)
+	return f
 }
 
 func (f *Func) start(parent *Func) {

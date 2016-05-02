@@ -38,8 +38,14 @@ type IntDist struct {
 	sorted    bool
 }
 
-func NewIntDist() *IntDist {
-	return &IntDist{lcg: newLCG()}
+func initIntDist(v *IntDist) {
+	v.lcg = newLCG()
+}
+
+func NewIntDist() (d *IntDist) {
+	d = &IntDist{}
+	initIntDist(d)
+	return d
 }
 
 func (d *IntDist) Insert(val int64) {
@@ -126,8 +132,14 @@ type DurationDist struct {
 	sorted    bool
 }
 
-func NewDurationDist() *DurationDist {
-	return &DurationDist{lcg: newLCG()}
+func initDurationDist(d *DurationDist) {
+	d.lcg = newLCG()
+}
+
+func NewDurationDist() (d *DurationDist) {
+	d = &DurationDist{}
+	initDurationDist(d)
+	return d
 }
 
 func (d *DurationDist) Insert(val time.Duration) {
@@ -214,8 +226,14 @@ type FloatDist struct {
 	sorted    bool
 }
 
-func NewFloatDist() *FloatDist {
-	return &FloatDist{lcg: newLCG()}
+func initFloatDist(d *FloatDist) {
+	d.lcg = newLCG()
+}
+
+func NewFloatDist() (d *FloatDist) {
+	d = &FloatDist{}
+	initFloatDist(d)
+	return d
 }
 
 func (d *FloatDist) Insert(val float64) {

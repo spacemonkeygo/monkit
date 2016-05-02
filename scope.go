@@ -75,7 +75,7 @@ func (s *Scope) Funcs(cb func(f *Func)) {
 }
 
 func (s *Scope) Meter(name string) *Meter {
-	source := s.newSource(name, newMeter)
+	source := s.newSource(name, func() StatSource { return NewMeter() })
 	m, ok := source.(*Meter)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -90,7 +90,7 @@ func (s *Scope) Event(name string) {
 
 func (s *Scope) DiffMeter(name string, m1, m2 *Meter) {
 	source := s.newSource(name, func() StatSource {
-		return newDiffMeter(m1, m2)
+		return NewDiffMeter(m1, m2)
 	})
 	if _, ok := source.(*DiffMeter); !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -99,7 +99,7 @@ func (s *Scope) DiffMeter(name string, m1, m2 *Meter) {
 }
 
 func (s *Scope) IntVal(name string) *IntVal {
-	source := s.newSource(name, newIntVal)
+	source := s.newSource(name, func() StatSource { return NewIntVal() })
 	m, ok := source.(*IntVal)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -109,7 +109,7 @@ func (s *Scope) IntVal(name string) *IntVal {
 }
 
 func (s *Scope) FloatVal(name string) *FloatVal {
-	source := s.newSource(name, newFloatVal)
+	source := s.newSource(name, func() StatSource { return NewFloatVal() })
 	m, ok := source.(*FloatVal)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -119,7 +119,7 @@ func (s *Scope) FloatVal(name string) *FloatVal {
 }
 
 func (s *Scope) BoolVal(name string) *BoolVal {
-	source := s.newSource(name, newBoolVal)
+	source := s.newSource(name, func() StatSource { return NewBoolVal() })
 	m, ok := source.(*BoolVal)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -129,7 +129,7 @@ func (s *Scope) BoolVal(name string) *BoolVal {
 }
 
 func (s *Scope) Counter(name string) *Counter {
-	source := s.newSource(name, newCounter)
+	source := s.newSource(name, func() StatSource { return NewCounter() })
 	m, ok := source.(*Counter)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",

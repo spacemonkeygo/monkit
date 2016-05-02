@@ -25,7 +25,7 @@ type Counter struct {
 	low, high *int64
 }
 
-func newCounter() StatSource {
+func NewCounter() *Counter {
 	return &Counter{}
 }
 

@@ -41,7 +41,7 @@ type Meter struct {
 	slices [ticksToKeep]meterBucket
 }
 
-func newMeter() StatSource {
+func NewMeter() *Meter {
 	rv := &Meter{}
 	now := monotime.Monotonic()
 	for i := 0; i < ticksToKeep; i++ {
@@ -99,7 +99,7 @@ type DiffMeter struct {
 	meter1, meter2 *Meter
 }
 
-func newDiffMeter(meter1, meter2 *Meter) *DiffMeter {
+func NewDiffMeter(meter1, meter2 *Meter) *DiffMeter {
 	return &DiffMeter{meter1: meter1, meter2: meter2}
 }
 

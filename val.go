@@ -24,8 +24,10 @@ type IntVal struct {
 	dist IntDist
 }
 
-func newIntVal() StatSource {
-	return &IntVal{dist: *NewIntDist()}
+func NewIntVal() (v *IntVal) {
+	v = &IntVal{}
+	initIntDist(&v.dist)
+	return v
 }
 
 func (v *IntVal) Observe(val int64) {
@@ -59,8 +61,10 @@ type FloatVal struct {
 	dist FloatDist
 }
 
-func newFloatVal() StatSource {
-	return &FloatVal{dist: *NewFloatDist()}
+func NewFloatVal() (v *FloatVal) {
+	v = &FloatVal{}
+	initFloatDist(&v.dist)
+	return v
 }
 
 func (v *FloatVal) Observe(val float64) {
@@ -94,7 +98,7 @@ type BoolVal struct {
 	falses int64
 }
 
-func newBoolVal() StatSource {
+func NewBoolVal() *BoolVal {
 	return &BoolVal{}
 }
 
