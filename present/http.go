@@ -25,7 +25,7 @@ type handler struct {
 	Registry *monitor.Registry
 }
 
-func RegistryHandler(r *monitor.Registry) http.Handler {
+func HTTP(r *monitor.Registry) http.Handler {
 	return handler{Registry: r}
 }
 

@@ -23,9 +23,7 @@ const (
 	reservoirSize = 64
 )
 
-var (
-	ObservedQuantiles = []float64{0, .1, .25, .5, .75, .9, .95, 1}
-)
+var ObservedQuantiles = []float64{0, .1, .25, .5, .75, .9, .95, 1}
 
 // IntDist keeps statistics about ints.
 type IntDist struct {

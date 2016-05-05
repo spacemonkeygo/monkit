@@ -53,10 +53,10 @@ func NewRegistry() *Registry {
 }
 
 func (r *Registry) Package() *Scope {
-	return r.PackageNamed(callerPackage(1))
+	return r.ScopeNamed(callerPackage(1))
 }
 
-func (r *Registry) PackageNamed(name string) *Scope {
+func (r *Registry) ScopeNamed(name string) *Scope {
 	r.scopeMtx.Lock()
 	defer r.scopeMtx.Unlock()
 	s, exists := r.scopes[name]
@@ -196,18 +196,16 @@ func (r *Registry) Stats(cb func(name string, val float64)) {
 	})
 }
 
-var (
-	Default      = NewRegistry()
-	PackageNamed = Default.PackageNamed
-	RootSpans    = Default.RootSpans
-	Scopes       = Default.Scopes
-	Funcs        = Default.Funcs
-	Stats        = Default.Stats
-)
+var Default = NewRegistry()
 
-func Package() *Scope {
-	return PackageNamed(callerPackage(1))
-}
+func ScopeNamed(name string) *Scope { return Default.ScopeNamed(name) }
+func RootSpans(cb func(s *Span))    { Default.RootSpans(cb) }
+func Scopes(cb func(s *Scope))      { Default.Scopes(cb) }
+func Funcs(cb func(f *Func))        { Default.Funcs(cb) }
+
+func Package() *Scope { return Default.ScopeNamed(callerPackage(1)) }
+
+func Stats(cb func(name string, val float64)) { Default.Stats(cb) }
 
 type spanSorter []*Span
 

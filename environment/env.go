@@ -26,7 +26,7 @@ func Register(registry *monitor.Registry) {
 	if registry == nil {
 		registry = monitor.Default
 	}
-	pkg := registry.PackageNamed("env")
+	pkg := registry.ScopeNamed("env")
 	for name, source := range registrations {
 		pkg.Chain(name, source)
 	}
