@@ -23,4 +23,4 @@ or
     xdot <(curl -s http://localhost:7070/diagnostics/monitor/v2/funcs/dot)
 
 */
-package monitor
+package monitor // import "gopkg.in/spacemonkeygo/monitor.v2"
