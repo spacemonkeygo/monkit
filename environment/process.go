@@ -15,9 +15,9 @@
 package environment
 
 import (
+	"hash/crc32"
 	"io"
 
-	"github.com/spacemonkeygo/crc"
 	"github.com/spacemonkeygo/monotime"
 	"gopkg.in/spacemonkeygo/monitor.v2"
 )
@@ -43,17 +43,10 @@ func processCRC() (uint32, error) {
 		return 0, err
 	}
 	defer fh.Close()
-	c := crc.InitialCRC
-	_, err = io.Copy(writerFunc(func(p []byte) (n int, err error) {
-		c = crc.CRC(c, p)
-		return len(p), nil
-	}), fh)
-	return c, err
+	c := crc32.NewIEEE()
+	_, err = io.Copy(c, fh)
+	return c.Sum32(), err
 }
-
-type writerFunc func(p []byte) (n int, err error)
-
-func (f writerFunc) Write(p []byte) (n int, err error) { return f(p) }
 
 func init() {
 	registrations["process"] = Process()

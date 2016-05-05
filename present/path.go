@@ -72,6 +72,7 @@ func FromRequest(reg *monitor.Registry, path string, query url.Values) (
 		case "json":
 			return curry(reg, StatsJSON), "application/json; charset=utf-8", nil
 		}
+
 	case "trace":
 		regexStr := query.Get("regex")
 		traceIdStr := query.Get("trace_id")
