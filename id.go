@@ -21,11 +21,18 @@ import (
 )
 
 var (
-	rng       = rand.New(rand.NewSource(time.Now().Unix()))
-	idCounter = uint64(rng.Int63())
-	inc       = uint64(rng.Int63() | 3)
+	idCounter uint64
+	inc       uint64
 )
 
+func init() {
+	rng := rand.New(rand.NewSource(time.Now().Unix()))
+	idCounter = uint64(rng.Int63())
+	inc = uint64(rng.Int63() | 3)
+}
+
+// NewId returns a random integer intended for use when constructing new
+// traces. See NewTrace.
 func NewId() int64 {
 	id := atomic.AddUint64(&idCounter, inc)
 	return int64(id >> 1)

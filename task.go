@@ -25,36 +25,37 @@ type taskKey int
 
 const taskGetFunc taskKey = 0
 
-type lazyTaskSecretT struct{}
+type taskSecretT struct{}
 
-func (*lazyTaskSecretT) Value(key interface{}) interface{} { return nil }
-func (*lazyTaskSecretT) Done() <-chan struct{}             { return nil }
-func (*lazyTaskSecretT) Err() error                        { return nil }
-func (*lazyTaskSecretT) Deadline() (time.Time, bool) {
+func (*taskSecretT) Value(key interface{}) interface{} { return nil }
+func (*taskSecretT) Done() <-chan struct{}             { return nil }
+func (*taskSecretT) Err() error                        { return nil }
+func (*taskSecretT) Deadline() (time.Time, bool) {
 	return time.Time{}, false
 }
 
-var lazyTaskSecret context.Context = &lazyTaskSecretT{}
+var taskSecret context.Context = &taskSecretT{}
 
-type LazyTask func(ctx *context.Context, args ...interface{}) func(*error)
+type Task func(ctx *context.Context, args ...interface{}) func(*error)
 
-func (f LazyTask) Func() (out *Func) {
+// Func returns the Func associated with the Task
+func (f Task) Func() (out *Func) {
 	// we're doing crazy things to make a function have methods that do other
 	// things with internal state. basically, we have a secret argument we can
-	// pass to the function that is only checked if ctx is lazyTaskSecret (
+	// pass to the function that is only checked if ctx is taskSecret (
 	// which it should never be) that controls what other behavior we want.
 	// in this case, if arg[0] is taskGetFunc, then f will place the func in the
 	// out location.
 	// since someone can cast any function of this signature to a lazy task,
 	// let's make sure we got roughly expected behavior and panic otherwise
-	if f(&lazyTaskSecret, taskGetFunc, &out) != nil || out == nil {
-		panic("Func() called on a non-LazyTask function")
+	if f(&taskSecret, taskGetFunc, &out) != nil || out == nil {
+		panic("Func() called on a non-Task function")
 	}
 	return out
 }
 
 func taskArgs(f *Func, args []interface{}) bool {
-	// this function essentially does method dispatch for LazyTasks. returns true
+	// this function essentially does method dispatch for Tasks. returns true
 	// if a method got dispatched and normal behavior should be aborted
 	if len(args) != 2 {
 		return false
@@ -71,17 +72,46 @@ func taskArgs(f *Func, args []interface{}) bool {
 	return false
 }
 
-func (s *Scope) Task() LazyTask {
+// Task returns a new Task for use, creating an associated Func if necessary.
+// It also adds a new Span to the given ctx during execution. Expected usage
+// like:
+//
+//   var mon = monitor.Package()
+//
+//   func MyFunc(ctx context.Context, arg1, arg2 string) (err error) {
+//     defer mon.Task()(&ctx, arg1, arg2)(&err)
+//     ...
+//   }
+//
+// or
+//
+//   var (
+//     mon = monitor.Package()
+//     funcTask = mon.Task()
+//   )
+//
+//   func MyFunc(ctx context.Context, arg1, arg2 string) (err error) {
+//     defer funcTask(&ctx, arg1, arg2)(&err)
+//     ...
+//   }
+//
+// Task uses runtime.Caller to determine the associated Func name. See
+// TaskNamed if you want to supply your own name. See Func.Task if you already
+// have a Func.
+//
+// If you want to control Trace creation, see Func.ResetTrace and
+// Func.RemoteTrace
+func (s *Scope) Task() Task {
 	var initOnce sync.Once
 	var f *Func
 	init := func() {
 		f = s.FuncNamed(callerFunc(3))
 	}
-	return LazyTask(func(ctx *context.Context,
+	return Task(func(ctx *context.Context,
 		args ...interface{}) func(*error) {
 		if ctx == nil {
 			ctx = emptyCtx()
-		} else if ctx == &lazyTaskSecret && taskArgs(f, args) {
+		} else if ctx == &taskSecret && taskArgs(f, args) {
 			return nil
 		}
 		initOnce.Do(init)
@@ -91,14 +121,29 @@ func (s *Scope) Task() LazyTask {
 	})
 }
 
-func (s *Scope) TaskNamed(name string) LazyTask {
+// TaskNamed is like Task except you can choose the name of the associated
+// Func.
+func (s *Scope) TaskNamed(name string) Task {
 	return s.FuncNamed(name).Task
 }
 
+// Task returns a new Task for use on this Func. It also adds a new Span to
+// the given ctx during execution.
+//
+//   var mon = monitor.Package()
+//
+//   func MyFunc(ctx context.Context, arg1, arg2 string) (err error) {
+//     f := mon.Func()
+//     defer f.Task(&ctx, arg1, arg2)(&err)
+//     ...
+//   }
+//
+// It's more expected for you to use mon.Task directly. See RemoteTrace or
+// ResetTrace if you want greater control over creating new traces.
 func (f *Func) Task(ctx *context.Context, args ...interface{}) func(*error) {
 	if ctx == nil {
 		ctx = emptyCtx()
-	} else if ctx == &lazyTaskSecret && taskArgs(f, args) {
+	} else if ctx == &taskSecret && taskArgs(f, args) {
 		return nil
 	}
 	s, exit := newSpan(*ctx, f, args, NewId(), nil)
@@ -106,6 +151,8 @@ func (f *Func) Task(ctx *context.Context, args ...interface{}) func(*error) {
 	return exit
 }
 
+// RemoteTrace is like Func.Task, except you can specify the trace and span id.
+// Needed for things like the Zipkin plugin.
 func (f *Func) RemoteTrace(ctx *context.Context, spanId int64, trace *Trace,
 	args ...interface{}) func(*error) {
 	if ctx == nil {
@@ -119,11 +166,12 @@ func (f *Func) RemoteTrace(ctx *context.Context, spanId int64, trace *Trace,
 	return exit
 }
 
+// ResetTrace is like Func.Task, except it always creates a new Trace.
 func (f *Func) ResetTrace(ctx *context.Context,
 	args ...interface{}) func(*error) {
 	if ctx == nil {
 		ctx = emptyCtx()
-	} else if ctx == &lazyTaskSecret && taskArgs(f, args) {
+	} else if ctx == &taskSecret && taskArgs(f, args) {
 		return nil
 	}
 	trace := NewTrace(NewId())

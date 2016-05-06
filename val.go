@@ -19,23 +19,37 @@ import (
 	"sync/atomic"
 )
 
+// IntVal is a convenience wrapper around an IntDist. Constructed using
+// NewIntVal, though it's expected usage is like:
+//
+//   var mon = monitor.Package()
+//
+//   func MyFunc() {
+//     ...
+//     mon.IntVal("size").Observe(val)
+//     ...
+//   }
+//
 type IntVal struct {
 	mtx  sync.Mutex
 	dist IntDist
 }
 
+// NewIntVal creates an IntVal
 func NewIntVal() (v *IntVal) {
 	v = &IntVal{}
 	initIntDist(&v.dist)
 	return v
 }
 
+// Observe observes an integer value
 func (v *IntVal) Observe(val int64) {
 	v.mtx.Lock()
 	v.dist.Insert(val)
 	v.mtx.Unlock()
 }
 
+// Stats implements the StatSource interface.
 func (v *IntVal) Stats(cb func(name string, val float64)) {
 	v.mtx.Lock()
 	vd := v.dist
@@ -49,6 +63,8 @@ func (v *IntVal) Stats(cb func(name string, val float64)) {
 	cb("sum", float64(sum))
 }
 
+// Quantile returns an estimate of the requested quantile of observed values.
+// 0 <= quantile <= 1
 func (v *IntVal) Quantile(quantile float64) (rv int64) {
 	v.mtx.Lock()
 	rv = v.dist.Query(quantile)
@@ -56,23 +72,37 @@ func (v *IntVal) Quantile(quantile float64) (rv int64) {
 	return rv
 }
 
+// FloatVal is a convenience wrapper around an FloatDist. Constructed using
+// NewFloatVal, though it's expected usage is like:
+//
+//   var mon = monitor.Package()
+//
+//   func MyFunc() {
+//     ...
+//     mon.FloatVal("size").Observe(val)
+//     ...
+//   }
+//
 type FloatVal struct {
 	mtx  sync.Mutex
 	dist FloatDist
 }
 
+// NewFloatVal creates a FloatVal
 func NewFloatVal() (v *FloatVal) {
 	v = &FloatVal{}
 	initFloatDist(&v.dist)
 	return v
 }
 
+// Observe observes an floating point value
 func (v *FloatVal) Observe(val float64) {
 	v.mtx.Lock()
 	v.dist.Insert(val)
 	v.mtx.Unlock()
 }
 
+// Stats implements the StatSource interface.
 func (v *FloatVal) Stats(cb func(name string, val float64)) {
 	v.mtx.Lock()
 	vd := v.dist
@@ -86,6 +116,8 @@ func (v *FloatVal) Stats(cb func(name string, val float64)) {
 	cb("sum", sum)
 }
 
+// Quantile returns an estimate of the requested quantile of observed values.
+// 0 <= quantile <= 1
 func (v *FloatVal) Quantile(quantile float64) (rv float64) {
 	v.mtx.Lock()
 	rv = v.dist.Query(quantile)
@@ -93,15 +125,29 @@ func (v *FloatVal) Quantile(quantile float64) (rv float64) {
 	return rv
 }
 
+// BoolVal keeps statistics about boolean values. It keeps the number of trues,
+// number of falses, and the disposition (number of trues minus number of
+// falses). Constructed using NewBoolVal, though it's expected usage is like:
+//
+//   var mon = monitor.Package()
+//
+//   func MyFunc() {
+//     ...
+//     mon.BoolVal("flipped").Observe(bool)
+//     ...
+//   }
+//
 type BoolVal struct {
 	trues  int64
 	falses int64
 }
 
+// NewBoolVal creates a BoolVal
 func NewBoolVal() *BoolVal {
 	return &BoolVal{}
 }
 
+// Observe observes a boolean value
 func (v *BoolVal) Observe(val bool) {
 	if val {
 		atomic.AddInt64(&v.trues, 1)
@@ -110,6 +156,7 @@ func (v *BoolVal) Observe(val bool) {
 	}
 }
 
+// Stats implements the StatSource interface.
 func (v *BoolVal) Stats(cb func(name string, val float64)) {
 	trues := atomic.LoadInt64(&v.trues)
 	falses := atomic.LoadInt64(&v.falses)

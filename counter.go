@@ -19,52 +19,109 @@ import (
 	"sync"
 )
 
+// Counter keeps track of running totals, along with the highest and lowest
+// values seen. The overall value can increment or decrement. Counter
+// implements StatSource. Should be constructed with NewCounter(), though it
+// may be more convenient to use the Counter accessor on a given Scope.
+// Expected creation is like:
+//
+//   var mon = monitor.Package()
+//
+//   func MyFunc() {
+//     mon.Event("an event!")
+//   }
+//
 type Counter struct {
-	mtx       sync.Mutex
-	val       int64
-	low, high *int64
+	mtx            sync.Mutex
+	val, low, high int64
+	nonempty       bool
 }
 
+// NewCounter constructs a counter
 func NewCounter() *Counter {
 	return &Counter{}
 }
 
 func (c *Counter) set(val int64) {
 	c.val = val
-	if c.low == nil || val < *c.low {
-		c.low = &val
+	if !c.nonempty || val < c.low {
+		c.low = val
 	}
-	if c.high == nil || *c.high < val {
-		c.high = &val
+	if !c.nonempty || c.high < val {
+		c.high = val
 	}
+	c.nonempty = true
 }
 
-func (c *Counter) Set(val int64) {
+// Set will immediately change the value of the counter to whatever val is. It
+// will appropriately update the high and low values, and return the former
+// value.
+func (c *Counter) Set(val int64) (former int64) {
 	c.mtx.Lock()
+	former = c.val
 	c.set(val)
 	c.mtx.Unlock()
+	return former
 }
 
-func (c *Counter) Inc(delta int64) {
+// Inc will atomically increment the counter by delta and return the new value.
+func (c *Counter) Inc(delta int64) (current int64) {
 	c.mtx.Lock()
 	c.set(c.val + delta)
+	current = c.val
 	c.mtx.Unlock()
+	return current
 }
 
-func (c *Counter) Dec(delta int64) { c.Inc(-delta) }
+// Dec will atomically decrement the counter by delta and return the new value.
+func (c *Counter) Dec(delta int64) (current int64) {
+	return c.Inc(-delta)
+}
 
+// High returns the highest value seen since construction or the last reset
+func (c *Counter) High() (h int64) {
+	c.mtx.Lock()
+	h = c.high
+	c.mtx.Unlock()
+	return h
+}
+
+// Low returns the lowest value seen since construction or the last reset
+func (c *Counter) Low() (l int64) {
+	c.mtx.Lock()
+	l = c.low
+	c.mtx.Unlock()
+	return l
+}
+
+// Current returns the current value
+func (c *Counter) Current() (cur int64) {
+	c.mtx.Lock()
+	cur = c.val
+	c.mtx.Unlock()
+	return cur
+}
+
+// Reset resets all values including high/low counters and returns what they
+// were.
+func (c *Counter) Reset() (val, low, high int64) {
+	c.mtx.Lock()
+	val, low, high = c.val, c.low, c.high
+	c.val, c.low, c.high, c.nonempty = 0, 0, 0, false
+	c.mtx.Unlock()
+	return val, low, high
+}
+
+// Stats implements the StatSource interface
 func (c *Counter) Stats(cb func(name string, val float64)) {
 	c.mtx.Lock()
-	val, low, high := c.val, c.low, c.high
+	val, low, high, nonempty := c.val, c.low, c.high, c.nonempty
 	c.mtx.Unlock()
-	if high != nil {
-		cb("high", float64(*high))
+	if nonempty {
+		cb("high", float64(high))
+		cb("low", float64(low))
 	} else {
 		cb("high", math.NaN())
-	}
-	if low != nil {
-		cb("low", float64(*low))
-	} else {
 		cb("low", math.NaN())
 	}
 	cb("val", float64(val))

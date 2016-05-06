@@ -26,6 +26,8 @@ type traceWatcherRef struct {
 	watcher func(*Trace)
 }
 
+// Registry encapsulates all of the top-level state for a monitoring system.
+// In general, only the Default registry is ever used.
 type Registry struct {
 	// sync/atomic things
 	traceWatcher unsafe.Pointer
@@ -44,6 +46,8 @@ type Registry struct {
 	orphans   map[*Span]struct{}
 }
 
+// NewRegistry creates a NewRegistry, though you almost certainly just want
+// to use Default.
 func NewRegistry() *Registry {
 	return &Registry{
 		traceWatchers: map[int64]func(*Trace){},
@@ -52,10 +56,17 @@ func NewRegistry() *Registry {
 		orphans:       map[*Span]struct{}{}}
 }
 
+// Package creates a new monitoring Scope, named after the top level package.
+// It's expected that you'll have something like
+//
+//   var mon = monitor.Package()
+//
+// at the top of each package.
 func (r *Registry) Package() *Scope {
 	return r.ScopeNamed(callerPackage(1))
 }
 
+// ScopeNamed is like Package, but lets you choose the name.
 func (r *Registry) ScopeNamed(name string) *Scope {
 	r.scopeMtx.Lock()
 	defer r.scopeMtx.Unlock()
@@ -96,6 +107,9 @@ func (r *Registry) updateWatcher() {
 	}
 }
 
+// ObserveTraces lets you observe all traces flowing through the system.
+// The passed in callback 'cb' will be called for every new trace as soon as
+// it starts, until the returned cancel method is called.
 func (r *Registry) ObserveTraces(cb func(*Trace)) (cancel func()) {
 	// even though observeTrace doesn't get a mutex, it's only ever loading
 	// the traceWatcher pointer, so we can use this mutex here to safely
@@ -140,6 +154,8 @@ func (r *Registry) orphanEnd(s *Span) {
 	r.orphanMtx.Unlock()
 }
 
+// RootSpans will call 'cb' on all currently executing Spans with no live or
+// reachable parent. See also AllSpans.
 func (r *Registry) RootSpans(cb func(s *Span)) {
 	r.spanMtx.Lock()
 	spans := make([]*Span, 0, len(r.spans))
@@ -167,10 +183,12 @@ func walkSpan(s *Span, cb func(s *Span)) {
 	})
 }
 
+// AllSpans calls 'cb' on all currently known Spans. See also RootSpans.
 func (r *Registry) AllSpans(cb func(s *Span)) {
 	r.RootSpans(func(s *Span) { walkSpan(s, cb) })
 }
 
+// Scopes calls 'cb' on all currently known Scopes.
 func (r *Registry) Scopes(cb func(s *Scope)) {
 	r.scopeMtx.Lock()
 	c := make([]*Scope, 0, len(r.scopes))
@@ -184,10 +202,12 @@ func (r *Registry) Scopes(cb func(s *Scope)) {
 	}
 }
 
+// Funcs calls 'cb' on all currently known Funcs.
 func (r *Registry) Funcs(cb func(f *Func)) {
 	r.Scopes(func(s *Scope) { s.Funcs(cb) })
 }
 
+// Stats implements the StatSource interface.
 func (r *Registry) Stats(cb func(name string, val float64)) {
 	r.Scopes(func(s *Scope) {
 		s.Stats(func(name string, val float64) {
@@ -196,15 +216,25 @@ func (r *Registry) Stats(cb func(name string, val float64)) {
 	})
 }
 
+// Default is the default Registry
 var Default = NewRegistry()
 
+// ScopeNamed is just a wrapper around Default.ScopeNamed
 func ScopeNamed(name string) *Scope { return Default.ScopeNamed(name) }
-func RootSpans(cb func(s *Span))    { Default.RootSpans(cb) }
-func Scopes(cb func(s *Scope))      { Default.Scopes(cb) }
-func Funcs(cb func(f *Func))        { Default.Funcs(cb) }
 
+// RootSpans is just a wrapper around Default.RootSpans
+func RootSpans(cb func(s *Span)) { Default.RootSpans(cb) }
+
+// Scopes is just a wrapper around Default.Scopes
+func Scopes(cb func(s *Scope)) { Default.Scopes(cb) }
+
+// Funcs is just a wrapper around Default.Funcs
+func Funcs(cb func(f *Func)) { Default.Funcs(cb) }
+
+// Package is just a wrapper around Default.Package
 func Package() *Scope { return Default.ScopeNamed(callerPackage(1)) }
 
+// Stats is just a wrapper around Default.Stats
 func Stats(cb func(name string, val float64)) { Default.Stats(cb) }
 
 type spanSorter []*Span

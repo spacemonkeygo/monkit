@@ -18,6 +18,7 @@ import (
 	"reflect"
 )
 
+// StatSource represents anything that can return named floating point values.
 type StatSource interface {
 	Stats(cb func(name string, val float64))
 }
@@ -59,6 +60,8 @@ func StatSourceFromStruct(structData interface{}) StatSource {
 	})
 }
 
+// Prefix takes a StatSource and returns a new StatSource where all names have
+// the given prefix.
 func Prefix(prefix string, source StatSource) StatSource {
 	return StatSourceFunc(func(cb func(string, float64)) {
 		source.Stats(func(name string, val float64) {

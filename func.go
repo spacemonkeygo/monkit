@@ -18,6 +18,17 @@ import (
 	"fmt"
 )
 
+// Func represents a FuncStats bound to a particular function id, scope, and
+// name. You should create a Func using the Func creation methods
+// (Func/FuncNamed) on a Scope. Expected creation like:
+//
+//   var mon = monitor.Package()
+//
+//   func MyFunc() {
+//     f := mon.Func()
+//     ...
+//   }
+//
 type Func struct {
 	// sync/atomic things
 	FuncStats
@@ -38,15 +49,22 @@ func newFunc(s *Scope, name string) (f *Func) {
 	return f
 }
 
+// ShortName returns the name of the function within the package
 func (f *Func) ShortName() string { return f.name }
 
+// FullName returns the name of the function including the package
 func (f *Func) FullName() string {
 	return fmt.Sprintf("%s.%s", f.scope.name, f.name)
 }
 
-func (f *Func) Id() int64     { return f.id }
+// Id returns a unique integer referencing this function
+func (f *Func) Id() int64 { return f.id }
+
+// Scope references the Scope this Func is bound to
 func (f *Func) Scope() *Scope { return f.scope }
 
+// Parents will call the given cb with all of the unique Funcs that so far
+// have called this Func.
 func (f *Func) Parents(cb func(f *Func)) {
 	f.FuncStats.parents(cb)
 }

@@ -20,6 +20,8 @@ import (
 	"sync"
 )
 
+// Scope represents a named collection of StatSources. Scopes are constructed
+// through Registries.
 type Scope struct {
 	r       *Registry
 	name    string
@@ -34,6 +36,8 @@ func newScope(r *Registry, name string) *Scope {
 		sources: map[string]StatSource{}}
 }
 
+// Func retrieves or creates a Func named after the currently executing
+// function name (via runtime.Caller. See FuncNamed to choose your own name.
 func (s *Scope) Func() *Func {
 	return s.FuncNamed(callerFunc(1))
 }
@@ -50,6 +54,8 @@ func (s *Scope) newSource(name string, constructor func() StatSource) (
 	return ss
 }
 
+// FuncNamed retrieves or creates a Func named after the given name. See
+// Func() for automatic name determination.
 func (s *Scope) FuncNamed(name string) *Func {
 	source := s.newSource(name, func() StatSource { return newFunc(s, name) })
 	f, ok := source.(*Func)
@@ -60,6 +66,7 @@ func (s *Scope) FuncNamed(name string) *Func {
 	return f
 }
 
+// Funcs calls 'cb' for all Funcs registered on this Scope.
 func (s *Scope) Funcs(cb func(f *Func)) {
 	s.mtx.Lock()
 	funcs := make(map[*Func]struct{}, len(s.sources))
@@ -74,6 +81,7 @@ func (s *Scope) Funcs(cb func(f *Func)) {
 	}
 }
 
+// Meter retrieves or creates a Meter named after the given name. See Event.
 func (s *Scope) Meter(name string) *Meter {
 	source := s.newSource(name, func() StatSource { return NewMeter() })
 	m, ok := source.(*Meter)
@@ -84,10 +92,14 @@ func (s *Scope) Meter(name string) *Meter {
 	return m
 }
 
+// Event retrieves or creates a Meter named after the given name and then
+// calls Mark(1) on that meter.
 func (s *Scope) Event(name string) {
 	s.Meter(name).Mark(1)
 }
 
+// DiffMeter retrieves or creates a DiffMeter after the given name and two
+// submeters.
 func (s *Scope) DiffMeter(name string, m1, m2 *Meter) {
 	source := s.newSource(name, func() StatSource {
 		return NewDiffMeter(m1, m2)
@@ -98,6 +110,7 @@ func (s *Scope) DiffMeter(name string, m1, m2 *Meter) {
 	}
 }
 
+// IntVal retrieves or creates an IntVal after the given name.
 func (s *Scope) IntVal(name string) *IntVal {
 	source := s.newSource(name, func() StatSource { return NewIntVal() })
 	m, ok := source.(*IntVal)
@@ -108,6 +121,7 @@ func (s *Scope) IntVal(name string) *IntVal {
 	return m
 }
 
+// FloatVal retrieves or creates a FloatVal after the given name.
 func (s *Scope) FloatVal(name string) *FloatVal {
 	source := s.newSource(name, func() StatSource { return NewFloatVal() })
 	m, ok := source.(*FloatVal)
@@ -118,6 +132,7 @@ func (s *Scope) FloatVal(name string) *FloatVal {
 	return m
 }
 
+// BoolVal retrieves or creates a BoolVal after the given name.
 func (s *Scope) BoolVal(name string) *BoolVal {
 	source := s.newSource(name, func() StatSource { return NewBoolVal() })
 	m, ok := source.(*BoolVal)
@@ -128,6 +143,18 @@ func (s *Scope) BoolVal(name string) *BoolVal {
 	return m
 }
 
+// Timer retrieves or creates a Timer after the given name.
+func (s *Scope) Timer(name string) *Timer {
+	source := s.newSource(name, func() StatSource { return NewTimer() })
+	m, ok := source.(*Timer)
+	if !ok {
+		panic(fmt.Sprintf("%s already used for another stats source: %#v",
+			name, source))
+	}
+	return m
+}
+
+// Counter retrieves or creates a Counter after the given name.
 func (s *Scope) Counter(name string) *Counter {
 	source := s.newSource(name, func() StatSource { return NewCounter() })
 	m, ok := source.(*Counter)
@@ -138,6 +165,8 @@ func (s *Scope) Counter(name string) *Counter {
 	return m
 }
 
+// Gauge registers a callback that returns a float as the given name in the
+// Scope's StatSource table.
 func (s *Scope) Gauge(name string, cb func() float64) {
 	// gauges allow overwriting
 	s.mtx.Lock()
@@ -151,6 +180,8 @@ func (s *Scope) Gauge(name string, cb func() float64) {
 	s.sources[name] = gauge{cb: cb}
 }
 
+// Chain registers a full StatSource as the given name in the Scope's
+// StatSource table.
 func (s *Scope) Chain(name string, source StatSource) {
 	// chains allow overwriting
 	s.mtx.Lock()
@@ -164,6 +195,7 @@ func (s *Scope) Chain(name string, source StatSource) {
 	s.sources[name] = chain{source: source}
 }
 
+// Stats implements the StatSource interface.
 func (s *Scope) Stats(cb func(name string, val float64)) {
 	s.mtx.Lock()
 	sources := make([]namedSource, 0, len(s.sources))
@@ -179,6 +211,7 @@ func (s *Scope) Stats(cb func(name string, val float64)) {
 	}
 }
 
+// Name returns the name of the Scope, often the Package name.
 func (s *Scope) Name() string { return s.name }
 
 type namedSource struct {

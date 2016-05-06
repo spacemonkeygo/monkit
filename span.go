@@ -34,6 +34,8 @@ type Annotation struct {
 	Value string
 }
 
+// Span represents a 'span' of execution. A span is analogous to a stack frame.
+// Spans are constructed as a side-effect of Tasks.
 type Span struct {
 	// sync/atomic things
 	mtx spinLock
@@ -54,6 +56,8 @@ type Span struct {
 	annotations []Annotation
 }
 
+// SpanFromCtx loads the current Span from the given context. This assumes
+// the context already had a Span created through a Task.
 func SpanFromCtx(ctx context.Context) *Span {
 	if s, ok := ctx.(*Span); ok && s != nil {
 		return s
@@ -174,14 +178,17 @@ func (s *Span) orphan() {
 	s.mtx.Unlock()
 }
 
+// Duration returns the current amount of time the Span has been running
 func (s *Span) Duration() time.Duration {
 	return monotime.Now().Sub(s.start)
 }
 
+// Start returns the time the Span started.
 func (s *Span) Start() time.Time {
 	return s.start
 }
 
+// Value implements context.Context
 func (s *Span) Value(key interface{}) interface{} {
 	if key == spanKey {
 		return s
@@ -189,11 +196,13 @@ func (s *Span) Value(key interface{}) interface{} {
 	return s.Context.Value(key)
 }
 
+// String implements context.Context
 func (s *Span) String() string {
 	// TODO: for working with Contexts
 	return fmt.Sprintf("%v.WithSpan()", s.Context)
 }
 
+// Children returns all known running child Spans.
 func (s *Span) Children(cb func(s *Span)) {
 	found := map[*Span]bool{}
 	var sorter []*Span
@@ -211,6 +220,8 @@ func (s *Span) Children(cb func(s *Span)) {
 	}
 }
 
+// Args returns the list of strings associated with the args given to the
+// Task that created this Span.
 func (s *Span) Args() (rv []string) {
 	rv = make([]string, 0, len(s.args))
 	for _, arg := range s.args {
@@ -219,11 +230,20 @@ func (s *Span) Args() (rv []string) {
 	return rv
 }
 
-func (s *Span) Id() int64     { return s.id }
-func (s *Span) Func() *Func   { return s.f }
+// Id returns the Span id.
+func (s *Span) Id() int64 { return s.id }
+
+// Func returns the Func that kicked off this Span.
+func (s *Span) Func() *Func { return s.f }
+
+// Trace returns the Trace this Span is associated with.
 func (s *Span) Trace() *Trace { return s.trace }
+
+// Parent returns the Parent Span.
 func (s *Span) Parent() *Span { return s.parent }
 
+// Annotations returns any added annotations created through the Span Annotate
+// method
 func (s *Span) Annotations() []Annotation {
 	s.mtx.Lock()
 	annotations := s.annotations // okay cause we only ever append to this slice
@@ -231,12 +251,14 @@ func (s *Span) Annotations() []Annotation {
 	return append([]Annotation(nil), annotations...)
 }
 
+// Annotate adds an annotation to the existing Span.
 func (s *Span) Annotate(name, val string) {
 	s.mtx.Lock()
 	s.annotations = append(s.annotations, Annotation{Name: name, Value: val})
 	s.mtx.Unlock()
 }
 
+// Orphaned returns true if the Parent span ended before this Span did.
 func (s *Span) Orphaned() (rv bool) {
 	s.mtx.Lock()
 	rv = s.orphaned

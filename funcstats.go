@@ -23,6 +23,17 @@ import (
 	"github.com/spacemonkeygo/monotime"
 )
 
+// FuncStats keeps track of statistics about a possible function's execution.
+// Should be created with NewFuncStats, though expected creation is through a
+// Func object:
+//
+//   var mon = monitor.Package()
+//
+//   func MyFunc() {
+//     f := mon.Func()
+//     ...
+//   }
+//
 type FuncStats struct {
 	// sync/atomic things
 	current         int64
@@ -42,10 +53,23 @@ func initFuncStats(f *FuncStats) {
 	initDurationDist(&f.failureTimes)
 }
 
+// NewFuncStats creates a FuncStats
 func NewFuncStats() (f *FuncStats) {
 	f = &FuncStats{}
 	initFuncStats(f)
 	return f
+}
+
+// Reset resets all recorded data.
+func (f *FuncStats) Reset() {
+	atomic.StoreInt64(&f.current, 0)
+	atomic.StoreInt64(&f.highwater, 0)
+	f.parentsAndMutex.Lock()
+	f.errors = make(map[string]int64, len(f.errors))
+	f.panics = 0
+	f.successTimes.Reset()
+	f.failureTimes.Reset()
+	f.parentsAndMutex.Unlock()
 }
 
 func (f *FuncStats) start(parent *Func) {
@@ -79,9 +103,14 @@ func (f *FuncStats) end(err error, panicked bool, duration time.Duration) {
 	f.parentsAndMutex.Unlock()
 }
 
-func (f *FuncStats) Current() int64   { return atomic.LoadInt64(&f.current) }
+// Current returns how many concurrent instances of this function are currently
+// being observed.
+func (f *FuncStats) Current() int64 { return atomic.LoadInt64(&f.current) }
+
+// Highwater returns the highest value Current() would ever return.
 func (f *FuncStats) Highwater() int64 { return atomic.LoadInt64(&f.highwater) }
 
+// Success returns the number of successes that have been observed
 func (f *FuncStats) Success() (rv int64) {
 	f.parentsAndMutex.Lock()
 	rv = f.successTimes.Count
@@ -89,6 +118,7 @@ func (f *FuncStats) Success() (rv int64) {
 	return rv
 }
 
+// Panics returns the number of panics that have been observed
 func (f *FuncStats) Panics() (rv int64) {
 	f.parentsAndMutex.Lock()
 	rv = f.panics
@@ -96,6 +126,8 @@ func (f *FuncStats) Panics() (rv int64) {
 	return rv
 }
 
+// Errors returns the number of errors observed by error type. The error type
+// is determined using github.com/spacemonkeygo/errors.GetClass(err).String()
 func (f *FuncStats) Errors() (rv map[string]int64) {
 	f.parentsAndMutex.Lock()
 	rv = make(map[string]int64, len(f.errors))
@@ -110,6 +142,7 @@ func (f *FuncStats) parents(cb func(f *Func)) {
 	f.parentsAndMutex.Iterate(cb)
 }
 
+// Stats implements the StatSource interface
 func (f *FuncStats) Stats(cb func(name string, val float64)) {
 	cb("current", float64(f.Current()))
 	f.parentsAndMutex.Lock()
@@ -149,6 +182,7 @@ func (f *FuncStats) Stats(cb func(name string, val float64)) {
 	cb("failure times recent", f_recent.Seconds())
 }
 
+// SuccessTimes returns a DurationDist of successes
 func (f *FuncStats) SuccessTimes() *DurationDist {
 	f.parentsAndMutex.Lock()
 	d := f.successTimes.Copy()
@@ -156,6 +190,7 @@ func (f *FuncStats) SuccessTimes() *DurationDist {
 	return d
 }
 
+// FailureTimes returns a DurationDist of failures (includes panics and errors)
 func (f *FuncStats) FailureTimes() *DurationDist {
 	f.parentsAndMutex.Lock()
 	d := f.failureTimes.Copy()
@@ -163,6 +198,15 @@ func (f *FuncStats) FailureTimes() *DurationDist {
 	return d
 }
 
+// Observe starts the stopwatch for observing this function and returns a
+// function to be called at the end of the function execution. Expected usage
+// like:
+//
+//   func MyFunc() (err error) {
+//     defer funcStats.Observe()(&err)
+//     ...
+//   }
+//
 func (f *FuncStats) Observe() func(errptr *error) {
 	f.start(nil)
 	start := monotime.Now()

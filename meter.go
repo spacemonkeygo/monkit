@@ -35,12 +35,28 @@ type meterBucket struct {
 	start time.Duration
 }
 
+// Meter keeps track of events and their rates over time.
+// Implements the StatSource interface. You should construct using NewMeter,
+// though expected usage is like:
+//
+//   var (
+//     mon   = monitor.Package()
+//     meter = mon.Meter("meter")
+//   )
+//
+//   func MyFunc() {
+//     ...
+//     meter.Mark(4) // 4 things happened
+//     ...
+//   }
+//
 type Meter struct {
 	mtx    sync.Mutex
 	total  int64
 	slices [ticksToKeep]meterBucket
 }
 
+// NewMeter constructs a Meter
 func NewMeter() *Meter {
 	rv := &Meter{}
 	now := monotime.Monotonic()
@@ -51,12 +67,14 @@ func NewMeter() *Meter {
 	return rv
 }
 
+// SetTotal sets the initial total count of the meter.
 func (e *Meter) SetTotal(total int64) {
 	e.mtx.Lock()
 	e.total = total
 	e.mtx.Unlock()
 }
 
+// Mark marks amount events occurring in the current time window.
 func (e *Meter) Mark(amount int) {
 	e.mtx.Lock()
 	e.slices[ticksToKeep-1].count += int64(amount)
@@ -89,20 +107,33 @@ func (e *Meter) stats(now time.Duration) (rate float64, total int64) {
 	return rate, total
 }
 
+// Stats implements the StatSource interface
 func (e *Meter) Stats(cb func(name string, val float64)) {
 	rate, total := e.stats(monotime.Monotonic())
 	cb("rate", rate)
 	cb("total", float64(total))
 }
 
+// DiffMeter is a StatSource that shows the difference between
+// the rates of two meters. Expected usage like:
+//
+//   var (
+//     mon = monitor.Package()
+//     herps = mon.Meter("herps")
+//     derps = mon.Meter("derps")
+//     herpToDerp = mon.DiffMeter("herp_to_derp", herps, derps)
+//   )
+//
 type DiffMeter struct {
 	meter1, meter2 *Meter
 }
 
+// Constructs a DiffMeter.
 func NewDiffMeter(meter1, meter2 *Meter) *DiffMeter {
 	return &DiffMeter{meter1: meter1, meter2: meter2}
 }
 
+// Stats implements the StatSource interface
 func (m *DiffMeter) Stats(cb func(name string, val float64)) {
 	now := monotime.Monotonic()
 	rate1, total1 := m.meter1.stats(now)

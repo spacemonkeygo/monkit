@@ -22,7 +22,11 @@ import (
 )
 
 type SpanObserver interface {
+	// Start is called when a Span starts
 	Start(s *Span)
+
+	// Finish is called when a Span finishes, along with an error if any, whether
+	// or not it panicked, and what time it finished.
 	Finish(s *Span, err error, panicked bool, finish time.Time)
 }
 
@@ -43,6 +47,10 @@ type spanObserverRef struct {
 	observer SpanObserver
 }
 
+// Trace represents a 'trace' of execution. A 'trace' is the collection of all
+// of the 'spans' kicked off from the same root execution context. A trace is
+// a concurrency-supporting analog of a stack trace, where a span is somewhat
+// like a stack frame.
 type Trace struct {
 	// sync/atomic things
 	spanObserver unsafe.Pointer
@@ -55,6 +63,7 @@ type Trace struct {
 	vals map[interface{}]interface{}
 }
 
+// NewTrace creates a new Trace.
 func NewTrace(id int64) *Trace {
 	return &Trace{id: id}
 }
@@ -67,6 +76,8 @@ func (t *Trace) getObserver() SpanObserver {
 	return observer.observer
 }
 
+// ObserveSpans lets you register a SpanObserver for all future Spans on the
+// Trace.
 func (t *Trace) ObserveSpans(observer SpanObserver) {
 	for {
 		existing := (*spanObserverRef)(atomic.LoadPointer(&t.spanObserver))
@@ -87,8 +98,10 @@ func (t *Trace) ObserveSpans(observer SpanObserver) {
 	}
 }
 
+// Id returns the id of the Trace
 func (t *Trace) Id() int64 { return t.id }
 
+// Get returns a value associated with a key on a trace. See Set.
 func (t *Trace) Get(key interface{}) (val interface{}) {
 	t.mtx.Lock()
 	if t.vals != nil {
@@ -98,6 +111,7 @@ func (t *Trace) Get(key interface{}) (val interface{}) {
 	return val
 }
 
+// Set sets a value associated with a key on a trace. See Get.
 func (t *Trace) Set(key, val interface{}) {
 	t.mtx.Lock()
 	if t.vals == nil {
