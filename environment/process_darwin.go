@@ -12,14 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build !windows,!darwin
-
 package environment
 
 import (
+	"fmt"
 	"os"
+	"unsafe"
 )
 
+// #include <mach-o/dyld.h>
+// #include <stdlib.h>
+import "C"
+
 func openProc() (*os.File, error) {
-	return os.Open("/proc/self/exe")
+	const bufsize = 4096
+
+	buf := (*C.char)(C.malloc(bufsize))
+	defer C.free(unsafe.Pointer(buf))
+
+	size := C.uint32_t(bufsize)
+	if rc := C._NSGetExecutablePath(buf, &size); rc != 0 {
+		return nil, fmt.Errorf("error in cgo call to get path: %d", rc)
+	}
+
+	return os.Open(C.GoString(buf))
 }

@@ -17,6 +17,7 @@ package environment
 import (
 	"hash/crc32"
 	"io"
+	"sync"
 
 	"github.com/spacemonkeygo/monotime"
 	"gopkg.in/spacemonkeygo/monkit.v2"
@@ -42,7 +43,20 @@ func Process() monkit.StatSource {
 	})
 }
 
+var crcCache struct {
+	once sync.Once
+	crc  uint32
+	err  error
+}
+
 func processCRC() (uint32, error) {
+	crcCache.once.Do(func() {
+		crcCache.crc, crcCache.err = getProcessCRC()
+	})
+	return crcCache.crc, crcCache.err
+}
+
+func getProcessCRC() (uint32, error) {
 	fh, err := openProc()
 	if err != nil {
 		return 0, err
