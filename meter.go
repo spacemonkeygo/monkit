@@ -103,7 +103,12 @@ func (e *Meter) stats(now time.Duration) (rate float64, total int64) {
 	total = e.total
 	e.mtx.Unlock()
 	total += current
-	rate = float64(current) / (now - start).Seconds()
+	duration := (now - start).Seconds()
+	if duration > 0 {
+		rate = float64(current) / duration
+	} else {
+		rate = 0
+	}
 	return rate, total
 }
 

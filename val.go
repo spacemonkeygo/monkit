@@ -55,7 +55,9 @@ func (v *IntVal) Stats(cb func(name string, val float64)) {
 	vd := v.dist
 	min, max, recent, sum, count := vd.Low, vd.High, vd.Recent, vd.Sum, vd.Count
 	v.mtx.Unlock()
-	cb("avg", float64(sum/count))
+	if count > 0 {
+		cb("avg", float64(sum/count))
+	}
 	cb("count", float64(count))
 	cb("max", float64(max))
 	cb("min", float64(min))
@@ -108,7 +110,9 @@ func (v *FloatVal) Stats(cb func(name string, val float64)) {
 	vd := v.dist
 	min, max, recent, sum, count := vd.Low, vd.High, vd.Recent, vd.Sum, vd.Count
 	v.mtx.Unlock()
-	cb("avg", sum/float64(count))
+	if count > 0 {
+		cb("avg", sum/float64(count))
+	}
 	cb("count", float64(count))
 	cb("max", max)
 	cb("min", min)
