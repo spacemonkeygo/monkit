@@ -32,6 +32,8 @@ const (
 	fontOffset = int(barHeight * .2)
 )
 
+// SpansToSVG takes a list of FinishedSpans and writes them to w in SVG format.
+// It draws a trace using the Spans where the Spans are ordered by start time.
 func SpansToSVG(w io.Writer, spans []*FinishedSpan) error {
 	_, err := fmt.Fprint(w, `<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
@@ -88,6 +90,8 @@ func SpansToSVG(w io.Writer, spans []*FinishedSpan) error {
 	return err
 }
 
+// TraceQuerySVG uses WatchForSpans to write all Spans from 'reg' matching
+// 'matcher' to 'w' in SVG format.
 func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
 	matcher func(*monitor.Span) bool) error {
 	spans, err := watchForSpansWithKeepalive(
@@ -100,6 +104,8 @@ func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
 
 }
 
+// TraceQueryJSON uses WatchForSpans to write all Spans from 'reg' matching
+// 'matcher' to 'w' in JSON format.
 func TraceQueryJSON(reg *monitor.Registry, w io.Writer,
 	matcher func(*monitor.Span) bool) (write_err error) {
 
@@ -112,6 +118,7 @@ func TraceQueryJSON(reg *monitor.Registry, w io.Writer,
 	return SpansToJSON(w, spans)
 }
 
+// SpansToJSON turns a list of FinishedSpans into JSON format.
 func SpansToJSON(w io.Writer, spans []*FinishedSpan) error {
 	lw := newListWriter(w)
 	for _, s := range spans {
@@ -160,6 +167,7 @@ func watchForSpansWithKeepalive(reg *monitor.Registry, w io.Writer,
 	return spans, err
 }
 
+// StartTimeSorter assists with sorting a slice of FinishedSpans by start time.
 type StartTimeSorter []*FinishedSpan
 
 func (s StartTimeSorter) Len() int      { return len(s) }

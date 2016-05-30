@@ -28,7 +28,7 @@ import (
 //   var mon = monitor.Package()
 //
 //   func MyFunc() {
-//     mon.Event("an event!")
+//     mon.Counter("beans").Inc(1)
 //   }
 //
 type Counter struct {

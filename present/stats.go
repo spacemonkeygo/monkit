@@ -21,6 +21,8 @@ import (
 	"gopkg.in/spacemonkeygo/monitor.v2"
 )
 
+// StatsText writes all of the name/value statistics pairs the Registry knows
+// to w in a text format.
 func StatsText(r *monitor.Registry, w io.Writer) (err error) {
 	r.Stats(func(name string, val float64) {
 		if err != nil {
@@ -31,6 +33,8 @@ func StatsText(r *monitor.Registry, w io.Writer) (err error) {
 	return err
 }
 
+// StatsJSON writes all of the name/value statistics pairs the Registry knows
+// to w in a JSON format.
 func StatsJSON(r *monitor.Registry, w io.Writer) (err error) {
 	lw := newListWriter(w)
 	r.Stats(func(name string, val float64) {

@@ -22,6 +22,8 @@ var (
 	registrations = map[string]monitor.StatSource{}
 )
 
+// Register attaches all of this package's environment data to the given
+// registry. It will be attached to a top-level scope called 'env'.
 func Register(registry *monitor.Registry) {
 	if registry == nil {
 		registry = monitor.Default

@@ -26,6 +26,11 @@ var (
 	startTime = monotime.Monotonic()
 )
 
+// Process returns a StatSource including generic process data, such as
+// the process uptime, and a crc of the executing binary if possible. Also
+// includes a 'control' value so data collectors can accurately count how many
+// unique running processes being monitored there are. Not expected to be
+// called directly, as this StatSource is added by Register.
 func Process() monitor.StatSource {
 	return monitor.StatSourceFunc(func(cb func(name string, val float64)) {
 		cb("control", 1)

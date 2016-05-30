@@ -20,7 +20,8 @@ import (
 
 // Func represents a FuncStats bound to a particular function id, scope, and
 // name. You should create a Func using the Func creation methods
-// (Func/FuncNamed) on a Scope. Expected creation like:
+// (Func/FuncNamed) on a Scope. If you want to manage installation bookkeeping
+// yourself, create a FuncStats directly. Expected Func creation like:
 //
 //   var mon = monitor.Package()
 //

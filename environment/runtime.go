@@ -20,6 +20,10 @@ import (
 	"gopkg.in/spacemonkeygo/monitor.v2"
 )
 
+// Runtime returns a StatSource that includes information gathered from the
+// Go runtime, including the number of goroutines currently running, and
+// other live memory data. Not expected to be called directly, as this
+// StatSource is added by Register.
 func Runtime() monitor.StatSource {
 	return monitor.StatSourceFunc(func(cb func(name string, val float64)) {
 		cb("goroutines", float64(runtime.NumGoroutine()))

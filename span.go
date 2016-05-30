@@ -29,6 +29,7 @@ const (
 	spanKey ctxKey = iota
 )
 
+// Annotation represents an arbitrary name and value string pair
 type Annotation struct {
 	Name  string
 	Value string

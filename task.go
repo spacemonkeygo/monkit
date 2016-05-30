@@ -36,6 +36,9 @@ func (*taskSecretT) Deadline() (time.Time, bool) {
 
 var taskSecret context.Context = &taskSecretT{}
 
+// Tasks are created (sometimes implicitly) from Funcs. A Task should be called
+// at the start of a monitored task, and its return value should be called
+// at the stop of said task.
 type Task func(ctx *context.Context, args ...interface{}) func(*error)
 
 // Func returns the Func associated with the Task

@@ -30,6 +30,8 @@ func formatDist(data *monitor.DurationDist, indent string) (result string) {
 	return result
 }
 
+// FuncsDot finds all of the Funcs known by Registry r and writes information
+// about them in the dot graphics file format to w.
 func FuncsDot(r *monitor.Registry, w io.Writer) (err error) {
 	_, err = fmt.Fprintf(w, "digraph G {\n node [shape=box];\n")
 	if err != nil {
@@ -112,6 +114,8 @@ func FuncsDot(r *monitor.Registry, w io.Writer) (err error) {
 	return err
 }
 
+// FuncsText finds all of the Funcs known by Registry r and writes information
+// about them in a plain text format to w.
 func FuncsText(r *monitor.Registry, w io.Writer) (err error) {
 	r.Funcs(func(f *monitor.Func) {
 		if err != nil {
@@ -172,6 +176,8 @@ func FuncsText(r *monitor.Registry, w io.Writer) (err error) {
 	return err
 }
 
+// FuncsJSON finds all of the Funcs known by Registry r and writes information
+// about them in the JSON format to w.
 func FuncsJSON(r *monitor.Registry, w io.Writer) (err error) {
 	lw := newListWriter(w)
 	r.Funcs(func(f *monitor.Func) {

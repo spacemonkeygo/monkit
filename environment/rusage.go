@@ -22,6 +22,9 @@ import (
 	"gopkg.in/spacemonkeygo/monitor.v2"
 )
 
+// Rusage returns a StatSource that provides as many statistics as possible
+// gathered from the Rusage syscall. Not expected to be called directly, as
+// this StatSource is added by Register.
 func Rusage() monitor.StatSource {
 	return monitor.StatSourceFunc(func(cb func(name string, val float64)) {
 		var rusage syscall.Rusage

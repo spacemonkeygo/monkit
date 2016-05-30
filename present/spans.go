@@ -62,6 +62,8 @@ func outputDotSpan(w io.Writer, s *monitor.Span) error {
 	return err
 }
 
+// SpansDot finds all of the current Spans known by Registry r and writes
+// information about them in the dot graphics file format to w.
 func SpansDot(r *monitor.Registry, w io.Writer) error {
 	_, err := fmt.Fprintf(w, "digraph G {\n node [shape=box];\n")
 	if err != nil {
@@ -107,6 +109,8 @@ func outputTextSpan(w io.Writer, s *monitor.Span, indent string) (err error) {
 	return err
 }
 
+// SpansText finds all of the current Spans known by Registry r and writes
+// information about them in a plain text format to w.
 func SpansText(r *monitor.Registry, w io.Writer) (err error) {
 	r.RootSpans(func(s *monitor.Span) {
 		if err != nil {
@@ -121,6 +125,8 @@ func SpansText(r *monitor.Registry, w io.Writer) (err error) {
 	return err
 }
 
+// SpansJSON finds all of the current Spans known by Registry r and writes
+// information about them in the JSON format to w.
 func SpansJSON(r *monitor.Registry, w io.Writer) (err error) {
 	lw := newListWriter(w)
 	r.AllSpans(func(s *monitor.Span) {

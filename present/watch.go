@@ -25,6 +25,8 @@ import (
 	"gopkg.in/spacemonkeygo/monitor.v2"
 )
 
+// FinishedSpan is a Span that has completed and contains information about
+// how it finished.
 type FinishedSpan struct {
 	Span     *monitor.Span
 	Err      error
@@ -59,7 +61,8 @@ func WatchForSpans(ctx context.Context, r *monitor.Registry,
 
 // CollectSpans is kind of like WatchForSpans, except that it uses the current
 // span to figure out which trace to collect. It calls work(), then collects
-// from the current trace until work() returns.
+// from the current trace until work() returns. CollectSpans won't work unless
+// some ancestor function is also monitored and has modified the ctx.
 func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
 	spans []*FinishedSpan) {
 	s := monitor.SpanFromCtx(ctx)
@@ -80,6 +83,8 @@ func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
 	return collector.Spans()
 }
 
+// SpanCollector implements the SpanObserver interface. It stores all Spans
+// observed after it starts collecting, typically when matcher returns true.
 type SpanCollector struct {
 	// sync/atomic
 	check unsafe.Pointer
@@ -110,7 +115,7 @@ func NewSpanCollector(matcher func(s *monitor.Span) bool) (
 }
 
 // Done returns a channel that's closed when the SpanCollector has collected
-// everything.
+// everything it cares about.
 func (c *SpanCollector) Done() <-chan struct{} {
 	return c.done
 }
@@ -124,12 +129,12 @@ var (
 )
 
 // ForceStart starts the span collector collecting spans, stopping when endSpan
-// finishes
+// finishes. This is typically only used if matcher was nil at construction.
 func (c *SpanCollector) ForceStart(endSpan *monitor.Span) {
 	atomic.CompareAndSwapPointer(&c.check, nil, unsafe.Pointer(endSpan))
 }
 
-// Start is to implement the monitor.SpanObserver interface. Start is called
+// Start is to implement the monitor.SpanObserver interface. Start gets called
 // whenever a Span starts.
 func (c *SpanCollector) Start(s *monitor.Span) {
 	if atomic.LoadPointer(&c.check) != nil || !c.matcher(s) {
@@ -138,8 +143,8 @@ func (c *SpanCollector) Start(s *monitor.Span) {
 	atomic.CompareAndSwapPointer(&c.check, nil, unsafe.Pointer(s))
 }
 
-// Finish is to implement the monitor.SpanObserver interface. Finish is called
-// whenever a Span finishes.
+// Finish is to implement the monitor.SpanObserver interface. Finish gets
+// called whenever a Span finishes.
 func (c *SpanCollector) Finish(s *monitor.Span, err error, panicked bool,
 	finish time.Time) {
 	existing := atomic.LoadPointer(&c.check)

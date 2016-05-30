@@ -21,6 +21,8 @@ import (
 	"unsafe"
 )
 
+// SpanObserver is the interface plugins must implement if they want to observe
+// all spans on a given trace as they happen.
 type SpanObserver interface {
 	// Start is called when a Span starts
 	Start(s *Span)
