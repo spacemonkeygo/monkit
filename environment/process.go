@@ -19,7 +19,7 @@ import (
 	"io"
 
 	"github.com/spacemonkeygo/monotime"
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
 var (
@@ -31,8 +31,8 @@ var (
 // includes a 'control' value so data collectors can accurately count how many
 // unique running processes being monitored there are. Not expected to be
 // called directly, as this StatSource is added by Register.
-func Process() monitor.StatSource {
-	return monitor.StatSourceFunc(func(cb func(name string, val float64)) {
+func Process() monkit.StatSource {
+	return monkit.StatSourceFunc(func(cb func(name string, val float64)) {
 		cb("control", 1)
 		c, err := processCRC()
 		if err == nil {

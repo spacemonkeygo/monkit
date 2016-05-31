@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitor
+package monkit
 
 import (
 	"sync"
@@ -22,7 +22,7 @@ import (
 // IntVal is a convenience wrapper around an IntDist. Constructed using
 // NewIntVal, though it's expected usage is like:
 //
-//   var mon = monitor.Package()
+//   var mon = monkit.Package()
 //
 //   func MyFunc() {
 //     ...
@@ -77,7 +77,7 @@ func (v *IntVal) Quantile(quantile float64) (rv int64) {
 // FloatVal is a convenience wrapper around an FloatDist. Constructed using
 // NewFloatVal, though it's expected usage is like:
 //
-//   var mon = monitor.Package()
+//   var mon = monkit.Package()
 //
 //   func MyFunc() {
 //     ...
@@ -133,7 +133,7 @@ func (v *FloatVal) Quantile(quantile float64) (rv float64) {
 // number of falses, and the disposition (number of trues minus number of
 // falses). Constructed using NewBoolVal, though it's expected usage is like:
 //
-//   var mon = monitor.Package()
+//   var mon = monkit.Package()
 //
 //   func MyFunc() {
 //     ...

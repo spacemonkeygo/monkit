@@ -15,15 +15,15 @@
 package environment
 
 import (
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
 // OS returns a StatSource that includes various operating system process data
 // such as the number of file descriptors open and other information from
 // /proc if available. Not expected to be called directly, as this StatSource
 // is added by Register.
-func OS() monitor.StatSource {
-	return monitor.StatSourceFunc(func(cb func(name string, val float64)) {
+func OS() monkit.StatSource {
+	return monkit.StatSourceFunc(func(cb func(name string, val float64)) {
 		fds, err := fdCount()
 		if err == nil {
 			cb("fds", float64(fds))

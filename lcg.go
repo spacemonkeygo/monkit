@@ -1,6 +1,6 @@
 // Copyright (C) 2016 Space Monkey, Inc.
 
-package monitor
+package monkit
 
 import (
 	"math/rand"

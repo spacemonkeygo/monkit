@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /*
-Package monitor is a flexible code instrumenting and data collection library.
+Package monkit is a flexible code instrumenting and data collection library.
 
 With this package, it's easy to monitor and watch all sorts of data.
 A motivating example:
@@ -24,12 +24,12 @@ A motivating example:
 		"net/http"
 
 		"golang.org/x/net/context"
-		"gopkg.in/spacemonkeygo/monitor.v2"
-		"gopkg.in/spacemonkeygo/monitor.v2/present"
+		"gopkg.in/spacemonkeygo/monkit.v2"
+		"gopkg.in/spacemonkeygo/monkit.v2/present"
 	)
 
 	var (
-		mon = monitor.Package()
+		mon = monkit.Package()
 	)
 
 	func FixSerenity(ctx context.Context) (err error) {
@@ -54,7 +54,7 @@ A motivating example:
 	}
 
 	func Monitor() {
-		go http.ListenAndServe(":8080", present.HTTP(monitor.Default))
+		go http.ListenAndServe(":8080", present.HTTP(monkit.Default))
 	}
 
 In this example, calling FixSerenity will cause the endpoint at
@@ -82,4 +82,4 @@ or
   xdot <(curl -s http://localhost:8080/funcs/dot)
 
 */
-package monitor // import "gopkg.in/spacemonkeygo/monitor.v2"
+package monkit // import "gopkg.in/spacemonkeygo/monkit.v2"

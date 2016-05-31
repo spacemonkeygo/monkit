@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitor
+package monkit
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ import (
 // (Func/FuncNamed) on a Scope. If you want to manage installation bookkeeping
 // yourself, create a FuncStats directly. Expected Func creation like:
 //
-//   var mon = monitor.Package()
+//   var mon = monkit.Package()
 //
 //   func MyFunc() {
 //     f := mon.Func()

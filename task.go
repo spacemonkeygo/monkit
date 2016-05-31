@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitor
+package monkit
 
 import (
 	"sync"
@@ -79,7 +79,7 @@ func taskArgs(f *Func, args []interface{}) bool {
 // It also adds a new Span to the given ctx during execution. Expected usage
 // like:
 //
-//   var mon = monitor.Package()
+//   var mon = monkit.Package()
 //
 //   func MyFunc(ctx context.Context, arg1, arg2 string) (err error) {
 //     defer mon.Task()(&ctx, arg1, arg2)(&err)
@@ -89,7 +89,7 @@ func taskArgs(f *Func, args []interface{}) bool {
 // or
 //
 //   var (
-//     mon = monitor.Package()
+//     mon = monkit.Package()
 //     funcTask = mon.Task()
 //   )
 //
@@ -133,7 +133,7 @@ func (s *Scope) TaskNamed(name string) Task {
 // Task returns a new Task for use on this Func. It also adds a new Span to
 // the given ctx during execution.
 //
-//   var mon = monitor.Package()
+//   var mon = monkit.Package()
 //
 //   func MyFunc(ctx context.Context, arg1, arg2 string) (err error) {
 //     f := mon.Func()

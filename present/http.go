@@ -18,17 +18,17 @@ import (
 	"net/http"
 
 	"github.com/spacemonkeygo/errors/errhttp"
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
 type handler struct {
-	Registry *monitor.Registry
+	Registry *monkit.Registry
 }
 
 // HTTP makes an http.Handler out of a Registry. It serves paths using this
 // package's FromRequest request router. Usually HTTP is called with the
 // Default registry.
-func HTTP(r *monitor.Registry) http.Handler {
+func HTTP(r *monkit.Registry) http.Handler {
 	return handler{Registry: r}
 }
 

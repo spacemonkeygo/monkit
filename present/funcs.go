@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
-func formatDist(data *monitor.DurationDist, indent string) (result string) {
-	for _, q := range monitor.ObservedQuantiles {
+func formatDist(data *monkit.DurationDist, indent string) (result string) {
+	for _, q := range monkit.ObservedQuantiles {
 		result += fmt.Sprintf("%s%.02f: %s\n", indent, q, data.Query(q))
 	}
 	result += fmt.Sprintf("%savg: %s\n", indent, data.Average())
@@ -32,12 +32,12 @@ func formatDist(data *monitor.DurationDist, indent string) (result string) {
 
 // FuncsDot finds all of the Funcs known by Registry r and writes information
 // about them in the dot graphics file format to w.
-func FuncsDot(r *monitor.Registry, w io.Writer) (err error) {
+func FuncsDot(r *monkit.Registry, w io.Writer) (err error) {
 	_, err = fmt.Fprintf(w, "digraph G {\n node [shape=box];\n")
 	if err != nil {
 		return err
 	}
-	r.Funcs(func(f *monitor.Func) {
+	r.Funcs(func(f *monkit.Func) {
 		if err != nil {
 			return
 		}
@@ -89,7 +89,7 @@ func FuncsDot(r *monitor.Registry, w io.Writer) (err error) {
 			return
 		}
 
-		f.Parents(func(parent *monitor.Func) {
+		f.Parents(func(parent *monkit.Func) {
 			if err != nil {
 				return
 			}
@@ -116,8 +116,8 @@ func FuncsDot(r *monitor.Registry, w io.Writer) (err error) {
 
 // FuncsText finds all of the Funcs known by Registry r and writes information
 // about them in a plain text format to w.
-func FuncsText(r *monitor.Registry, w io.Writer) (err error) {
-	r.Funcs(func(f *monitor.Func) {
+func FuncsText(r *monkit.Registry, w io.Writer) (err error) {
+	r.Funcs(func(f *monkit.Func) {
 		if err != nil {
 			return
 		}
@@ -126,7 +126,7 @@ func FuncsText(r *monitor.Registry, w io.Writer) (err error) {
 			return
 		}
 		printed := false
-		f.Parents(func(parent *monitor.Func) {
+		f.Parents(func(parent *monkit.Func) {
 			if err != nil {
 				return
 			}
@@ -178,9 +178,9 @@ func FuncsText(r *monitor.Registry, w io.Writer) (err error) {
 
 // FuncsJSON finds all of the Funcs known by Registry r and writes information
 // about them in the JSON format to w.
-func FuncsJSON(r *monitor.Registry, w io.Writer) (err error) {
+func FuncsJSON(r *monkit.Registry, w io.Writer) (err error) {
 	lw := newListWriter(w)
-	r.Funcs(func(f *monitor.Func) {
+	r.Funcs(func(f *monkit.Func) {
 		lw.elem(formatFunc(f))
 	})
 	return lw.done()

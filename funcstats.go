@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitor
+package monkit
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ import (
 // Should be created with NewFuncStats, though expected creation is through a
 // Func object:
 //
-//   var mon = monitor.Package()
+//   var mon = monkit.Package()
 //
 //   func MyFunc() {
 //     f := mon.Func()

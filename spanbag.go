@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitor
+package monkit
 
 // spanBag is a bag data structure (can add 0 or more references to a span,
 // where every add needs to be matched with an equivalent remove). spanBag has

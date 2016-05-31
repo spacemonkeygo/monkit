@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitor
+package monkit
 
 import (
 	"sync"
@@ -40,7 +40,7 @@ type meterBucket struct {
 // though expected usage is like:
 //
 //   var (
-//     mon   = monitor.Package()
+//     mon   = monkit.Package()
 //     meter = mon.Meter("meter")
 //   )
 //
@@ -123,7 +123,7 @@ func (e *Meter) Stats(cb func(name string, val float64)) {
 // the rates of two meters. Expected usage like:
 //
 //   var (
-//     mon = monitor.Package()
+//     mon = monkit.Package()
 //     herps = mon.Meter("herps")
 //     derps = mon.Meter("derps")
 //     herpToDerp = mon.DiffMeter("herp_to_derp", herps, derps)

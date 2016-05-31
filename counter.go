@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitor
+package monkit
 
 import (
 	"math"
@@ -25,7 +25,7 @@ import (
 // may be more convenient to use the Counter accessor on a given Scope.
 // Expected creation is like:
 //
-//   var mon = monitor.Package()
+//   var mon = monkit.Package()
 //
 //   func MyFunc() {
 //     mon.Counter("beans").Inc(1)

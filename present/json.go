@@ -20,10 +20,10 @@ import (
 	"io"
 	"time"
 
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
-func formatSpan(s *monitor.Span) interface{} {
+func formatSpan(s *monkit.Span) interface{} {
 	js := struct {
 		Id       int64  `json:"id"`
 		ParentId *int64 `json:"parent_id,omitempty"`
@@ -114,18 +114,18 @@ type durationStats struct {
 	Quantiles map[string]time.Duration `json:"quantiles"`
 }
 
-func formatDuration(d *monitor.DurationDist, out *durationStats) {
+func formatDuration(d *monkit.DurationDist, out *durationStats) {
 	out.Average = d.Average()
 	out.Recent = d.Recent
 	out.Quantiles = make(map[string]time.Duration,
-		len(monitor.ObservedQuantiles))
-	for _, quantile := range monitor.ObservedQuantiles {
+		len(monkit.ObservedQuantiles))
+	for _, quantile := range monkit.ObservedQuantiles {
 		name := fmt.Sprintf("%.02f", quantile)
 		out.Quantiles[name] = d.Query(quantile)
 	}
 }
 
-func formatFunc(f *monitor.Func) interface{} {
+func formatFunc(f *monkit.Func) interface{} {
 	js := struct {
 		Id           int64            `json:"id"`
 		ParentIds    []int64          `json:"parent_ids"`
@@ -142,7 +142,7 @@ func formatFunc(f *monitor.Func) interface{} {
 	}{}
 
 	js.Id = f.Id()
-	f.Parents(func(parent *monitor.Func) {
+	f.Parents(func(parent *monkit.Func) {
 		if parent == nil {
 			js.Entry = true
 		} else {

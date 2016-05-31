@@ -20,20 +20,20 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
 func proc(cb func(name string, val float64)) {
 	var stat procSelfStat
 	err := readProcSelfStat(&stat)
 	if err == nil {
-		monitor.Prefix("stat.", monitor.StatSourceFromStruct(&stat)).Stats(cb)
+		monkit.Prefix("stat.", monkit.StatSourceFromStruct(&stat)).Stats(cb)
 	}
 
 	var statm procSelfStatm
 	err = readProcSelfStatm(&statm)
 	if err == nil {
-		monitor.Prefix("statm.", monitor.StatSourceFromStruct(&statm)).Stats(cb)
+		monkit.Prefix("statm.", monkit.StatSourceFromStruct(&statm)).Stats(cb)
 	}
 }
 

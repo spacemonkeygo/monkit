@@ -23,7 +23,7 @@ import (
 
 	"github.com/spacemonkeygo/errors"
 	"github.com/spacemonkeygo/errors/errhttp"
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
 var (
@@ -35,8 +35,8 @@ var (
 // found.
 type Result func(io.Writer) error
 
-func curry(reg *monitor.Registry,
-	f func(*monitor.Registry, io.Writer) error) func(io.Writer) error {
+func curry(reg *monkit.Registry,
+	f func(*monkit.Registry, io.Writer) error) func(io.Writer) error {
 	return func(w io.Writer) error {
 		return f(reg, w)
 	}
@@ -74,7 +74,7 @@ func curry(reg *monitor.Registry,
 // additional query param. Be advised that until a trace completes, whether
 // or not it has started, it adds a small amount of overhead (a comparison or
 // two) to every monitored function.
-func FromRequest(reg *monitor.Registry, path string, query url.Values) (
+func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 	f Result, contentType string, err error) {
 	first, rest := shift(path)
 	second, _ := shift(rest)
@@ -114,7 +114,7 @@ func FromRequest(reg *monitor.Registry, path string, query url.Values) (
 			return nil, "", BadRequest.New("at least one of 'regex' or 'trace_id' " +
 				"query parameters required")
 		}
-		fnMatcher := func(*monitor.Func) bool { return true }
+		fnMatcher := func(*monkit.Func) bool { return true }
 
 		if regexStr != "" {
 			re, err := regexp.Compile(regexStr)
@@ -122,7 +122,7 @@ func FromRequest(reg *monitor.Registry, path string, query url.Values) (
 				return nil, "", BadRequest.New("invalid regex %#v: %v",
 					regexStr, err)
 			}
-			fnMatcher = func(f *monitor.Func) bool {
+			fnMatcher = func(f *monkit.Func) bool {
 				return re.MatchString(f.FullName())
 			}
 
@@ -135,8 +135,8 @@ func FromRequest(reg *monitor.Registry, path string, query url.Values) (
 				}
 			}
 			if preselect {
-				funcs := map[*monitor.Func]bool{}
-				reg.Funcs(func(f *monitor.Func) {
+				funcs := map[*monkit.Func]bool{}
+				reg.Funcs(func(f *monkit.Func) {
 					if fnMatcher(f) {
 						funcs[f] = true
 					}
@@ -145,11 +145,11 @@ func FromRequest(reg *monitor.Registry, path string, query url.Values) (
 					return nil, "", BadRequest.New("regex preselect matches 0 functions")
 				}
 
-				fnMatcher = func(f *monitor.Func) bool { return funcs[f] }
+				fnMatcher = func(f *monkit.Func) bool { return funcs[f] }
 			}
 		}
 
-		spanMatcher := func(s *monitor.Span) bool { return fnMatcher(s.Func()) }
+		spanMatcher := func(s *monkit.Span) bool { return fnMatcher(s.Func()) }
 
 		if traceIdStr != "" {
 			traceId, err := strconv.ParseUint(traceIdStr, 16, 64)
@@ -157,7 +157,7 @@ func FromRequest(reg *monitor.Registry, path string, query url.Values) (
 				return nil, "", BadRequest.New(
 					"trace_id expected to be hex unsigned 64 bit number: %#v", traceIdStr)
 			}
-			spanMatcher = func(s *monitor.Span) bool {
+			spanMatcher = func(s *monkit.Span) bool {
 				return s.Trace().Id() == int64(traceId) && fnMatcher(s.Func())
 			}
 		}

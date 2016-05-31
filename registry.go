@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitor
+package monkit
 
 import (
 	"fmt"
@@ -59,7 +59,7 @@ func NewRegistry() *Registry {
 // Package creates a new monitoring Scope, named after the top level package.
 // It's expected that you'll have something like
 //
-//   var mon = monitor.Package()
+//   var mon = monkit.Package()
 //
 // at the top of each package.
 func (r *Registry) Package() *Scope {

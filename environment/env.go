@@ -15,18 +15,18 @@
 package environment
 
 import (
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
 var (
-	registrations = map[string]monitor.StatSource{}
+	registrations = map[string]monkit.StatSource{}
 )
 
 // Register attaches all of this package's environment data to the given
 // registry. It will be attached to a top-level scope called 'env'.
-func Register(registry *monitor.Registry) {
+func Register(registry *monkit.Registry) {
 	if registry == nil {
-		registry = monitor.Default
+		registry = monkit.Default
 	}
 	pkg := registry.ScopeNamed("env")
 	for name, source := range registrations {

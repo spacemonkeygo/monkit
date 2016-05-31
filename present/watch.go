@@ -22,13 +22,13 @@ import (
 	"unsafe"
 
 	"golang.org/x/net/context"
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
 // FinishedSpan is a Span that has completed and contains information about
 // how it finished.
 type FinishedSpan struct {
-	Span     *monitor.Span
+	Span     *monkit.Span
 	Err      error
 	Panicked bool
 	Finish   time.Time
@@ -42,11 +42,11 @@ type FinishedSpan struct {
 // There is a small but permanent amount of overhead added by this function to
 // every trace that is started while this function is running. This only really
 // affects long-running traces.
-func WatchForSpans(ctx context.Context, r *monitor.Registry,
-	matcher func(s *monitor.Span) bool) (spans []*FinishedSpan, err error) {
+func WatchForSpans(ctx context.Context, r *monkit.Registry,
+	matcher func(s *monkit.Span) bool) (spans []*FinishedSpan, err error) {
 	collector := NewSpanCollector(matcher)
 	defer collector.Stop()
-	canceler := r.ObserveTraces(func(t *monitor.Trace) {
+	canceler := r.ObserveTraces(func(t *monkit.Trace) {
 		t.ObserveSpans(collector)
 	})
 	defer canceler()
@@ -65,7 +65,7 @@ func WatchForSpans(ctx context.Context, r *monitor.Registry,
 // some ancestor function is also monitored and has modified the ctx.
 func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
 	spans []*FinishedSpan) {
-	s := monitor.SpanFromCtx(ctx)
+	s := monkit.SpanFromCtx(ctx)
 	if s == nil {
 		work(ctx)
 		return nil
@@ -77,7 +77,7 @@ func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
 	newF := f.Scope().FuncNamed(fmt.Sprintf("%s-TRACED", f.ShortName()))
 	func() {
 		defer newF.Task(&ctx)(nil)
-		collector.ForceStart(monitor.SpanFromCtx(ctx))
+		collector.ForceStart(monkit.SpanFromCtx(ctx))
 		work(ctx)
 	}()
 	return collector.Spans()
@@ -90,27 +90,27 @@ type SpanCollector struct {
 	check unsafe.Pointer
 
 	// construction
-	matcher func(s *monitor.Span) bool
+	matcher func(s *monkit.Span) bool
 	done    chan struct{}
 
 	// mtx protected
 	mtx           sync.Mutex
 	root          *FinishedSpan
-	spansByParent map[*monitor.Span][]*FinishedSpan
+	spansByParent map[*monkit.Span][]*FinishedSpan
 }
 
 // NewSpanCollector takes a matcher that will return true when a span is found
 // that should start collection. matcher can be nil if you intend to use
 // ForceStart instead.
-func NewSpanCollector(matcher func(s *monitor.Span) bool) (
+func NewSpanCollector(matcher func(s *monkit.Span) bool) (
 	rv *SpanCollector) {
 	if matcher == nil {
-		matcher = func(*monitor.Span) bool { return false }
+		matcher = func(*monkit.Span) bool { return false }
 	}
 	return &SpanCollector{
 		matcher:       matcher,
 		done:          make(chan struct{}),
-		spansByParent: map[*monitor.Span][]*FinishedSpan{},
+		spansByParent: map[*monkit.Span][]*FinishedSpan{},
 	}
 }
 
@@ -130,26 +130,26 @@ var (
 
 // ForceStart starts the span collector collecting spans, stopping when endSpan
 // finishes. This is typically only used if matcher was nil at construction.
-func (c *SpanCollector) ForceStart(endSpan *monitor.Span) {
+func (c *SpanCollector) ForceStart(endSpan *monkit.Span) {
 	atomic.CompareAndSwapPointer(&c.check, nil, unsafe.Pointer(endSpan))
 }
 
-// Start is to implement the monitor.SpanObserver interface. Start gets called
+// Start is to implement the monkit.SpanObserver interface. Start gets called
 // whenever a Span starts.
-func (c *SpanCollector) Start(s *monitor.Span) {
+func (c *SpanCollector) Start(s *monkit.Span) {
 	if atomic.LoadPointer(&c.check) != nil || !c.matcher(s) {
 		return
 	}
 	atomic.CompareAndSwapPointer(&c.check, nil, unsafe.Pointer(s))
 }
 
-// Finish is to implement the monitor.SpanObserver interface. Finish gets
+// Finish is to implement the monkit.SpanObserver interface. Finish gets
 // called whenever a Span finishes.
-func (c *SpanCollector) Finish(s *monitor.Span, err error, panicked bool,
+func (c *SpanCollector) Finish(s *monkit.Span, err error, panicked bool,
 	finish time.Time) {
 	existing := atomic.LoadPointer(&c.check)
 	if existing == donePointer || existing == nil ||
-		((*monitor.Span)(existing)).Trace() != s.Trace() {
+		((*monkit.Span)(existing)).Trace() != s.Trace() {
 		return
 	}
 	fs := &FinishedSpan{Span: s, Err: err, Panicked: panicked, Finish: finish}
@@ -158,7 +158,7 @@ func (c *SpanCollector) Finish(s *monitor.Span, err error, panicked bool,
 		c.mtx.Unlock()
 		return
 	}
-	if (*monitor.Span)(existing) == s {
+	if (*monkit.Span)(existing) == s {
 		c.root = fs
 		c.mtx.Unlock()
 		c.Stop()

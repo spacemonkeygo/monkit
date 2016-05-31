@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitor
+package monkit
 
 import (
 	"sort"
@@ -26,7 +26,7 @@ import (
 // construct with NewTimer(), though the expected usage is from a Scope like
 // so:
 //
-//   var mon = monitor.Package()
+//   var mon = monkit.Package()
 //
 //   func MyFunc() {
 //     ...

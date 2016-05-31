@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
 // StatsText writes all of the name/value statistics pairs the Registry knows
 // to w in a text format.
-func StatsText(r *monitor.Registry, w io.Writer) (err error) {
+func StatsText(r *monkit.Registry, w io.Writer) (err error) {
 	r.Stats(func(name string, val float64) {
 		if err != nil {
 			return
@@ -35,7 +35,7 @@ func StatsText(r *monitor.Registry, w io.Writer) (err error) {
 
 // StatsJSON writes all of the name/value statistics pairs the Registry knows
 // to w in a JSON format.
-func StatsJSON(r *monitor.Registry, w io.Writer) (err error) {
+func StatsJSON(r *monkit.Registry, w io.Writer) (err error) {
 	lw := newListWriter(w)
 	r.Stats(func(name string, val float64) {
 		lw.elem([]interface{}{name, val})

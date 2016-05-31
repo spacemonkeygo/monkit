@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"golang.org/x/net/context"
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
 const (
@@ -92,8 +92,8 @@ func SpansToSVG(w io.Writer, spans []*FinishedSpan) error {
 
 // TraceQuerySVG uses WatchForSpans to write all Spans from 'reg' matching
 // 'matcher' to 'w' in SVG format.
-func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
-	matcher func(*monitor.Span) bool) error {
+func TraceQuerySVG(reg *monkit.Registry, w io.Writer,
+	matcher func(*monkit.Span) bool) error {
 	spans, err := watchForSpansWithKeepalive(
 		reg, w, matcher, []byte("\n"))
 	if err != nil {
@@ -106,8 +106,8 @@ func TraceQuerySVG(reg *monitor.Registry, w io.Writer,
 
 // TraceQueryJSON uses WatchForSpans to write all Spans from 'reg' matching
 // 'matcher' to 'w' in JSON format.
-func TraceQueryJSON(reg *monitor.Registry, w io.Writer,
-	matcher func(*monitor.Span) bool) (write_err error) {
+func TraceQueryJSON(reg *monkit.Registry, w io.Writer,
+	matcher func(*monkit.Span) bool) (write_err error) {
 
 	spans, err := watchForSpansWithKeepalive(
 		reg, w, matcher, []byte("\n"))
@@ -127,8 +127,8 @@ func SpansToJSON(w io.Writer, spans []*FinishedSpan) error {
 	return lw.done()
 }
 
-func watchForSpansWithKeepalive(reg *monitor.Registry, w io.Writer,
-	matcher func(s *monitor.Span) bool, keepalive []byte) (
+func watchForSpansWithKeepalive(reg *monkit.Registry, w io.Writer,
+	matcher func(s *monkit.Span) bool, keepalive []byte) (
 	spans []*FinishedSpan, write_err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 

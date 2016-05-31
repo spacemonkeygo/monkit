@@ -19,10 +19,10 @@ import (
 	"io"
 	"strings"
 
-	"gopkg.in/spacemonkeygo/monitor.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
-func outputDotSpan(w io.Writer, s *monitor.Span) error {
+func outputDotSpan(w io.Writer, s *monkit.Span) error {
 	orphaned := ""
 	if s.Orphaned() {
 		orphaned = "orphaned\n"
@@ -46,7 +46,7 @@ func outputDotSpan(w io.Writer, s *monitor.Span) error {
 	if err != nil {
 		return err
 	}
-	s.Children(func(child *monitor.Span) {
+	s.Children(func(child *monkit.Span) {
 		if err != nil {
 			return
 		}
@@ -64,12 +64,12 @@ func outputDotSpan(w io.Writer, s *monitor.Span) error {
 
 // SpansDot finds all of the current Spans known by Registry r and writes
 // information about them in the dot graphics file format to w.
-func SpansDot(r *monitor.Registry, w io.Writer) error {
+func SpansDot(r *monkit.Registry, w io.Writer) error {
 	_, err := fmt.Fprintf(w, "digraph G {\n node [shape=box];\n")
 	if err != nil {
 		return err
 	}
-	r.RootSpans(func(s *monitor.Span) {
+	r.RootSpans(func(s *monkit.Span) {
 		if err != nil {
 			return
 		}
@@ -82,7 +82,7 @@ func SpansDot(r *monitor.Registry, w io.Writer) error {
 	return err
 }
 
-func outputTextSpan(w io.Writer, s *monitor.Span, indent string) (err error) {
+func outputTextSpan(w io.Writer, s *monkit.Span, indent string) (err error) {
 	orphaned := ""
 	if s.Orphaned() {
 		orphaned = ", orphaned"
@@ -100,7 +100,7 @@ func outputTextSpan(w io.Writer, s *monitor.Span, indent string) (err error) {
 			return err
 		}
 	}
-	s.Children(func(s *monitor.Span) {
+	s.Children(func(s *monkit.Span) {
 		if err != nil {
 			return
 		}
@@ -111,8 +111,8 @@ func outputTextSpan(w io.Writer, s *monitor.Span, indent string) (err error) {
 
 // SpansText finds all of the current Spans known by Registry r and writes
 // information about them in a plain text format to w.
-func SpansText(r *monitor.Registry, w io.Writer) (err error) {
-	r.RootSpans(func(s *monitor.Span) {
+func SpansText(r *monkit.Registry, w io.Writer) (err error) {
+	r.RootSpans(func(s *monkit.Span) {
 		if err != nil {
 			return
 		}
@@ -127,9 +127,9 @@ func SpansText(r *monitor.Registry, w io.Writer) (err error) {
 
 // SpansJSON finds all of the current Spans known by Registry r and writes
 // information about them in the JSON format to w.
-func SpansJSON(r *monitor.Registry, w io.Writer) (err error) {
+func SpansJSON(r *monkit.Registry, w io.Writer) (err error) {
 	lw := newListWriter(w)
-	r.AllSpans(func(s *monitor.Span) {
+	r.AllSpans(func(s *monkit.Span) {
 		lw.elem(formatSpan(s))
 	})
 	return lw.done()
