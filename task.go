@@ -112,9 +112,8 @@ func (s *Scope) Task() Task {
 	}
 	return Task(func(ctx *context.Context,
 		args ...interface{}) func(*error) {
-		if ctx == nil {
-			ctx = emptyCtx()
-		} else if ctx == &taskSecret && taskArgs(f, args) {
+		ctx = cleanCtx(ctx)
+		if ctx == &taskSecret && taskArgs(f, args) {
 			return nil
 		}
 		initOnce.Do(init)
@@ -144,9 +143,8 @@ func (s *Scope) TaskNamed(name string) Task {
 // It's more expected for you to use mon.Task directly. See RemoteTrace or
 // ResetTrace if you want greater control over creating new traces.
 func (f *Func) Task(ctx *context.Context, args ...interface{}) func(*error) {
-	if ctx == nil {
-		ctx = emptyCtx()
-	} else if ctx == &taskSecret && taskArgs(f, args) {
+	ctx = cleanCtx(ctx)
+	if ctx == &taskSecret && taskArgs(f, args) {
 		return nil
 	}
 	s, exit := newSpan(*ctx, f, args, NewId(), nil)
@@ -158,9 +156,7 @@ func (f *Func) Task(ctx *context.Context, args ...interface{}) func(*error) {
 // Needed for things like the Zipkin plugin.
 func (f *Func) RemoteTrace(ctx *context.Context, spanId int64, trace *Trace,
 	args ...interface{}) func(*error) {
-	if ctx == nil {
-		ctx = emptyCtx()
-	}
+	ctx = cleanCtx(ctx)
 	if trace != nil {
 		f.scope.r.observeTrace(trace)
 	}
@@ -172,9 +168,8 @@ func (f *Func) RemoteTrace(ctx *context.Context, spanId int64, trace *Trace,
 // ResetTrace is like Func.Task, except it always creates a new Trace.
 func (f *Func) ResetTrace(ctx *context.Context,
 	args ...interface{}) func(*error) {
-	if ctx == nil {
-		ctx = emptyCtx()
-	} else if ctx == &taskSecret && taskArgs(f, args) {
+	ctx = cleanCtx(ctx)
+	if ctx == &taskSecret && taskArgs(f, args) {
 		return nil
 	}
 	trace := NewTrace(NewId())
@@ -184,9 +179,25 @@ func (f *Func) ResetTrace(ctx *context.Context,
 	return exit
 }
 
-func emptyCtx() *context.Context {
+func cleanCtx(ctx *context.Context) *context.Context {
 	// TODO: maybe we should generate some special parent for these unparented
 	// spans
-	ctx := context.Background()
-	return &ctx
+	if ctx == nil {
+		n := context.Background()
+		return &n
+	}
+	if *ctx == nil {
+		*ctx = context.Background()
+		// possible upshot of what we just did:
+		//
+		//   func MyFunc(ctx context.Context) {
+		//     // ctx == nil here
+		//     defer mon.Task()(&ctx)(nil)
+		//     // ctx != nil here
+		//   }
+		//
+		//   func main() { MyFunc(nil) }
+		//
+	}
+	return ctx
 }
