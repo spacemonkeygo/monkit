@@ -121,6 +121,11 @@ func (s *Scope) IntVal(name string) *IntVal {
 	return m
 }
 
+// IntValf retrieves or creates an IntVal after the given printf-formatted name.
+func (s *Scope) IntValf(template string, args ...interface{}) *IntVal {
+	return s.IntVal(fmt.Sprintf(template, args...))
+}
+
 // FloatVal retrieves or creates a FloatVal after the given name.
 func (s *Scope) FloatVal(name string) *FloatVal {
 	source := s.newSource(name, func() StatSource { return NewFloatVal() })
@@ -130,6 +135,11 @@ func (s *Scope) FloatVal(name string) *FloatVal {
 			name, source))
 	}
 	return m
+}
+
+// FloatValf retrieves or creates a FloatVal after the given printf-formatted name.
+func (s *Scope) FloatValf(template string, args ...interface{}) *FloatVal {
+	return s.FloatVal(fmt.Sprintf(template, args...))
 }
 
 // BoolVal retrieves or creates a BoolVal after the given name.
