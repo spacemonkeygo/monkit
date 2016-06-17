@@ -121,7 +121,8 @@ func (s *Scope) IntVal(name string) *IntVal {
 	return m
 }
 
-// IntValf retrieves or creates an IntVal after the given printf-formatted name.
+// IntValf retrieves or creates an IntVal after the given printf-formatted
+// name.
 func (s *Scope) IntValf(template string, args ...interface{}) *IntVal {
 	return s.IntVal(fmt.Sprintf(template, args...))
 }
@@ -137,7 +138,8 @@ func (s *Scope) FloatVal(name string) *FloatVal {
 	return m
 }
 
-// FloatValf retrieves or creates a FloatVal after the given printf-formatted name.
+// FloatValf retrieves or creates a FloatVal after the given printf-formatted
+// name.
 func (s *Scope) FloatValf(template string, args ...interface{}) *FloatVal {
 	return s.FloatVal(fmt.Sprintf(template, args...))
 }
@@ -151,6 +153,29 @@ func (s *Scope) BoolVal(name string) *BoolVal {
 			name, source))
 	}
 	return m
+}
+
+// BoolValf retrieves or creates a BoolVal after the given printf-formatted
+// name.
+func (s *Scope) BoolValf(template string, args ...interface{}) *BoolVal {
+	return s.BoolVal(fmt.Sprintf(template, args...))
+}
+
+// StructVal retrieves or creates a StructVal after the given name.
+func (s *Scope) StructVal(name string) *StructVal {
+	source := s.newSource(name, func() StatSource { return NewStructVal() })
+	m, ok := source.(*StructVal)
+	if !ok {
+		panic(fmt.Sprintf("%s already used for another stats source: %#v",
+			name, source))
+	}
+	return m
+}
+
+// StructValf retrieves or creates a StructVal after the given printf-formatted
+// name.
+func (s *Scope) StructValf(template string, args ...interface{}) *StructVal {
+	return s.StructVal(fmt.Sprintf(template, args...))
 }
 
 // Timer retrieves or creates a Timer after the given name.

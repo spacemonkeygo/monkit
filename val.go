@@ -20,7 +20,7 @@ import (
 )
 
 // IntVal is a convenience wrapper around an IntDist. Constructed using
-// NewIntVal, though it's expected usage is like:
+// NewIntVal, though its expected usage is like:
 //
 //   var mon = monkit.Package()
 //
@@ -75,7 +75,7 @@ func (v *IntVal) Quantile(quantile float64) (rv int64) {
 }
 
 // FloatVal is a convenience wrapper around an FloatDist. Constructed using
-// NewFloatVal, though it's expected usage is like:
+// NewFloatVal, though its expected usage is like:
 //
 //   var mon = monkit.Package()
 //
@@ -131,7 +131,7 @@ func (v *FloatVal) Quantile(quantile float64) (rv float64) {
 
 // BoolVal keeps statistics about boolean values. It keeps the number of trues,
 // number of falses, and the disposition (number of trues minus number of
-// falses). Constructed using NewBoolVal, though it's expected usage is like:
+// falses). Constructed using NewBoolVal, though its expected usage is like:
 //
 //   var mon = monkit.Package()
 //
@@ -167,4 +167,45 @@ func (v *BoolVal) Stats(cb func(name string, val float64)) {
 	cb("disposition", float64(trues-falses))
 	cb("false", float64(falses))
 	cb("true", float64(trues))
+}
+
+// StructVal keeps track of a structure of data. Constructed using
+// NewStructVal, though its expected usage is like:
+//
+//   var mon = monkit.Package()
+//
+//   func MyFunc() {
+//     ...
+//     mon.StructVal("stats").Observe(stats)
+//     ...
+//   }
+//
+type StructVal struct {
+	mtx    sync.Mutex
+	recent interface{}
+}
+
+// NewStructVal creates a StructVal
+func NewStructVal() *StructVal {
+	return &StructVal{}
+}
+
+// Observe observes a struct value. Only the fields convertable to float64 will
+// be monitored. A reference to the most recently called Observe value is kept
+// for reading when Stats is called.
+func (v *StructVal) Observe(val interface{}) {
+	v.mtx.Lock()
+	v.recent = val
+	v.mtx.Unlock()
+}
+
+// Stats implements the StatSource interface.
+func (v *StructVal) Stats(cb func(name string, val float64)) {
+	v.mtx.Lock()
+	recent := v.recent
+	v.mtx.Unlock()
+
+	if recent != nil {
+		StatSourceFromStruct(recent).Stats(cb)
+	}
 }
