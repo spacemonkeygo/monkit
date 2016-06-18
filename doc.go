@@ -82,4 +82,5 @@ or
   xdot <(curl -s http://localhost:8080/funcs/dot)
 
 */
+
 package monkit // import "gopkg.in/spacemonkeygo/monkit.v2"
