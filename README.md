@@ -113,7 +113,7 @@ You get this trace information for free whenever you use
 [Go contexts](https://blog.golang.org/context) and function monitoring.
 
 Additionally, the library supports trace observation plugins, and we've written
-a plugin that sends this data to Zipkin (to come soon).
+[a plugin that sends this data to Zipkin](http://github.com/spacemonkeygo/monkit-zipkin).
 
 ![trace](https://raw.githubusercontent.com/spacemonkeygo/monkit/master/images/trace.png)
 
@@ -486,8 +486,12 @@ other reports.
 
 ## Plugins
 
-Plugins that hook into monkit are straightforward to write, and we'll be
-publishing some examples, such as a Zipkin plugin, soon!
+It's easy to write plugins for monkit! Check out our first one that exports
+data to [Zipkin](http://zipkin.io/)'s Scribe API:
+
+ * https://github.com/spacemonkeygo/monkit-zipkin
+
+We plan to have more (for HTrace, OpenTracing, etc, etc), soon!
 
 ## License
 
