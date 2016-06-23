@@ -2,34 +2,32 @@
 
 Package monkit is a flexible code instrumenting and data collection library.
 
-Software is hard. Like, really hard. Just the worst[1]. Sometimes it feels
-like we've constructed a field where the whole point is to see how tangled we
-can get ourselves before seeing if we can get tangled up more while trying to
-get untangled.
+Software is hard. Like, really hard.
+[Just the worst](http://www.stilldrinking.org/programming-sucks). Sometimes it
+feels like we've constructed a field where the whole point is to see how
+tangled we can get ourselves before seeing if we can get tangled up more while
+trying to get untangled.
 
 Many software engineering teams are coming to realize (some slower than others)
 that collecting data over time about how their systems are functioning is a
-super power you can't turn back from. Some teams are calling this Telemetry[2],
-Observability[3], or describing it more basically through subcomponents such as
-distributed tracing[4], time-series data[5], or even just metrics[6]. We've
-been calling it monitoring, but geez, I suppose if trends continue and you want
-to do this yourself your first step should be to open a thesaurus and pick an
-unused term.
+super power you can't turn back from. Some teams are calling this
+[Telemetry](http://techblog.netflix.com/2014/12/introducing-atlas-netflixs-primary.html),
+[Observability](https://blog.twitter.com/2013/observability-at-twitter), or
+describing it more basically through subcomponents such as
+[distributed tracing](http://research.google.com/pubs/pub36356.html),
+[time-series data](https://influxdata.com/), or even just
+[metrics](http://metrics.dropwizard.io/). We've been calling it monitoring, but
+geez, I suppose if trends continue and you want to do this yourself your first
+step should be to open a thesaurus and pick an unused term.
 
 I'm not here to tell you about our whole platform. Instead, I'm here to
 explain a redesign of a Go library for instrumenting your Go programs that we
 rather quietly launched a few years ago. If you are already using version 1 of
-our library, we're sorry, but we rewrote it from scratch and renamed it to
-monkit. This one (this one!) is better - you should switch!
+our old library (https://github.com/spacemonkeygo/monitor), we're sorry, but
+we rewrote it from scratch and renamed it to monkit. This one (this one!) is
+better - you should switch!
 
 I'm going to try and sell you as fast as I can on this library.
-
- * [1] http://www.stilldrinking.org/programming-sucks
- * [2] http://techblog.netflix.com/2014/12/introducing-atlas-netflixs-primary.html
- * [3] https://blog.twitter.com/2013/observability-at-twitter
- * [4] http://research.google.com/pubs/pub36356.html
- * [5] https://influxdata.com/
- * [6] http://metrics.dropwizard.io/
 
 ## Metrics
 
@@ -43,7 +41,7 @@ Almost just as importantly, the amount of boilerplate and code you have to
 write to get these features is very minimal. Data that's hard to measure
 probably won't get measured.
 
-This data can be collected and sent to Graphite (http://graphite.wikidot.com/)
+This data can be collected and sent to [Graphite](http://graphite.wikidot.com/)
 or any other time-series database.
 
 Here's a selection of live stats from one of our storage nodes:
@@ -105,24 +103,25 @@ Here's another example of one of our production nodes:
 
 ## Trace graphs
 
-Inspired by Google's Dapper (http://research.google.com/pubs/pub36356.html)
-and Twitter's Zipkin (http://zipkin.io), we have process-internal trace
+Inspired by [Google's Dapper](http://research.google.com/pubs/pub36356.html)
+and [Twitter's Zipkin](http://zipkin.io), we have process-internal trace
 graphs, triggerable by a number of different methods.
 
 You get this trace information for free whenever you use
-Go contexts (https://blog.golang.org/context) and function monitoring.
+[Go contexts](https://blog.golang.org/context) and function monitoring.
 
 Additionally, the library supports trace observation plugins, and we've written
-a plugin that sends this data to Zipkin.
+a plugin that sends this data to Zipkin (to come soon).
 
 ![trace](https://raw.githubusercontent.com/spacemonkeygo/monkit/master/images/trace.png)
 
 ## History
 
-Before our crazy Go rewrite of everything[7] (and before we had even seen
-Google's Dapper paper), we were a Python shop, and all of our "interesting"
-functions were decorated with a helper that collected timing information and
-sent it to Graphite.
+Before our crazy
+[Go rewrite of everything](https://www.spacemonkey.com/blog/posts/go-space-monkey)
+(and before we had even seen Google's Dapper paper), we were a Python shop, and
+all of our "interesting" functions were decorated with a helper that collected
+timing information and sent it to Graphite.
 
 When we translitered to Go, we wanted to preserve that functionality, so the
 first version of our monitoring package was born.
@@ -132,8 +131,6 @@ adding tracing functionality to it. We rewrote all of our Go code to use Google
 contexts, and then realized we could get call graph information. We decided a
 refactor and then an all-out rethinking of our monitoring package was best,
 and so now we have this library.
-
- * [7] https://www.spacemonkey.com/blog/posts/go-space-monkey
 
 ## Aside about contexts
 
@@ -150,20 +147,20 @@ log lines kicked off by that request? Then you could grep for all log lines
 caused by a specific request id. Geez, it would suck to have to pass all
 contextual debugging information through all of your callsites.
 
-Google solved this problem by always passing a context.Context interface
-through from call to call. A Context is basically just a mapping of arbitrary
+Google solved this problem by always passing a `context.Context` interface
+through from call to call. A `Context` is basically just a mapping of arbitrary
 keys to arbitrary values that users can add new values for. This way if you
-decide to add a request context, you can add it to your Context and then all
+decide to add a request context, you can add it to your `Context` and then all
 callsites that decend from that place will have the new data in their contexts.
 
 It is admittedly very verbose to add contexts to every function call.
-Painfully so. I hope to write more about it in the future, but Google also
-wrote up their thoughts about it (https://blog.golang.org/context), which you
+Painfully so. I hope to write more about it in the future, but [Google also
+wrote up their thoughts about it](https://blog.golang.org/context), which you
 can go read. For now, just swallow your disgust and let's keep moving.
 
 ## Motivating program
 
-Let's make a super simple Varnish (https://www.varnish-cache.org/) clone.
+Let's make a super simple [Varnish](https://www.varnish-cache.org/) clone.
 Open up gedit! (Okay just kidding, open whatever text editor you want.)
 
 For this motivating program, we won't even add the caching, though there's
@@ -217,7 +214,7 @@ func main() {
 }
 ```
 
-Run and build this and open localhost:8080 in your browser. If you use the
+Run and build this and open `localhost:8080` in your browser. If you use the
 default proxy target, it should inform you that the world hasn't been
 destroyed yet.
 
@@ -242,18 +239,18 @@ environment.Register(monkit.Default)
 go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
 ```
 
-Rebuild, and then check out localhost:9000/stats (or
-localhost:9000/stats/json, if you prefer) in your browser!
+Rebuild, and then check out `localhost:9000/stats` (or
+`localhost:9000/stats/json`, if you prefer) in your browser!
 
 ## Request contexts
 
-Remember what I said about Google's contexts (https://blog.golang.org/context)?
+Remember what I said about [Google's contexts](https://blog.golang.org/context)?
 It might seem a bit overkill for such a small project, but it's time to add
 them.
 
 To help out here, I've created a library that constructs contexts for you
 for incoming HTTP requests. Nothing that's about to happen requires my
-webhelp library (https://godoc.org/github.com/jtolds/webhelp), but here is the
+[webhelp library](https://godoc.org/github.com/jtolds/webhelp), but here is the
 code now refactored to receive and pass contexts through our two per-request
 calls.
 
@@ -346,13 +343,13 @@ func (v *VLite) Proxy(ctx context.Context, w http.ResponseWriter, r *http.Reques
 We'll unpack what's going on here, but for now:
 
  * Rebuild and restart!
- * Trigger a full refresh at localhost:8080 to make sure your new HTTP
+ * Trigger a full refresh at `localhost:8080` to make sure your new HTTP
    handler runs
- * Visit localhost:9000/stats and then localhost:9000/funcs
+ * Visit `localhost:9000/stats` and then `localhost:9000/funcs`
 
 For this new funcs dataset, if you want a graph, you can download a dot
-graph at localhost:9000/funcs/dot and json information from
-localhost:9000/funcs/json.
+graph at `localhost:9000/funcs/dot` and json information from
+`localhost:9000/funcs/json`.
 
 You should see something like:
 
@@ -452,9 +449,9 @@ observed errors or panics (it repanics after observing them).
 Turns out, we don't even need to change our program anymore to get rich tracing
 information!
 
-Open your browser and go to localhost:9000/trace/svg?regex=HandleHTTP. It
+Open your browser and go to `localhost:9000/trace/svg?regex=HandleHTTP`. It
 won't load, and in fact, it's waiting for you to open another tab and refresh
-localhost:8080 again. Once you retrigger the actual application behavior,
+`localhost:8080` again. Once you retrigger the actual application behavior,
 the trace regex will capture a trace starting on the first function that
 matches the supplied regex, and return an svg. Go back to your first tab, and
 you should see a relatively uninteresting but super promising svg.
@@ -465,8 +462,8 @@ Let's make the trace more interesting. Add a
 time.Sleep(200 * time.Millisecond)
 ```
 
-to your HandleHTTP method, rebuild, and restart. Load localhost:8080, then
-start a new request to your trace URL, then reload localhost:8080 again. Flip
+to your HandleHTTP method, rebuild, and restart. Load `localhost:8080`, then
+start a new request to your trace URL, then reload `localhost:8080` again. Flip
 back to your trace, and you should see that the Proxy method only takes a
 portion of the time of HandleHTTP!
 
