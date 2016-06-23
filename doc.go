@@ -478,4 +478,4 @@ Plugins that hook into monkit are straightforward to write, and we'll be
 publishing some examples, such as a Zipkin plugin, soon!
 
 */
-package monkit
+package monkit // import "gopkg.in/spacemonkeygo/monkit.v2"

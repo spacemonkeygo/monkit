@@ -2,6 +2,8 @@
 
 Package monkit is a flexible code instrumenting and data collection library.
 
+See documentation at https://godoc.org/gopkg.in/spacemonkeygo/monkit.v2
+
 Software is hard. Like, really hard.
 [Just the worst](http://www.stilldrinking.org/programming-sucks). Sometimes it
 feels like we've constructed a field where the whole point is to see how
