@@ -25,7 +25,7 @@ step should be to open a thesaurus and pick an unused term.
 I'm not here to tell you about our whole platform. Instead, I'm here to
 explain a redesign of a Go library for instrumenting your Go programs that we
 rather quietly launched a few years ago. If you are already using version 1 of
-our old library (https://github.com/spacemonkeygo/monitor), we're sorry, but
+our [old library](https://github.com/spacemonkeygo/monitor), we're sorry, but
 we rewrote it from scratch and renamed it to monkit. This one (this one!) is
 better - you should switch!
 
