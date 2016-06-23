@@ -188,7 +188,7 @@ Before our crazy
 all of our "interesting" functions were decorated with a helper that collected
 timing information and sent it to Graphite.
 
-When we translitered to Go, we wanted to preserve that functionality, so the
+When we transliterated to Go, we wanted to preserve that functionality, so the
 first version of our monitoring package was born.
 
 Over time it started to get janky, especially as we found Zipkin and started
@@ -403,6 +403,67 @@ Proxy, replacing &err with nil:
 ```
 func (v *VLite) Proxy(ctx context.Context, w http.ResponseWriter, r *http.Request) {
   defer mon.Task()(&ctx)(nil)
+```
+
+You should now have something like:
+
+```
+package main
+
+import (
+  "flag"
+  "net/http"
+  "net/http/httputil"
+  "net/url"
+
+  "github.com/jtolds/webhelp"
+  "golang.org/x/net/context"
+  "gopkg.in/spacemonkeygo/monkit.v2"
+  "gopkg.in/spacemonkeygo/monkit.v2/environment"
+  "gopkg.in/spacemonkeygo/monkit.v2/present"
+)
+
+var mon = monkit.Package()
+
+type VLite struct {
+  target *url.URL
+  proxy  *httputil.ReverseProxy
+}
+
+func NewVLite(target *url.URL) *VLite {
+  return &VLite{
+	  target: target,
+	  proxy:  httputil.NewSingleHostReverseProxy(target),
+  }
+}
+
+func (v *VLite) Proxy(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+  defer mon.Task()(&ctx)(nil)
+  r.Host = v.target.Host // let the proxied server get the right vhost
+  v.proxy.ServeHTTP(w, r)
+}
+
+func (v *VLite) HandleHTTP(ctx context.Context, w webhelp.ResponseWriter, r *http.Request) (err error) {
+  defer mon.Task()(&ctx)(&err)
+  // here's where you'd put caching logic
+  v.Proxy(ctx, w, r)
+  return nil
+}
+
+func main() {
+  target := flag.String(
+	  "proxy",
+	  "http://hasthelargehadroncolliderdestroyedtheworldyet.com/",
+	  "server to cache")
+  flag.Parse()
+  targetURL, err := url.Parse(*target)
+  if err != nil {
+	  panic(err)
+  }
+  environment.Register(monkit.Default)
+  go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
+  panic(webhelp.ListenAndServe(":8080", NewVLite(targetURL)))
+}
 ```
 
 We'll unpack what's going on here, but for now:
