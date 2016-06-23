@@ -128,6 +128,8 @@ Here's a selection of live stats from one of our storage nodes:
 
 Call graphs
 
+This library generates call graphs of your live process for you.
+
 These call graphs aren't created through sampling. They're full pictures of all
 of the interesting functions you've annotated, along with quantile information
 about their successes, failures, how often they panic, return an error (if so
@@ -143,12 +145,17 @@ https://raw.githubusercontent.com/spacemonkeygo/monkit/master/images/callgraph2.
 
 Trace graphs
 
+This library generates trace graphs of your live process for you directly,
+without requiring standing up some tracing system such as Zipkin (though you
+can do that too).
+
 Inspired by Google's Dapper (http://research.google.com/pubs/pub36356.html)
 and Twitter's Zipkin (http://zipkin.io), we have process-internal trace
 graphs, triggerable by a number of different methods.
 
 You get this trace information for free whenever you use
-Go contexts (https://blog.golang.org/context) and function monitoring.
+Go contexts (https://blog.golang.org/context) and function monitoring. The
+output formats are svg and json.
 
 Additionally, the library supports trace observation plugins, and we've written
 a plugin that sends this data to Zipkin (http://github.com/spacemonkeygo/monkit-zipkin).
