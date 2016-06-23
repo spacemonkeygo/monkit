@@ -457,7 +457,7 @@ start a new request to your trace URL, then reload localhost:8080 again. Flip
 back to your trace, and you should see that the Proxy method only takes a
 portion of the time of HandleHTTP!
 
-https://raw.githubusercontent.com/spacemonkeygo/monkit/master/images/trace.svg
+https://cdn.rawgit.com/spacemonkeygo/monkit/master/images/trace.svg
 
 There's multiple ways to select a trace. You can select by regex using the
 preselect method (default), which first evaluates the regex on all known
