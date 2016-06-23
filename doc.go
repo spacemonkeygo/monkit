@@ -15,34 +15,7 @@
 /*
 Package monkit is a flexible code instrumenting and data collection library.
 
-Software is hard. Like, really hard. Just the worst[1]. Sometimes it feels
-like we've constructed a field where the whole point is to see how tangled we
-can get ourselves before seeing if we can get tangled up more while trying to
-get untangled.
-
-Many software engineering teams are coming to realize (some slower than others)
-that collecting data over time about how their systems are functioning is a
-super power you can't turn back from. Some teams are calling this Telemetry[2],
-Observability[3], or describing it more basically through subcomponents such as
-distributed tracing[4], time-series data[5], or even just metrics[6]. We've
-been calling it monitoring, but geez, I suppose if trends continue and you want
-to do this yourself your first step should be to open a thesaurus and pick an
-unused term.
-
-I'm not here to tell you about our whole platform. Instead, I'm here to
-explain a redesign of a Go library for instrumenting your Go programs that we
-rather quietly launched a few years ago. If you are already using version 1 of
-our library, we're sorry, but we rewrote it from scratch and renamed it to
-monkit. This one (this one!) is better - you should switch!
-
 I'm going to try and sell you as fast as I can on this library.
-
-  [1] http://www.stilldrinking.org/programming-sucks
-  [2] http://techblog.netflix.com/2014/12/introducing-atlas-netflixs-primary.html
-  [3] https://blog.twitter.com/2013/observability-at-twitter
-  [4] http://research.google.com/pubs/pub36356.html
-  [5] https://influxdata.com/
-  [6] http://metrics.dropwizard.io/
 
 Metrics
 
