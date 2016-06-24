@@ -33,7 +33,7 @@ I'm going to try and sell you as fast as I can on this library.
 
 ## Example usage
 
-```
+```go
 package main
 
 import (
@@ -233,7 +233,7 @@ comments for where to add it if you'd like. For now, let's just make a
 barebones system that will proxy HTTP requests. We'll call it VLite, but
 maybe we should call it VReallyLite.
 
-```
+```go
 package main
 
 import (
@@ -290,7 +290,7 @@ make the instrumentation we're going to add to your process observable later.
 
 Import the basic monkit packages:
 
-```
+```go
 "gopkg.in/spacemonkeygo/monkit.v2"
 "gopkg.in/spacemonkeygo/monkit.v2/environment"
 "gopkg.in/spacemonkeygo/monkit.v2/present"
@@ -299,7 +299,7 @@ Import the basic monkit packages:
 and then register environmental statistics and kick off a goroutine in your
 main method to serve debug requests:
 
-```
+```go
 environment.Register(monkit.Default)
 go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
 ```
@@ -319,7 +319,7 @@ for incoming HTTP requests. Nothing that's about to happen requires my
 code now refactored to receive and pass contexts through our two per-request
 calls.
 
-```
+```go
 package main
 
 import (
@@ -385,14 +385,14 @@ package (main) will need to get a monitoring Scope. Add this global definition
 right after all your imports, much like you'd create a logger with many logging
 libraries:
 
-```
+```go
 var mon = monkit.Package()
 ```
 
 Now, make the error return value of HandleHTTP named (so, (err error)), and add
 this defer line as the very first instruction of HandleHTTP:
 
-```
+```go
 func (v *VLite) HandleHTTP(ctx context.Context, w webhelp.ResponseWriter, r *http.Request) (err error) {
   defer mon.Task()(&ctx)(&err)
 ```
@@ -400,14 +400,14 @@ func (v *VLite) HandleHTTP(ctx context.Context, w webhelp.ResponseWriter, r *htt
 Let's also add the same line (albeit modified for the lack of error) to
 Proxy, replacing &err with nil:
 
-```
+```go
 func (v *VLite) Proxy(ctx context.Context, w http.ResponseWriter, r *http.Request) {
   defer mon.Task()(&ctx)(nil)
 ```
 
 You should now have something like:
 
-```
+```go
 package main
 
 import (
@@ -524,7 +524,7 @@ Cool, eh?
 
 ## How it works
 
-```
+```go
 defer mon.Task()(&ctx)(&nil)
 ```
 
@@ -539,7 +539,7 @@ are inspecting runtime.Caller to determine the name of the function. Because
 this is a heavy operation, you can actually store the result of mon.Task() and
 reuse it somehow else if you prefer, so instead of
 
-```
+```go
 func MyFunc(ctx context.Context) (err error) {
   defer mon.Task()(&ctx)(&err)
 }
@@ -547,7 +547,7 @@ func MyFunc(ctx context.Context) (err error) {
 
 you could instead use
 
-```
+```go
 var myFuncMon = mon.Task()
 
 func MyFunc(ctx context.Context) (err error) {
