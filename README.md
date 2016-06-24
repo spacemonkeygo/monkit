@@ -584,7 +584,7 @@ you should see a relatively uninteresting but super promising svg.
 
 Let's make the trace more interesting. Add a
 
-```
+```go
 time.Sleep(200 * time.Millisecond)
 ```
 
