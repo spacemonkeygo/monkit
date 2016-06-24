@@ -487,7 +487,7 @@ Cool, eh?
 
 How it works
 
-  defer mon.Task()(&ctx)(&nil)
+  defer mon.Task()(&ctx)(&err)
 
 is an interesting line of code - there's three function calls. If you look at
 the Go spec, all of the function calls will run at the time the function starts
@@ -519,7 +519,7 @@ Careful! Don't use the same myFuncMon in different functions unless you want to
 screw up your statistics!
 
 The second function call starts all the various stop watches and bookkeeping to
-keep track of the function. It also mutates the context pointer its given to
+keep track of the function. It also mutates the context pointer it's given to
 extend the context with information about what current span (in Zipkin
 parlance) is active. Notably, you *can* pass nil for the context if you really
 don't want a context. You just lose callgraph information.
