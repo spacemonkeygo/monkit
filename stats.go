@@ -43,21 +43,37 @@ var f64Type = reflect.TypeOf(float64(0))
 // across all float64-castable fields of the struct.
 func StatSourceFromStruct(structData interface{}) StatSource {
 	val := reflect.ValueOf(structData)
-	for val.Type().Kind() == reflect.Ptr {
-		val = val.Elem()
-	}
+
+	val = deref(val)
+
 	typ := val.Type()
 	if typ.Kind() != reflect.Struct {
 		return StatSourceFunc(func(cb func(name string, val float64)) {})
 	}
 	return StatSourceFunc(func(cb func(name string, val float64)) {
 		for i := 0; i < typ.NumField(); i++ {
-			field := typ.Field(i)
-			if field.Type.ConvertibleTo(f64Type) {
-				cb(field.Name, val.Field(i).Convert(f64Type).Float())
+			field := val.Field(i)
+
+			field = deref(field)
+
+			field_type := field.Type()
+
+			if field_type.Kind() == reflect.Struct && field.CanInterface() {
+				child_source := StatSourceFromStruct(field.Interface())
+				Prefix(typ.Field(i).Name+".", child_source).Stats(cb)
+			} else if field_type.ConvertibleTo(f64Type) {
+				cb(typ.Field(i).Name, field.Convert(f64Type).Float())
 			}
 		}
 	})
+}
+
+// if val is a pointer, deref until it isn't
+func deref(val reflect.Value) reflect.Value {
+	for val.Type().Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	return val
 }
 
 // Prefix takes a StatSource and returns a new StatSource where all names have
