@@ -144,6 +144,7 @@ func (v *FloatVal) Quantile(quantile float64) (rv float64) {
 type BoolVal struct {
 	trues  int64
 	falses int64
+	recent int32
 }
 
 // NewBoolVal creates a BoolVal
@@ -155,8 +156,10 @@ func NewBoolVal() *BoolVal {
 func (v *BoolVal) Observe(val bool) {
 	if val {
 		atomic.AddInt64(&v.trues, 1)
+		atomic.StoreInt32(&v.recent, 1)
 	} else {
 		atomic.AddInt64(&v.falses, 1)
+		atomic.StoreInt32(&v.recent, 0)
 	}
 }
 
@@ -164,8 +167,10 @@ func (v *BoolVal) Observe(val bool) {
 func (v *BoolVal) Stats(cb func(name string, val float64)) {
 	trues := atomic.LoadInt64(&v.trues)
 	falses := atomic.LoadInt64(&v.falses)
+	recent := atomic.LoadInt32(&v.recent)
 	cb("disposition", float64(trues-falses))
 	cb("false", float64(falses))
+	cb("recent", float64(recent))
 	cb("true", float64(trues))
 }
 
