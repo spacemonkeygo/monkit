@@ -14,8 +14,6 @@
 
 package environment
 
-import "C"
-
 import (
 	"fmt"
 	"io/ioutil"
@@ -38,50 +36,50 @@ func proc(cb func(name string, val float64)) {
 }
 
 type procSelfStat struct {
-	Pid                 C.int
+	Pid                 int64
 	Comm                string
 	State               byte
-	Ppid                C.int
-	Pgrp                C.int
-	Session             C.int
-	TtyNr               C.int
-	Tpgid               C.int
-	Flags               C.uint
-	Minflt              C.ulong
-	Cminflt             C.ulong
-	Majflt              C.ulong
-	Cmajflt             C.ulong
-	Utime               C.ulong
-	Stime               C.ulong
-	Cutime              C.long
-	Cstime              C.long
-	Priority            C.long
-	Nice                C.long
-	NumThreads          C.long
-	Itrealvalue         C.long
-	Starttime           C.ulonglong
-	Vsize               C.ulong
-	Rss                 C.long
-	Rsslim              C.ulong
-	Startcode           C.ulong
-	Endcode             C.ulong
-	Startstack          C.ulong
-	Kstkesp             C.ulong
-	Kstkeip             C.ulong
-	Signal              C.ulong
-	Blocked             C.ulong
-	Sigignore           C.ulong
-	Sigcatch            C.ulong
-	Wchan               C.ulong
-	Nswap               C.ulong
-	Cnswap              C.ulong
-	ExitSignal          C.int
-	Processor           C.int
-	RtPriority          C.uint
-	Policy              C.uint
-	DelayAcctBlkioTicks C.ulonglong
-	GuestTime           C.ulong
-	CguestTime          C.long
+	Ppid                int64
+	Pgrp                int64
+	Session             int64
+	TtyNr               int64
+	Tpgid               int64
+	Flags               uint64
+	Minflt              uint64
+	Cminflt             uint64
+	Majflt              uint64
+	Cmajflt             uint64
+	Utime               uint64
+	Stime               uint64
+	Cutime              int64
+	Cstime              int64
+	Priority            int64
+	Nice                int64
+	NumThreads          int64
+	Itrealvalue         int64
+	Starttime           uint64
+	Vsize               uint64
+	Rss                 int64
+	Rsslim              uint64
+	Startcode           uint64
+	Endcode             uint64
+	Startstack          uint64
+	Kstkesp             uint64
+	Kstkeip             uint64
+	Signal              uint64
+	Blocked             uint64
+	Sigignore           uint64
+	Sigcatch            uint64
+	Wchan               uint64
+	Nswap               uint64
+	Cnswap              uint64
+	ExitSignal          int64
+	Processor           int64
+	RtPriority          uint64
+	Policy              uint64
+	DelayAcctBlkioTicks uint64
+	GuestTime           uint64
+	CguestTime          int64
 }
 
 func readProcSelfStat(s *procSelfStat) error {
