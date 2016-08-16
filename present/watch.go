@@ -17,9 +17,7 @@ package present
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"golang.org/x/net/context"
 	"gopkg.in/spacemonkeygo/monkit.v2"
@@ -87,7 +85,7 @@ func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
 // observed after it starts collecting, typically when matcher returns true.
 type SpanCollector struct {
 	// sync/atomic
-	check unsafe.Pointer
+	check *monkit.Span
 
 	// construction
 	matcher func(s *monkit.Span) bool
@@ -120,36 +118,30 @@ func (c *SpanCollector) Done() <-chan struct{} {
 	return c.done
 }
 
-type nonce struct {
-	int
-}
-
-var (
-	donePointer = unsafe.Pointer(&nonce{})
-)
+var donePointer = new(monkit.Span)
 
 // ForceStart starts the span collector collecting spans, stopping when endSpan
 // finishes. This is typically only used if matcher was nil at construction.
 func (c *SpanCollector) ForceStart(endSpan *monkit.Span) {
-	atomic.CompareAndSwapPointer(&c.check, nil, unsafe.Pointer(endSpan))
+	compareAndSwapSpan(&c.check, nil, endSpan)
 }
 
 // Start is to implement the monkit.SpanObserver interface. Start gets called
 // whenever a Span starts.
 func (c *SpanCollector) Start(s *monkit.Span) {
-	if atomic.LoadPointer(&c.check) != nil || !c.matcher(s) {
+	if loadSpan(&c.check) != nil || !c.matcher(s) {
 		return
 	}
-	atomic.CompareAndSwapPointer(&c.check, nil, unsafe.Pointer(s))
+	compareAndSwapSpan(&c.check, nil, s)
 }
 
 // Finish is to implement the monkit.SpanObserver interface. Finish gets
 // called whenever a Span finishes.
 func (c *SpanCollector) Finish(s *monkit.Span, err error, panicked bool,
 	finish time.Time) {
-	existing := atomic.LoadPointer(&c.check)
+	existing := loadSpan(&c.check)
 	if existing == donePointer || existing == nil ||
-		((*monkit.Span)(existing)).Trace() != s.Trace() {
+		existing.Trace() != s.Trace() {
 		return
 	}
 	fs := &FinishedSpan{Span: s, Err: err, Panicked: panicked, Finish: finish}
@@ -158,7 +150,7 @@ func (c *SpanCollector) Finish(s *monkit.Span, err error, panicked bool,
 		c.mtx.Unlock()
 		return
 	}
-	if (*monkit.Span)(existing) == s {
+	if existing == s {
 		c.root = fs
 		c.mtx.Unlock()
 		c.Stop()
@@ -170,7 +162,7 @@ func (c *SpanCollector) Finish(s *monkit.Span, err error, panicked bool,
 
 // Stop stops the SpanCollector from collecting.
 func (c *SpanCollector) Stop() {
-	if atomic.SwapPointer(&c.check, donePointer) != donePointer {
+	if swapSpan(&c.check, donePointer) != donePointer {
 		close(c.done)
 	}
 }
