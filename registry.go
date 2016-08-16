@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-	"sync/atomic"
-	"unsafe"
 )
 
 type traceWatcherRef struct {
@@ -30,7 +28,7 @@ type traceWatcherRef struct {
 // In general, only the Default registry is ever used.
 type Registry struct {
 	// sync/atomic things
-	traceWatcher unsafe.Pointer
+	traceWatcher *traceWatcherRef
 
 	watcherMtx     sync.Mutex
 	watcherCounter int64
@@ -80,7 +78,7 @@ func (r *Registry) ScopeNamed(name string) *Scope {
 }
 
 func (r *Registry) observeTrace(t *Trace) {
-	watcher := (*traceWatcherRef)(atomic.LoadPointer(&r.traceWatcher))
+	watcher := loadTraceWatcherRef(&r.traceWatcher)
 	if watcher != nil {
 		watcher.watcher(t)
 	}
@@ -93,17 +91,17 @@ func (r *Registry) updateWatcher() {
 	}
 	switch len(cbs) {
 	case 0:
-		atomic.StorePointer(&r.traceWatcher, nil)
+		storeTraceWatcherRef(&r.traceWatcher, nil)
 	case 1:
-		atomic.StorePointer(&r.traceWatcher,
-			unsafe.Pointer(&traceWatcherRef{watcher: cbs[0]}))
+		storeTraceWatcherRef(&r.traceWatcher,
+			&traceWatcherRef{watcher: cbs[0]})
 	default:
-		atomic.StorePointer(&r.traceWatcher,
-			unsafe.Pointer(&traceWatcherRef{watcher: func(t *Trace) {
+		storeTraceWatcherRef(&r.traceWatcher,
+			&traceWatcherRef{watcher: func(t *Trace) {
 				for _, cb := range cbs {
 					cb(t)
 				}
-			}}))
+			}})
 	}
 }
 

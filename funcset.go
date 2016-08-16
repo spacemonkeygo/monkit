@@ -16,8 +16,6 @@ package monkit
 
 import (
 	"sync"
-	"sync/atomic"
-	"unsafe"
 )
 
 // funcSet is a set data structure (keeps track of unique functions). funcSet
@@ -27,7 +25,7 @@ import (
 // other contexts
 type funcSet struct {
 	// sync/atomic things
-	first unsafe.Pointer
+	first *Func
 
 	// protected by mtx
 	sync.Mutex
@@ -44,10 +42,10 @@ func (s *funcSet) Add(f *Func) {
 	if f == nil {
 		f = nilFunc
 	}
-	if atomic.LoadPointer(&s.first) == unsafe.Pointer(f) {
+	if loadFunc(&s.first) == f {
 		return
 	}
-	if atomic.CompareAndSwapPointer(&s.first, nil, unsafe.Pointer(f)) {
+	if compareAndSwapFunc(&s.first, nil, f) {
 		return
 	}
 	s.Mutex.Lock()
@@ -66,7 +64,7 @@ func (s *funcSet) Iterate(cb func(f *Func)) {
 		uniq[f] = struct{}{}
 	}
 	s.Mutex.Unlock()
-	f := (*Func)(atomic.LoadPointer(&s.first))
+	f := loadFunc(&s.first)
 	if f != nil {
 		uniq[f] = struct{}{}
 	}

@@ -16,9 +16,7 @@ package monkit
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
-	"unsafe"
 )
 
 // SpanObserver is the interface plugins must implement if they want to observe
@@ -55,7 +53,7 @@ type spanObserverRef struct {
 // like a stack frame.
 type Trace struct {
 	// sync/atomic things
-	spanObserver unsafe.Pointer
+	spanObserver *spanObserverRef
 
 	// immutable things from construction
 	id int64
@@ -71,7 +69,7 @@ func NewTrace(id int64) *Trace {
 }
 
 func (t *Trace) getObserver() SpanObserver {
-	observer := (*spanObserverRef)(atomic.LoadPointer(&t.spanObserver))
+	observer := loadSpanObserverRef(&t.spanObserver)
 	if observer == nil {
 		return nil
 	}
@@ -82,18 +80,17 @@ func (t *Trace) getObserver() SpanObserver {
 // Trace.
 func (t *Trace) ObserveSpans(observer SpanObserver) {
 	for {
-		existing := (*spanObserverRef)(atomic.LoadPointer(&t.spanObserver))
+		existing := loadSpanObserverRef(&t.spanObserver)
 		if existing == nil {
-			if atomic.CompareAndSwapPointer(&t.spanObserver, nil,
-				unsafe.Pointer(&spanObserverRef{observer: observer})) {
+			if compareAndSwapSpanObserverRef(&t.spanObserver, nil,
+				&spanObserverRef{observer: observer}) {
 				break
 			}
 		} else {
 			otherObserver := existing.observer
-			if atomic.CompareAndSwapPointer(&t.spanObserver,
-				unsafe.Pointer(existing),
-				unsafe.Pointer(&spanObserverRef{observer: spanObserverTuple{
-					first: otherObserver, second: observer}})) {
+			if compareAndSwapSpanObserverRef(&t.spanObserver, existing,
+				&spanObserverRef{observer: spanObserverTuple{
+					first: otherObserver, second: observer}}) {
 				break
 			}
 		}
