@@ -20,7 +20,6 @@ import (
 	"sort"
 	"time"
 
-	"golang.org/x/net/context"
 	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
@@ -130,7 +129,7 @@ func SpansToJSON(w io.Writer, spans []*FinishedSpan) error {
 func watchForSpansWithKeepalive(reg *monkit.Registry, w io.Writer,
 	matcher func(s *monkit.Span) bool, keepalive []byte) (
 	spans []*FinishedSpan, write_err error) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := contextWithCancel()
 
 	abortTimerCh := make(chan struct{})
 	var abortTimerChClosed bool

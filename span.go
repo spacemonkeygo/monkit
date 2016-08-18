@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/spacemonkeygo/monotime"
-	"golang.org/x/net/context"
 )
 
 type ctxKey int
@@ -33,125 +32,6 @@ const (
 type Annotation struct {
 	Name  string
 	Value string
-}
-
-// Span represents a 'span' of execution. A span is analogous to a stack frame.
-// Spans are constructed as a side-effect of Tasks.
-type Span struct {
-	// sync/atomic things
-	mtx spinLock
-
-	// immutable things from construction
-	id     int64
-	start  time.Time
-	f      *Func
-	trace  *Trace
-	parent *Span
-	args   []interface{}
-	context.Context
-
-	// protected by mtx
-	done        bool
-	orphaned    bool
-	children    spanBag
-	annotations []Annotation
-}
-
-// SpanFromCtx loads the current Span from the given context. This assumes
-// the context already had a Span created through a Task.
-func SpanFromCtx(ctx context.Context) *Span {
-	if s, ok := ctx.(*Span); ok && s != nil {
-		return s
-	} else if s, ok := ctx.Value(spanKey).(*Span); ok && s != nil {
-		return s
-	}
-	return nil
-}
-
-func newSpan(ctx context.Context, f *Func, args []interface{},
-	id int64, trace *Trace) (s *Span, exit func(*error)) {
-
-	var parent *Span
-	if s, ok := ctx.(*Span); ok && s != nil {
-		ctx = s.Context
-		if trace == nil {
-			parent = s
-			trace = parent.trace
-		}
-	} else if s, ok := ctx.Value(spanKey).(*Span); ok && s != nil {
-		if trace == nil {
-			parent = s
-			trace = parent.trace
-		}
-	} else if trace == nil {
-		trace = NewTrace(id)
-		f.scope.r.observeTrace(trace)
-	}
-
-	observer := trace.getObserver()
-
-	s = &Span{
-		id:      id,
-		start:   monotime.Now(),
-		f:       f,
-		trace:   trace,
-		parent:  parent,
-		args:    args,
-		Context: ctx}
-
-	if parent != nil {
-		f.start(parent.f)
-		parent.addChild(s)
-	} else {
-		f.start(nil)
-		f.scope.r.rootSpanStart(s)
-	}
-
-	if observer != nil {
-		observer.Start(s)
-	}
-
-	return s, func(errptr *error) {
-		rec := recover()
-		panicked := rec != nil
-
-		finish := monotime.Now()
-
-		var err error
-		if errptr != nil {
-			err = *errptr
-		}
-		s.f.end(err, panicked, finish.Sub(s.start))
-
-		var children []*Span
-		s.mtx.Lock()
-		s.done = true
-		orphaned := s.orphaned
-		s.children.Iterate(func(child *Span) {
-			children = append(children, child)
-		})
-		s.mtx.Unlock()
-		for _, child := range children {
-			child.orphan()
-		}
-
-		if s.parent != nil {
-			s.parent.removeChild(s)
-			if orphaned {
-				s.f.scope.r.orphanEnd(s)
-			}
-		} else {
-			s.f.scope.r.rootSpanEnd(s)
-		}
-
-		if observer != nil {
-			observer.Finish(s, err, panicked, finish)
-		}
-
-		if panicked {
-			panic(rec)
-		}
-	}
 }
 
 func (s *Span) addChild(child *Span) {

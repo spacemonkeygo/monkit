@@ -15,10 +15,7 @@
 package monkit
 
 import (
-	"sync"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 type taskKey int
@@ -33,13 +30,6 @@ func (*taskSecretT) Err() error                        { return nil }
 func (*taskSecretT) Deadline() (time.Time, bool) {
 	return time.Time{}, false
 }
-
-var taskSecret context.Context = &taskSecretT{}
-
-// Tasks are created (sometimes implicitly) from Funcs. A Task should be called
-// at the start of a monitored task, and its return value should be called
-// at the stop of said task.
-type Task func(ctx *context.Context, args ...interface{}) func(*error)
 
 // Func returns the Func associated with the Task
 func (f Task) Func() (out *Func) {
@@ -75,129 +65,8 @@ func taskArgs(f *Func, args []interface{}) bool {
 	return false
 }
 
-// Task returns a new Task for use, creating an associated Func if necessary.
-// It also adds a new Span to the given ctx during execution. Expected usage
-// like:
-//
-//   var mon = monkit.Package()
-//
-//   func MyFunc(ctx context.Context, arg1, arg2 string) (err error) {
-//     defer mon.Task()(&ctx, arg1, arg2)(&err)
-//     ...
-//   }
-//
-// or
-//
-//   var (
-//     mon = monkit.Package()
-//     funcTask = mon.Task()
-//   )
-//
-//   func MyFunc(ctx context.Context, arg1, arg2 string) (err error) {
-//     defer funcTask(&ctx, arg1, arg2)(&err)
-//     ...
-//   }
-//
-// Task uses runtime.Caller to determine the associated Func name. See
-// TaskNamed if you want to supply your own name. See Func.Task if you already
-// have a Func.
-//
-// If you want to control Trace creation, see Func.ResetTrace and
-// Func.RemoteTrace
-func (s *Scope) Task() Task {
-	var initOnce sync.Once
-	var f *Func
-	init := func() {
-		f = s.FuncNamed(callerFunc(3))
-	}
-	return Task(func(ctx *context.Context,
-		args ...interface{}) func(*error) {
-		ctx = cleanCtx(ctx)
-		if ctx == &taskSecret && taskArgs(f, args) {
-			return nil
-		}
-		initOnce.Do(init)
-		s, exit := newSpan(*ctx, f, args, NewId(), nil)
-		*ctx = s
-		return exit
-	})
-}
-
 // TaskNamed is like Task except you can choose the name of the associated
 // Func.
 func (s *Scope) TaskNamed(name string) Task {
 	return s.FuncNamed(name).Task
-}
-
-// Task returns a new Task for use on this Func. It also adds a new Span to
-// the given ctx during execution.
-//
-//   var mon = monkit.Package()
-//
-//   func MyFunc(ctx context.Context, arg1, arg2 string) (err error) {
-//     f := mon.Func()
-//     defer f.Task(&ctx, arg1, arg2)(&err)
-//     ...
-//   }
-//
-// It's more expected for you to use mon.Task directly. See RemoteTrace or
-// ResetTrace if you want greater control over creating new traces.
-func (f *Func) Task(ctx *context.Context, args ...interface{}) func(*error) {
-	ctx = cleanCtx(ctx)
-	if ctx == &taskSecret && taskArgs(f, args) {
-		return nil
-	}
-	s, exit := newSpan(*ctx, f, args, NewId(), nil)
-	*ctx = s
-	return exit
-}
-
-// RemoteTrace is like Func.Task, except you can specify the trace and span id.
-// Needed for things like the Zipkin plugin.
-func (f *Func) RemoteTrace(ctx *context.Context, spanId int64, trace *Trace,
-	args ...interface{}) func(*error) {
-	ctx = cleanCtx(ctx)
-	if trace != nil {
-		f.scope.r.observeTrace(trace)
-	}
-	s, exit := newSpan(*ctx, f, args, spanId, trace)
-	*ctx = s
-	return exit
-}
-
-// ResetTrace is like Func.Task, except it always creates a new Trace.
-func (f *Func) ResetTrace(ctx *context.Context,
-	args ...interface{}) func(*error) {
-	ctx = cleanCtx(ctx)
-	if ctx == &taskSecret && taskArgs(f, args) {
-		return nil
-	}
-	trace := NewTrace(NewId())
-	f.scope.r.observeTrace(trace)
-	s, exit := newSpan(*ctx, f, args, trace.Id(), trace)
-	*ctx = s
-	return exit
-}
-
-func cleanCtx(ctx *context.Context) *context.Context {
-	// TODO: maybe we should generate some special parent for these unparented
-	// spans
-	if ctx == nil {
-		n := context.Background()
-		return &n
-	}
-	if *ctx == nil {
-		*ctx = context.Background()
-		// possible upshot of what we just did:
-		//
-		//   func MyFunc(ctx context.Context) {
-		//     // ctx == nil here
-		//     defer mon.Task()(&ctx)(nil)
-		//     // ctx != nil here
-		//   }
-		//
-		//   func main() { MyFunc(nil) }
-		//
-	}
-	return ctx
 }

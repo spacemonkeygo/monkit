@@ -37,9 +37,9 @@ I'm going to try and sell you as fast as I can on this library.
 package main
 
 import (
+  "context"
   "fmt"
 
-  "golang.org/x/net/context"
   "gopkg.in/spacemonkeygo/monkit.v2"
   "gopkg.in/spacemonkeygo/monkit.v2/environment"
   "gopkg.in/spacemonkeygo/monkit.v2/present"
@@ -323,13 +323,13 @@ calls.
 package main
 
 import (
+  "context"
   "flag"
   "net/http"
   "net/http/httputil"
   "net/url"
 
   "github.com/jtolds/webhelp"
-  "golang.org/x/net/context"
   "gopkg.in/spacemonkeygo/monkit.v2"
   "gopkg.in/spacemonkeygo/monkit.v2/environment"
   "gopkg.in/spacemonkeygo/monkit.v2/present"
@@ -411,13 +411,13 @@ You should now have something like:
 package main
 
 import (
+  "context"
   "flag"
   "net/http"
   "net/http/httputil"
   "net/url"
 
   "github.com/jtolds/webhelp"
-  "golang.org/x/net/context"
   "gopkg.in/spacemonkeygo/monkit.v2"
   "gopkg.in/spacemonkeygo/monkit.v2/environment"
   "gopkg.in/spacemonkeygo/monkit.v2/present"
