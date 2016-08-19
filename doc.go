@@ -19,64 +19,65 @@ I'm going to try and sell you as fast as I can on this library.
 
 Example usage
 
-  package main
+package main
 
-  import (
-    "context"
-  	"fmt"
-  	"log"
-  	"net/http"
-  	"sync"
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"sync"
 
-  	monkit "gopkg.in/spacemonkeygo/monkit.v2"
-  	"gopkg.in/spacemonkeygo/monkit.v2/environment"
-  	"gopkg.in/spacemonkeygo/monkit.v2/present"
-  )
+	monkit "gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2/environment"
+	"gopkg.in/spacemonkeygo/monkit.v2/present"
+)
 
-  var (
-  	mon = monkit.Package()
-  )
+var (
+	mon = monkit.Package()
+)
 
-  func ComputeThing(ctx context.Context, arg1, arg2 int) (res int, err error) {
-  	defer mon.Task()(&ctx)(&err)
+func ComputeThing(ctx context.Context, arg1, arg2 int) (res int, err error) {
+	defer mon.Task()(&ctx)(&err)
 
-  	timer := mon.Timer("subcomputation").Start()
-  	res = arg1 + arg2
-  	timer.Stop()
+	timer := mon.Timer("subcomputation").Start()
+	res = arg1 + arg2
+	timer.Stop()
 
-  	if res == 3 {
-  		mon.Event("hit 3")
-  	}
+	if res == 3 {
+		mon.Event("hit 3")
+	}
 
-  	mon.BoolVal("was-4").Observe(res == 4)
-  	mon.IntVal("res").Observe(int64(res))
-  	mon.Counter("calls").Inc(1)
-  	mon.Gauge("arg1", func() float64 { return float64(arg1) })
-  	mon.Meter("arg2").Mark(arg2)
+	mon.BoolVal("was-4").Observe(res == 4)
+	mon.IntVal("res").Observe(int64(res))
+	mon.Counter("calls").Inc(1)
+	mon.Gauge("arg1", func() float64 { return float64(arg1) })
+	mon.Meter("arg2").Mark(arg2)
 
-  	return arg1 + arg2, nil
-  }
+	return arg1 + arg2, nil
+}
 
-  func DoStuff(ctx context.Context) (err error) {
-  	defer mon.Task()(&ctx)(&err)
+func DoStuff(ctx context.Context) (err error) {
+	defer mon.Task()(&ctx)(&err)
 
-  	result, err := ComputeThing(ctx, 1, 2)
-  	if err != nil {
-  		return err
-  	}
+	result, err := ComputeThing(ctx, 1, 2)
+	if err != nil {
+		return err
+	}
 
-  	fmt.Println(result)
-  	return
-  }
+	fmt.Println(result)
+	return
+}
 
-  func main() {
-  	var wg sync.WaitGroup
-  	wg.Add(1)
-  	environment.Register(monkit.Default)
-  	go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
-  	log.Println(DoStuff(context.Background()))
-  	wg.Wait()
-  }
+func main() {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	environment.Register(monkit.Default)
+	go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
+	log.Println(DoStuff(context.Background()))
+	wg.Wait()
+}
+
 
 Metrics
 
