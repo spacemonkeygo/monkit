@@ -112,6 +112,18 @@ func (e *Meter) stats(now time.Duration) (rate float64, total int64) {
 	return rate, total
 }
 
+// Rate returns the rate over the internal sliding window
+func (e *Meter) Rate() float64 {
+	rate, _ := e.stats(monotime.Monotonic())
+	return rate
+}
+
+// Total returns the total over the internal sliding window
+func (e *Meter) Total() float64 {
+	_, total := e.stats(monotime.Monotonic())
+	return float64(total)
+}
+
 // Stats implements the StatSource interface
 func (e *Meter) Stats(cb func(name string, val float64)) {
 	rate, total := e.stats(monotime.Monotonic())
