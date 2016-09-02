@@ -88,7 +88,7 @@ func (f *FuncStats) end(err error, panicked bool, duration time.Duration) {
 	atomic.AddInt64(&f.current, -1)
 	f.parentsAndMutex.Lock()
 	if panicked {
-		f.panics -= 1
+		f.panics += 1
 		f.failureTimes.Insert(duration)
 		f.parentsAndMutex.Unlock()
 		return
