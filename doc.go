@@ -26,7 +26,6 @@ Example usage
 		"fmt"
 		"log"
 		"net/http"
-		"sync"
 
 		monkit "gopkg.in/spacemonkeygo/monkit.v2"
 		"gopkg.in/spacemonkeygo/monkit.v2/environment"
@@ -70,12 +69,9 @@ Example usage
 	}
 
 	func main() {
-		var wg sync.WaitGroup
-		wg.Add(1)
 		environment.Register(monkit.Default)
 		go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
 		log.Println(DoStuff(context.Background()))
-		wg.Wait()
 	}
 
 Metrics
