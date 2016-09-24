@@ -27,7 +27,7 @@ Example usage
 		"log"
 		"net/http"
 
-		monkit "gopkg.in/spacemonkeygo/monkit.v2"
+		"gopkg.in/spacemonkeygo/monkit.v2"
 		"gopkg.in/spacemonkeygo/monkit.v2/environment"
 		"gopkg.in/spacemonkeygo/monkit.v2/present"
 	)
