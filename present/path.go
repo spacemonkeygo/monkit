@@ -15,6 +15,7 @@
 package present
 
 import (
+	"bufio"
 	"io"
 	"net/url"
 	"regexp"
@@ -76,6 +77,24 @@ func curry(reg *monkit.Registry,
 // two) to every monitored function.
 func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 	f Result, contentType string, err error) {
+
+	defer func() {
+		if err != nil {
+			return
+		}
+		// wrap all functions with buffering
+		unbuffered := f
+		f = func(w io.Writer) (err error) {
+			buf := bufio.NewWriter(w)
+			err = unbuffered(buf)
+			if err != nil {
+				return err
+			}
+			err = buf.Flush()
+			return err
+		}
+	}()
+
 	first, rest := shift(path)
 	second, _ := shift(rest)
 	switch first {
