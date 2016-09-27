@@ -42,3 +42,27 @@ func StatsJSON(r *monkit.Registry, w io.Writer) (err error) {
 	})
 	return lw.done()
 }
+
+// FilteredStatsText writes all of the name/value statistics pairs the
+// Registry knows where the name has the given prefix to w in a text format.
+func FilteredStatsText(r *monkit.Registry, w io.Writer, prefix string) (
+	err error) {
+	r.FilteredStats(prefix, func(name string, val float64) {
+		if err != nil {
+			return
+		}
+		_, err = fmt.Fprintf(w, "%s\t%f\n", name, val)
+	})
+	return err
+}
+
+// FilteredStatsJSON writes all of the name/value statistics pairs the
+// Registry knows where the name has the given prefix to w in a JSON format.
+func FilteredStatsJSON(r *monkit.Registry, w io.Writer, prefix string) (
+	err error) {
+	lw := newListWriter(w)
+	r.FilteredStats(prefix, func(name string, val float64) {
+		lw.elem([]interface{}{name, val})
+	})
+	return lw.done()
+}

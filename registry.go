@@ -214,6 +214,28 @@ func (r *Registry) Stats(cb func(name string, val float64)) {
 	})
 }
 
+func filterPrefix(s, prefix string) (subfilter string, ok bool) {
+	if len(prefix) < len(s) {
+		return "", s[:len(prefix)] == prefix
+	}
+	return prefix[len(s):], s == prefix[:len(s)]
+}
+
+// FilteredStats implements the FilterableStatSource interface.
+func (r *Registry) FilteredStats(prefix string,
+	cb func(name string, val float64)) {
+	r.Scopes(func(s *Scope) {
+		to_add := s.name + "."
+		if subfilter, ok := filterPrefix(to_add, prefix); ok {
+			s.FilteredStats(subfilter, func(name string, val float64) {
+				cb(to_add+name, val)
+			})
+		}
+	})
+}
+
+var _ FilterableStatSource = (*Registry)(nil)
+
 // Default is the default Registry
 var Default = NewRegistry()
 

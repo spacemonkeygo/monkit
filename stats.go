@@ -16,6 +16,7 @@ package monkit
 
 import (
 	"reflect"
+	"strings"
 )
 
 // StatSource represents anything that can return named floating point values.
@@ -26,6 +27,11 @@ type StatSource interface {
 type StatSourceFunc func(cb func(name string, val float64))
 
 func (f StatSourceFunc) Stats(cb func(name string, val float64)) { f(cb) }
+
+type FilterableStatSource interface {
+	StatSource
+	FilteredStats(prefix string, cb func(name string, val float64))
+}
 
 // Collect takes something that implements the StatSource interface and returns
 // a key/value map.
@@ -84,4 +90,16 @@ func Prefix(prefix string, source StatSource) StatSource {
 			cb(prefix+name, val)
 		})
 	})
+}
+
+// Filter takes a StatSource callback and returns a new StatSource callback
+// that only passes through names that start with the given prefix. Keep in
+// mind that it may be more efficient to attempt to type-assert your
+// StatSource to a FilterableStatSource first.
+func Filter(prefix string, cb func(string, float64)) func(string, float64) {
+	return func(name string, val float64) {
+		if strings.HasPrefix(name, prefix) {
+			cb(name, val)
+		}
+	}
 }
