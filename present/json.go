@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2/collect"
 )
 
 func formatSpan(s *monkit.Span) interface{} {
@@ -61,7 +62,7 @@ func formatSpan(s *monkit.Span) interface{} {
 	return js
 }
 
-func formatFinishedSpan(s *FinishedSpan) interface{} {
+func formatFinishedSpan(s *collect.FinishedSpan) interface{} {
 	js := struct {
 		Id       int64  `json:"id"`
 		ParentId *int64 `json:"parent_id,omitempty"`

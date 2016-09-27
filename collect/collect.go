@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package present
+package collect
 
 import (
+	"sort"
 	"sync"
 	"time"
 
@@ -133,3 +134,15 @@ func (c *SpanCollector) Spans() (spans []*FinishedSpan) {
 	c.mtx.Unlock()
 	return spans
 }
+
+// StartTimeSorter assists with sorting a slice of FinishedSpans by start time.
+type StartTimeSorter []*FinishedSpan
+
+func (s StartTimeSorter) Len() int      { return len(s) }
+func (s StartTimeSorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func (s StartTimeSorter) Less(i, j int) bool {
+	return s[i].Span.Start().UnixNano() < s[j].Span.Start().UnixNano()
+}
+
+func (s StartTimeSorter) Sort() { sort.Sort(s) }

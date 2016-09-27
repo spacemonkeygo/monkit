@@ -17,10 +17,10 @@ package present
 import (
 	"fmt"
 	"io"
-	"sort"
 	"time"
 
 	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v2/collect"
 )
 
 const (
@@ -33,7 +33,7 @@ const (
 
 // SpansToSVG takes a list of FinishedSpans and writes them to w in SVG format.
 // It draws a trace using the Spans where the Spans are ordered by start time.
-func SpansToSVG(w io.Writer, spans []*FinishedSpan) error {
+func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 	_, err := fmt.Fprint(w, `<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -54,7 +54,7 @@ func SpansToSVG(w io.Writer, spans []*FinishedSpan) error {
 			maxEnd = finish
 		}
 	}
-	StartTimeSorter(spans).Sort()
+	collect.StartTimeSorter(spans).Sort()
 
 	timeToX := func(t time.Time) int64 {
 		return ((t.UnixNano() - minStart.UnixNano()) * graphWidth) /
@@ -118,7 +118,7 @@ func TraceQueryJSON(reg *monkit.Registry, w io.Writer,
 }
 
 // SpansToJSON turns a list of FinishedSpans into JSON format.
-func SpansToJSON(w io.Writer, spans []*FinishedSpan) error {
+func SpansToJSON(w io.Writer, spans []*collect.FinishedSpan) error {
 	lw := newListWriter(w)
 	for _, s := range spans {
 		lw.elem(formatFinishedSpan(s))
@@ -128,7 +128,7 @@ func SpansToJSON(w io.Writer, spans []*FinishedSpan) error {
 
 func watchForSpansWithKeepalive(reg *monkit.Registry, w io.Writer,
 	matcher func(s *monkit.Span) bool, keepalive []byte) (
-	spans []*FinishedSpan, write_err error) {
+	spans []*collect.FinishedSpan, write_err error) {
 	ctx, cancel := contextWithCancel()
 
 	abortTimerCh := make(chan struct{})
@@ -165,15 +165,3 @@ func watchForSpansWithKeepalive(reg *monkit.Registry, w io.Writer,
 
 	return spans, err
 }
-
-// StartTimeSorter assists with sorting a slice of FinishedSpans by start time.
-type StartTimeSorter []*FinishedSpan
-
-func (s StartTimeSorter) Len() int      { return len(s) }
-func (s StartTimeSorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-
-func (s StartTimeSorter) Less(i, j int) bool {
-	return s[i].Span.Start().UnixNano() < s[j].Span.Start().UnixNano()
-}
-
-func (s StartTimeSorter) Sort() { sort.Sort(s) }

@@ -14,7 +14,7 @@
 
 // +build !appengine
 
-package present
+package collect
 
 import (
 	"sync/atomic"

@@ -22,61 +22,10 @@ package present
 
 import (
 	_STDLIB_IMPORT_
-	"fmt"
 
 	_OTHER_IMPORT_
-	"gopkg.in/spacemonkeygo/monkit.v2"
 )
 
-// WatchForSpans will watch for spans that 'matcher' returns true for. As soon
-// as a trace generates a matched span, all spans from that trace that finish
-// from that point on are collected until the matching span completes. All
-// collected spans are returned.
-// To cancel this operation, simply cancel the ctx argument.
-// There is a small but permanent amount of overhead added by this function to
-// every trace that is started while this function is running. This only really
-// affects long-running traces.
-func WatchForSpans(ctx context.Context, r *monkit.Registry,
-	matcher func(s *monkit.Span) bool) (spans []*FinishedSpan, err error) {
-	collector := NewSpanCollector(matcher)
-	defer collector.Stop()
-	canceler := r.ObserveTraces(func(t *monkit.Trace) {
-		t.ObserveSpans(collector)
-	})
-	defer canceler()
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-collector.Done():
-		return collector.Spans(), nil
-	}
-}
-
-// CollectSpans is kind of like WatchForSpans, except that it uses the current
-// span to figure out which trace to collect. It calls work(), then collects
-// from the current trace until work() returns. CollectSpans won't work unless
-// some ancestor function is also monitored and has modified the ctx.
-func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
-	spans []*FinishedSpan) {
-	s := monkit.SpanFromCtx(ctx)
-	if s == nil {
-		work(ctx)
-		return nil
-	}
-	collector := NewSpanCollector(nil)
-	defer collector.Stop()
-	s.Trace().ObserveSpans(collector)
-	f := s.Func()
-	newF := f.Scope().FuncNamed(fmt.Sprintf("%s-TRACED", f.ShortName()))
-	func() {
-		defer newF.Task(&ctx)(nil)
-		collector.ForceStart(monkit.SpanFromCtx(ctx))
-		work(ctx)
-	}()
-	return collector.Spans()
-}
-
 func contextWithCancel() (context.Context, func()) {
-return context.WithCancel(context.Background())
+  return context.WithCancel(context.Background())
 }
