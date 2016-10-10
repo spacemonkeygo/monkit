@@ -219,7 +219,7 @@ Google solved this problem by always passing a `context.Context` interface
 through from call to call. A `Context` is basically just a mapping of arbitrary
 keys to arbitrary values that users can add new values for. This way if you
 decide to add a request context, you can add it to your `Context` and then all
-callsites that decend from that place will have the new data in their contexts.
+callsites that descend from that place will have the new data in their contexts.
 
 It is admittedly very verbose to add contexts to every function call.
 Painfully so. I hope to write more about it in the future, but [Google also
