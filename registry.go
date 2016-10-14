@@ -108,6 +108,8 @@ func (r *Registry) updateWatcher() {
 // ObserveTraces lets you observe all traces flowing through the system.
 // The passed in callback 'cb' will be called for every new trace as soon as
 // it starts, until the returned cancel method is called.
+// Note: this only applies to all new traces. If you want to find existing
+// or running traces, please pull them off of live RootSpans.
 func (r *Registry) ObserveTraces(cb func(*Trace)) (cancel func()) {
 	// even though observeTrace doesn't get a mutex, it's only ever loading
 	// the traceWatcher pointer, so we can use this mutex here to safely

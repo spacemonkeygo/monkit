@@ -30,21 +30,28 @@ type SpanObserver interface {
 	Finish(s *Span, err error, panicked bool, finish time.Time)
 }
 
-type spanObserverTuple struct{ first, second SpanObserver }
-
-func (l spanObserverTuple) Start(s *Span) {
-	l.first.Start(s)
-	l.second.Start(s)
+type spanObserverTuple struct {
+	// cdr is atomic
+	cdr *spanObserverTuple
+	// car never changes
+	car SpanObserver
 }
 
-func (l spanObserverTuple) Finish(s *Span, err error, panicked bool,
+func (l *spanObserverTuple) Start(s *Span) {
+	l.car.Start(s)
+	cdr := loadSpanObserverTuple(&l.cdr)
+	if cdr != nil {
+		cdr.Start(s)
+	}
+}
+
+func (l *spanObserverTuple) Finish(s *Span, err error, panicked bool,
 	finish time.Time) {
-	l.first.Finish(s, err, panicked, finish)
-	l.second.Finish(s, err, panicked, finish)
-}
-
-type spanObserverRef struct {
-	observer SpanObserver
+	l.car.Finish(s, err, panicked, finish)
+	cdr := loadSpanObserverTuple(&l.cdr)
+	if cdr != nil {
+		cdr.Finish(s, err, panicked, finish)
+	}
 }
 
 // Trace represents a 'trace' of execution. A 'trace' is the collection of all
@@ -53,7 +60,7 @@ type spanObserverRef struct {
 // like a stack frame.
 type Trace struct {
 	// sync/atomic things
-	spanObserver *spanObserverRef
+	spanObservers *spanObserverTuple
 
 	// immutable things from construction
 	id int64
@@ -69,32 +76,49 @@ func NewTrace(id int64) *Trace {
 }
 
 func (t *Trace) getObserver() SpanObserver {
-	observer := loadSpanObserverRef(&t.spanObserver)
-	if observer == nil {
+	observers := loadSpanObserverTuple(&t.spanObservers)
+	if observers == nil {
 		return nil
 	}
-	return observer.observer
+	if loadSpanObserverTuple(&observers.cdr) == nil {
+		return observers.car
+	}
+	return observers
 }
 
 // ObserveSpans lets you register a SpanObserver for all future Spans on the
-// Trace.
-func (t *Trace) ObserveSpans(observer SpanObserver) {
+// Trace. The returned cancel method will remove your observer from the trace.
+func (t *Trace) ObserveSpans(observer SpanObserver) (cancel func()) {
 	for {
-		existing := loadSpanObserverRef(&t.spanObserver)
-		if existing == nil {
-			if compareAndSwapSpanObserverRef(&t.spanObserver, nil,
-				&spanObserverRef{observer: observer}) {
-				break
-			}
-		} else {
-			otherObserver := existing.observer
-			if compareAndSwapSpanObserverRef(&t.spanObserver, existing,
-				&spanObserverRef{observer: spanObserverTuple{
-					first: otherObserver, second: observer}}) {
-				break
-			}
+		existing := loadSpanObserverTuple(&t.spanObservers)
+		ref := &spanObserverTuple{car: observer, cdr: existing}
+		if compareAndSwapSpanObserverTuple(&t.spanObservers, existing, ref) {
+			return func() { t.removeObserver(ref) }
 		}
 	}
+}
+
+func (t *Trace) removeObserver(ref *spanObserverTuple) {
+	t.mtx.Lock()
+	defer t.mtx.Unlock()
+	for {
+		if removeObserverFrom(&t.spanObservers, ref) {
+			return
+		}
+	}
+}
+
+func removeObserverFrom(parent **spanObserverTuple, ref *spanObserverTuple) (
+	success bool) {
+	existing := loadSpanObserverTuple(parent)
+	if existing == nil {
+		return true
+	}
+	if existing != ref {
+		return removeObserverFrom(&existing.cdr, ref)
+	}
+	return compareAndSwapSpanObserverTuple(parent, existing,
+		loadSpanObserverTuple(&existing.cdr))
 }
 
 // Id returns the id of the Trace

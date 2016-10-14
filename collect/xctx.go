@@ -22,6 +22,7 @@ package collect
 
 import (
 	"fmt"
+	"sync"
 
 	"golang.org/x/net/context"
 	"gopkg.in/spacemonkeygo/monkit.v2"
@@ -39,10 +40,41 @@ func WatchForSpans(ctx context.Context, r *monkit.Registry,
 	matcher func(s *monkit.Span) bool) (spans []*FinishedSpan, err error) {
 	collector := NewSpanCollector(matcher)
 	defer collector.Stop()
+
+	var mtx sync.Mutex
+	var cancelers []func()
+	existingTraces := map[*monkit.Trace]bool{}
+
 	canceler := r.ObserveTraces(func(t *monkit.Trace) {
-		t.ObserveSpans(collector)
+		mtx.Lock()
+		defer mtx.Unlock()
+		if existingTraces[t] {
+			return
+		}
+		existingTraces[t] = true
+		cancelers = append(cancelers, t.ObserveSpans(collector))
 	})
-	defer canceler()
+	cancelers = append(cancelers, canceler)
+
+	// pick up live traces we can find
+	r.RootSpans(func(s *monkit.Span) {
+		mtx.Lock()
+		defer mtx.Unlock()
+		t := s.Trace()
+		if existingTraces[t] {
+			return
+		}
+		existingTraces[t] = true
+		cancelers = append(cancelers, t.ObserveSpans(collector))
+	})
+
+	defer func() {
+		mtx.Lock()
+		defer mtx.Unlock()
+		for _, canceler := range cancelers {
+			canceler()
+		}
+	}()
 
 	select {
 	case <-ctx.Done():

@@ -54,8 +54,8 @@ func storeTraceWatcherRef(addr **traceWatcherRef, val *traceWatcherRef) {
 	bigHonkinMutex.Unlock()
 }
 
-func compareAndSwapSpanObserverRef(addr **spanObserverRef,
-	old, new *spanObserverRef) bool {
+func compareAndSwapSpanObserverTuple(addr **spanObserverTuple,
+	old, new *spanObserverTuple) bool {
 	bigHonkinMutex.Lock()
 	val := *addr
 	if val == old {
@@ -67,7 +67,7 @@ func compareAndSwapSpanObserverRef(addr **spanObserverRef,
 	return false
 }
 
-func loadSpanObserverRef(addr **spanObserverRef) (val *spanObserverRef) {
+func loadSpanObserverTuple(addr **spanObserverTuple) (val *spanObserverTuple) {
 	bigHonkinMutex.Lock()
 	val = *addr
 	bigHonkinMutex.Unlock()

@@ -53,18 +53,18 @@ func storeTraceWatcherRef(addr **traceWatcherRef, val *traceWatcherRef) {
 }
 
 //
-// *spanObserverRef atomic functons
+// *spanObserverTuple atomic functons
 //
 
-func compareAndSwapSpanObserverRef(addr **spanObserverRef,
-	old, new *spanObserverRef) bool {
+func compareAndSwapSpanObserverTuple(addr **spanObserverTuple,
+	old, new *spanObserverTuple) bool {
 	return atomic.CompareAndSwapPointer(
 		(*unsafe.Pointer)(unsafe.Pointer(addr)),
 		unsafe.Pointer(old),
 		unsafe.Pointer(new))
 }
 
-func loadSpanObserverRef(addr **spanObserverRef) (val *spanObserverRef) {
-	return (*spanObserverRef)(atomic.LoadPointer(
+func loadSpanObserverTuple(addr **spanObserverTuple) (val *spanObserverTuple) {
+	return (*spanObserverTuple)(atomic.LoadPointer(
 		(*unsafe.Pointer)(unsafe.Pointer(addr))))
 }
