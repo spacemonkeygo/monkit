@@ -168,10 +168,15 @@ func (f *FuncStats) Stats(cb func(name string, val float64)) {
 	}
 
 	cb("success", float64(s_count))
+	e_count := int64(0)
 	for errname, count := range errs {
+		e_count += count
 		cb(fmt.Sprintf("error %s", errname), float64(count))
 	}
+	cb("errors", float64(e_count))
 	cb("panics", float64(panics))
+	cb("failures", float64(e_count+panics))
+	cb("total", float64(s_count+e_count+panics))
 	cb("success times min", s_min.Seconds())
 	cb("success times avg", s_avg.Seconds())
 	cb("success times max", s_max.Seconds())
