@@ -81,6 +81,13 @@ func (e *Meter) Mark(amount int) {
 	e.mtx.Unlock()
 }
 
+// Mark64 marks amount events occurring in the current time window (int64 version).
+func (e *Meter) Mark64(amount int64) {
+	e.mtx.Lock()
+	e.slices[ticksToKeep-1].count += amount
+	e.mtx.Unlock()
+}
+
 func (e *Meter) tick(now time.Duration) {
 	e.mtx.Lock()
 	// only advance meter buckets if something happened. otherwise
