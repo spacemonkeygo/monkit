@@ -15,8 +15,10 @@
 package present
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"gopkg.in/spacemonkeygo/monkit.v2"
@@ -72,14 +74,24 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 	}
 
 	for id, s := range spans {
+		color := "rgb(128,128,255)"
+		switch {
+		case s.Panicked:
+			color = "rgb(255,0,0)"
+		case unwrapError(s.Err) == context.Canceled:
+			color = "rgb(255,255,0)"
+		case s.Err != nil:
+			color = "rgb(255,144,0)"
+		}
+		args := strings.Join(s.Span.Args(), " ")
 		_, err := fmt.Fprintf(w, `
   <g class="func">
-    <rect x="%d" y="%d" width="%d" height="%d" fill="rgb(128,128,255)" />
-    <text x="0" y="%d" fill="rgb(0,0,0)" font-size="%d">%s (%s)</text>
+    <rect x="%d" y="%d" width="%d" height="%d" fill="%s" />
+    <text x="0" y="%d" fill="rgb(0,0,0)" font-size="%d">%s(%s) (%s)</text>
   </g>`, timeToX(s.Span.Start()), id*(barHeight+barSep),
-			timeToX(s.Finish)-timeToX(s.Span.Start()), barHeight,
+			timeToX(s.Finish)-timeToX(s.Span.Start()), barHeight, color,
 			(id+1)*(barHeight+barSep)-barSep-fontOffset, fontSize,
-			s.Span.Func().FullName(), s.Finish.Sub(s.Span.Start()))
+			s.Span.Func().FullName(), args, s.Finish.Sub(s.Span.Start()))
 		if err != nil {
 			return err
 		}
@@ -87,6 +99,24 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 
 	_, err = w.Write([]byte("\n</svg>\n"))
 	return err
+}
+
+type wrappedError interface {
+	WrappedErr() error
+}
+
+func unwrapError(err error) error {
+	for {
+		wrapper, ok := err.(wrappedError)
+		if !ok {
+			return err
+		}
+		wrapped_error := wrapper.WrappedErr()
+		if wrapped_error == nil {
+			return err
+		}
+		err = wrapped_error
+	}
 }
 
 // TraceQuerySVG uses WatchForSpans to write all Spans from 'reg' matching
