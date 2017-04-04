@@ -15,7 +15,6 @@
 package present
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -78,7 +77,7 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 		switch {
 		case s.Panicked:
 			color = "rgb(255,0,0)"
-		case unwrapError(s.Err) == context.Canceled:
+		case unwrapError(s.Err) == contextCanceled:
 			color = "rgb(255,255,0)"
 		case s.Err != nil:
 			color = "rgb(255,144,0)"
