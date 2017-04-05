@@ -29,3 +29,5 @@ import (
 func contextWithCancel() (context.Context, func()) {
   return context.WithCancel(context.Background())
 }
+
+var contextCancelled = context.Cancelled
