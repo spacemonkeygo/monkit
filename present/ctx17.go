@@ -28,4 +28,4 @@ func contextWithCancel() (context.Context, func()) {
 	return context.WithCancel(context.Background())
 }
 
-var contextCancelled = context.Cancelled
+var contextCanceled = context.Canceled
