@@ -1,4 +1,4 @@
-# Monkit
+# ![monkit](https://raw.githubusercontent.com/spacemonkeygo/monkit/master/images/logo.png)
 
 Package monkit is a flexible code instrumenting and data collection library.
 
