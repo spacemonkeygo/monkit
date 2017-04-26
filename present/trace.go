@@ -15,9 +15,11 @@
 package present
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/xml"
 	"io"
 	"strings"
+	"text/template"
 	"time"
 
 	"gopkg.in/spacemonkeygo/monkit.v2"
@@ -32,19 +34,89 @@ const (
 	fontOffset = int(barHeight * .2)
 )
 
-// SpansToSVG takes a list of FinishedSpans and writes them to w in SVG format.
-// It draws a trace using the Spans where the Spans are ordered by start time.
-func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
-	_, err := fmt.Fprint(w, `<?xml version="1.0" standalone="no"?>
+var (
+	svgHeader = template.Must(template.New("header").Parse(
+		`<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg version="1.1" xmlns="http://www.w3.org/2000/svg"
-  xmlns:xlink="http://www.w3.org/1999/xlink"`)
-	if err != nil {
-		return err
-	}
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  viewBox="0 0 {{.GraphWidth}} {{.GraphHeight}}"
+  width="{{.GraphWidth}}" height="{{.GraphHeight}}">
 
+  <style type="text/css">
+    .func .parent { visibility: hidden; }
+    .func.asParent { stroke: green; stroke-width: 0.5; cursor: pointer; }
+    .func.selected { stroke: black; stroke-width: 0.5; cursor: pointer; }
+    .func.selected .parent { stroke: green; visibility: visible; }
+    .func.selected .parent line { marker-end: url(#head-green); }
+    .func.asChild { stroke: purple; stroke-width: 0.5; cursor: pointer; }
+    .func.asChild .parent { stroke: purple; visibility: visible; }
+    .func.asChild .parent line { marker-end: url(#head-purple); }
+  </style>
+  <script>
+  //<![CDATA[
+    function select(el, classname) {
+      if (el) { el.classList.add(classname); }
+    }
+    function deselect(el, classname) {
+      if (el) { el.classList.remove(classname); }
+    }
+    function mouseApply(fn, self, parent) {
+      fn(document.getElementById("id-" + parent), "asParent");
+      fn(document.getElementById("id-" + self), "selected");
+      var children = document.getElementsByClassName("parent-" + self);
+      for (var i = 0; i < children.length; i++) {
+        fn(children[i], "asChild");
+      }
+    }
+    function mouseover(self, parent) {
+      mouseApply(select, self, parent);
+    }
+    function mouseout(self, parent) {
+      mouseApply(deselect, self, parent);
+    }
+  //]]>
+  </script>
+  <defs>
+    <marker id="head-green" orient="auto" markerWidth="2" markerHeight="4"
+        refX="0.1" refY="2" fill="green">
+      <path d="M0,0 V4 L2,2 Z"/>
+    </marker>
+    <marker id="head-purple" orient="auto" markerWidth="2" markerHeight="4"
+        refX="0.1" refY="2" fill="purple">
+      <path d="M0,0 V4 L2,2 Z"/>
+    </marker>
+  </defs>`))
+
+	svgFooter = template.Must(template.New("footer").Parse(`
+</svg>
+`))
+
+	svgFunc = template.Must(template.New("func").Parse(`
+  <g id="id-{{.SpanId}}" class="func parent-{{.ParentId}}"
+    onmouseover="mouseover('{{.SpanId}}', '{{.ParentId}}');"
+    onmouseout="mouseout('{{.SpanId}}', '{{.ParentId}}');">
+    <rect x="{{.SpanLeft}}" y="{{.SpanTop}}"
+        width="{{.SpanWidth}}" height="{{.SpanHeight}}"
+        fill="{{.SpanColor}}" />
+    <text x="0" y="{{.TextTop}}" fill="rgb(0,0,0)" font-size="{{.FontSize}}">
+      {{.FuncName}}({{.FuncArgs}}) ({{.FuncDuration}})
+    </text>
+    <g class="parent">
+      <line stroke-width="2"
+          x1="{{.SpanLeft}}" x2="{{.ParentLeft}}"
+          y1="{{.SpanMid}}" y2="{{.ParentMid}}" />
+    </g>
+  </g>`))
+)
+
+// SpansToSVG takes a list of FinishedSpans and writes them to w in SVG format.
+// It draws a trace using the Spans where the Spans are ordered by start time.
+func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 	var minStart, maxEnd time.Time
+	graphHeight := (barHeight + barSep) * len(spans)
+
 	for _, s := range spans {
 		start := s.Span.Start()
 		finish := s.Finish
@@ -57,36 +129,15 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 	}
 	collect.StartTimeSorter(spans).Sort()
 
-	timeToX := func(t time.Time) int64 {
-		return ((t.UnixNano() - minStart.UnixNano()) * graphWidth) /
-			(maxEnd.UnixNano() - minStart.UnixNano())
+	timeToX := func(t time.Time) int {
+		return int(((t.UnixNano() - minStart.UnixNano()) * graphWidth) /
+			(maxEnd.UnixNano() - minStart.UnixNano()))
 	}
 
-	graphHeight := (barHeight + barSep) * len(spans)
-	_, err = fmt.Fprintf(w, ` viewBox="0 0 %d %d" width="%d" height="%d">
-
-  <style type="text/css">
-    .func .parent { visibility: hidden; }
-    .func:hover .parent { visibility: visible; }
-    .func:hover { stroke: black; stroke-width: 0.5; cursor: pointer; }
-    .phover { stroke: black; stroke-width: 0.5; cursor: pointer; }
-  </style>
-  <script>
-    function mouseover(parent) {
-      var el = document.getElementById(parent);
-      if (el) { el.classList.add('phover'); }
-    }
-    function mouseout(parent) {
-      var el = document.getElementById(parent);
-      if (el) { el.classList.remove('phover'); }
-    }
-  </script>
-  <defs>
-    <marker id="head" orient="auto" markerWidth="2" markerHeight="4"
-            refX="0.1" refY="2">
-      <path d="M0,0 V4 L2,2 Z" fill="black"/>
-    </marker>
-  </defs>`, graphWidth, graphHeight, graphWidth, graphHeight)
+	err := svgHeader.Execute(w, map[string]interface{}{
+		"GraphWidth":  graphWidth,
+		"GraphHeight": graphHeight,
+	})
 	if err != nil {
 		return err
 	}
@@ -105,32 +156,68 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 		case s.Err != nil:
 			color = "rgb(255,144,0)"
 		}
-		args := strings.Join(s.Span.Args(), " ")
-		_, err := fmt.Fprintf(w, `
-  <g class="func" id="span-%d"
-      onmouseover="mouseover('span-%d');" onmouseout="mouseout('span-%d');">
-    <rect x="%d" y="%d" width="%d" height="%d" fill="%s" />
-    <text x="0" y="%d" fill="rgb(0,0,0)" font-size="%d">%s(%s) (%s)</text>
-    <g class="parent">
-      <line marker-end="url(#head)" stroke-width="2" stroke="black"
-        x1="%d" x2="%d" y1="%d" y2="%d" />
-    </g>
-  </g>`, s.Span.Id(), s.Span.Parent().Id(), s.Span.Parent().Id(),
-			timeToX(s.Span.Start()), id*(barHeight+barSep),
-			timeToX(s.Finish)-timeToX(s.Span.Start()), barHeight, color,
-			(id+1)*(barHeight+barSep)-barSep-fontOffset, fontSize,
-			s.Span.Func().FullName(), args, s.Finish.Sub(s.Span.Start()),
-			timeToX(s.Span.Start()), timeToX(s.Span.Parent().Start()),
-			id*(barHeight+barSep)+barHeight/2,
-			(positionBySpanId[s.Span.Parent().Id()])*(barHeight+barSep)+
-				2*barHeight/3)
+
+		templateVals := struct {
+			SpanId       int64
+			SpanLeft     int
+			SpanTop      int
+			SpanWidth    int
+			SpanHeight   int
+			SpanColor    string
+			TextTop      int
+			FontSize     int
+			FuncName     string
+			FuncArgs     string
+			FuncDuration string
+			SpanMid      int
+
+			ParentId   int64
+			ParentLeft int
+			ParentMid  int
+		}{
+			SpanId:       s.Span.Id(),
+			SpanLeft:     timeToX(s.Span.Start()),
+			SpanTop:      id * (barHeight + barSep),
+			SpanWidth:    timeToX(s.Finish) - timeToX(s.Span.Start()),
+			SpanHeight:   barHeight,
+			SpanColor:    color,
+			TextTop:      (id+1)*(barHeight+barSep) - barSep - fontOffset,
+			FontSize:     fontSize,
+			FuncName:     s.Span.Func().FullName(),
+			FuncArgs:     strings.Join(s.Span.Args(), " "),
+			FuncDuration: s.Finish.Sub(s.Span.Start()).String(),
+			SpanMid:      id*(barHeight+barSep) + barHeight/2,
+		}
+
+		var buf bytes.Buffer
+		err = xml.EscapeText(&buf, []byte(templateVals.FuncName))
+		if err != nil {
+			return err
+		}
+		templateVals.FuncName = buf.String()
+
+		buf.Reset()
+		err = xml.EscapeText(&buf, []byte(templateVals.FuncArgs))
+		if err != nil {
+			return err
+		}
+		templateVals.FuncArgs = buf.String()
+
+		parent := s.Span.Parent()
+		if parent != nil {
+			templateVals.ParentId = parent.Id()
+			templateVals.ParentLeft = timeToX(parent.Start())
+			templateVals.ParentMid = barHeight/2 +
+				positionBySpanId[parent.Id()]*(barHeight+barSep)
+		}
+
+		err := svgFunc.Execute(w, templateVals)
 		if err != nil {
 			return err
 		}
 	}
 
-	_, err = w.Write([]byte("\n</svg>\n"))
-	return err
+	return svgFooter.Execute(w, nil)
 }
 
 type wrappedError interface {
