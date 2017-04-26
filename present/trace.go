@@ -66,13 +66,36 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 	_, err = fmt.Fprintf(w, ` viewBox="0 0 %d %d" width="%d" height="%d">
 
   <style type="text/css">
+    .func .parent { visibility: hidden; }
+    .func:hover .parent { visibility: visible; }
     .func:hover { stroke: black; stroke-width: 0.5; cursor: pointer; }
-  </style>`, graphWidth, graphHeight, graphWidth, graphHeight)
+    .phover { stroke: black; stroke-width: 0.5; cursor: pointer; }
+  </style>
+  <script>
+    function mouseover(parent) {
+      var el = document.getElementById(parent);
+      if (el) { el.classList.add('phover'); }
+    }
+    function mouseout(parent) {
+      var el = document.getElementById(parent);
+      if (el) { el.classList.remove('phover'); }
+    }
+  </script>
+  <defs>
+    <marker id="head" orient="auto" markerWidth="2" markerHeight="4"
+            refX="0.1" refY="2">
+      <path d="M0,0 V4 L2,2 Z" fill="black"/>
+    </marker>
+  </defs>`, graphWidth, graphHeight, graphWidth, graphHeight)
 	if err != nil {
 		return err
 	}
 
+	positionBySpanId := map[int64]int{}
+
 	for id, s := range spans {
+		positionBySpanId[s.Span.Id()] = id
+
 		color := "rgb(128,128,255)"
 		switch {
 		case s.Panicked:
@@ -84,13 +107,23 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 		}
 		args := strings.Join(s.Span.Args(), " ")
 		_, err := fmt.Fprintf(w, `
-  <g class="func">
+  <g class="func" id="span-%d"
+      onmouseover="mouseover('span-%d');" onmouseout="mouseout('span-%d');">
     <rect x="%d" y="%d" width="%d" height="%d" fill="%s" />
     <text x="0" y="%d" fill="rgb(0,0,0)" font-size="%d">%s(%s) (%s)</text>
-  </g>`, timeToX(s.Span.Start()), id*(barHeight+barSep),
+    <g class="parent">
+      <line marker-end="url(#head)" stroke-width="2" stroke="black"
+        x1="%d" x2="%d" y1="%d" y2="%d" />
+    </g>
+  </g>`, s.Span.Id(), s.Span.Parent().Id(), s.Span.Parent().Id(),
+			timeToX(s.Span.Start()), id*(barHeight+barSep),
 			timeToX(s.Finish)-timeToX(s.Span.Start()), barHeight, color,
 			(id+1)*(barHeight+barSep)-barSep-fontOffset, fontSize,
-			s.Span.Func().FullName(), args, s.Finish.Sub(s.Span.Start()))
+			s.Span.Func().FullName(), args, s.Finish.Sub(s.Span.Start()),
+			timeToX(s.Span.Start()), timeToX(s.Span.Parent().Start()),
+			id*(barHeight+barSep)+barHeight/2,
+			(positionBySpanId[s.Span.Parent().Id()])*(barHeight+barSep)+
+				2*barHeight/3)
 		if err != nil {
 			return err
 		}
