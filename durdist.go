@@ -43,12 +43,12 @@ type DurationDist struct {
 	Sum time.Duration
 
 	reservoir [ReservoirSize]float32
-	lcg       lcg
+	rng       lcg
 	sorted    bool
 }
 
 func initDurationDist(v *DurationDist) {
-	v.lcg = newLCG()
+	v.rng = newLCG()
 }
 
 // NewDurationDist creates a distribution of time.Durations.
@@ -155,7 +155,7 @@ func (d *DurationDist) Query(quantile float64) time.Duration {
 // Copy returns a full copy of the entire distribution.
 func (d *DurationDist) Copy() *DurationDist {
 	cp := *d
-	cp.lcg = newLCG()
+	cp.rng = newLCG()
 	return &cp
 }
 
