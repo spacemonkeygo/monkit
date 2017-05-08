@@ -42,12 +42,12 @@ type IntDist struct {
 	Sum int64
 
 	reservoir [ReservoirSize]float32
-	rng       lcg
+	rng       xorshift128
 	sorted    bool
 }
 
 func initIntDist(v *IntDist) {
-	v.rng = newLCG()
+	v.rng = newXORShift128()
 }
 
 // NewIntDist creates a distribution of int64s.
@@ -154,7 +154,7 @@ func (d *IntDist) Query(quantile float64) int64 {
 // Copy returns a full copy of the entire distribution.
 func (d *IntDist) Copy() *IntDist {
 	cp := *d
-	cp.rng = newLCG()
+	cp.rng = newXORShift128()
 	return &cp
 }
 

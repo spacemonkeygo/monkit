@@ -43,12 +43,12 @@ type _NAME_`Dist' struct {
 	Sum _TYPE_
 
 	reservoir [ReservoirSize]float32
-	rng       lcg
+	rng       xorshift128
 	sorted    bool
 }
 
 func `init'_NAME_`Dist'(v *_NAME_`Dist') {
-	v.rng = newLCG()
+	v.rng = newXORShift128()
 }
 
 // `New'_NAME_`Dist' creates a distribution of _TYPE_`s'.
@@ -155,7 +155,7 @@ func (d *_NAME_`Dist') Query(quantile float64) _TYPE_ {
 // Copy returns a full copy of the entire distribution.
 func (d *_NAME_`Dist') Copy() *_NAME_`Dist' {
 	cp := *d
-	cp.rng = newLCG()
+	cp.rng = newXORShift128()
 	return &cp
 }
 
