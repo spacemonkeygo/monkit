@@ -145,29 +145,19 @@ func (f *FuncStats) parents(cb func(f *Func)) {
 // Stats implements the StatSource interface
 func (f *FuncStats) Stats(cb func(name string, val float64)) {
 	cb("current", float64(f.Current()))
+	cb("highwater", float64(f.Highwater()))
 	f.parentsAndMutex.Lock()
 	panics := f.panics
 	errs := make(map[string]int64, len(f.errors))
 	for errname, count := range f.errors {
 		errs[errname] = count
 	}
-	st := f.successTimes
-	s_min, s_max, s_recent := st.Low, st.High, st.Recent
-	s_count, s_sum := st.Count, st.Sum
-	ft := f.failureTimes
-	f_min, f_max, f_recent := ft.Low, ft.High, ft.Recent
-	f_count, f_sum := ft.Count, ft.Sum
+	st := f.successTimes.Copy()
+	ft := f.failureTimes.Copy()
 	f.parentsAndMutex.Unlock()
 
-	var s_avg, f_avg time.Duration
-	if s_count > 0 {
-		s_avg = time.Duration(int64(s_sum) / s_count)
-	}
-	if f_count > 0 {
-		f_avg = time.Duration(int64(f_sum) / f_count)
-	}
-
-	cb("success", float64(s_count))
+	cb("success", float64(st.Count)) // DEPRECATED
+	cb("successes", float64(st.Count))
 	e_count := int64(0)
 	for errname, count := range errs {
 		e_count += count
@@ -176,15 +166,13 @@ func (f *FuncStats) Stats(cb func(name string, val float64)) {
 	cb("errors", float64(e_count))
 	cb("panics", float64(panics))
 	cb("failures", float64(e_count+panics))
-	cb("total", float64(s_count+e_count+panics))
-	cb("success times min", s_min.Seconds())
-	cb("success times avg", s_avg.Seconds())
-	cb("success times max", s_max.Seconds())
-	cb("success times recent", s_recent.Seconds())
-	cb("failure times min", f_min.Seconds())
-	cb("failure times avg", f_avg.Seconds())
-	cb("failure times max", f_max.Seconds())
-	cb("failure times recent", f_recent.Seconds())
+	cb("total", float64(st.Count+e_count+panics))
+	st.Stats(func(name string, val float64) {
+		cb("success_times_"+name, val)
+	})
+	ft.Stats(func(name string, val float64) {
+		cb("failure_times_"+name, val)
+	})
 }
 
 // SuccessTimes returns a DurationDist of successes

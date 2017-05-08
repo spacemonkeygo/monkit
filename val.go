@@ -52,17 +52,9 @@ func (v *IntVal) Observe(val int64) {
 // Stats implements the StatSource interface.
 func (v *IntVal) Stats(cb func(name string, val float64)) {
 	v.mtx.Lock()
-	vd := v.dist
-	min, max, recent, sum, count := vd.Low, vd.High, vd.Recent, vd.Sum, vd.Count
+	vd := v.dist.Copy()
 	v.mtx.Unlock()
-	if count > 0 {
-		cb("avg", float64(sum/count))
-	}
-	cb("count", float64(count))
-	cb("max", float64(max))
-	cb("min", float64(min))
-	cb("recent", float64(recent))
-	cb("sum", float64(sum))
+	vd.Stats(cb)
 }
 
 // Quantile returns an estimate of the requested quantile of observed values.
@@ -107,17 +99,9 @@ func (v *FloatVal) Observe(val float64) {
 // Stats implements the StatSource interface.
 func (v *FloatVal) Stats(cb func(name string, val float64)) {
 	v.mtx.Lock()
-	vd := v.dist
-	min, max, recent, sum, count := vd.Low, vd.High, vd.Recent, vd.Sum, vd.Count
+	vd := v.dist.Copy()
 	v.mtx.Unlock()
-	if count > 0 {
-		cb("avg", sum/float64(count))
-	}
-	cb("count", float64(count))
-	cb("max", max)
-	cb("min", min)
-	cb("recent", recent)
-	cb("sum", sum)
+	vd.Stats(cb)
 }
 
 // Quantile returns an estimate of the requested quantile of observed values.

@@ -133,11 +133,9 @@ func (t *Timer) Stats(cb func(name string, val float64)) {
 	t.mtx.Unlock()
 
 	call := func(prefix string, times *DurationDist) {
-		cb(prefix+"avg", times.Average().Seconds())
-		cb(prefix+"recent", times.Recent.Seconds())
-		cb(prefix+"max", times.High.Seconds())
-		cb(prefix+"min", times.Low.Seconds())
-		cb(prefix+"sum", times.Sum.Seconds())
+		times.Stats(func(name string, val float64) {
+			cb(prefix+name, val)
+		})
 	}
 
 	call("", times)

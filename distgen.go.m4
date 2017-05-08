@@ -42,7 +42,7 @@ type _NAME_`Dist' struct {
 	// reset.
 	Sum _TYPE_
 
-	reservoir [reservoirSize]float32
+	reservoir [ReservoirSize]float32
 	lcg       lcg
 	sorted    bool
 }
@@ -77,38 +77,52 @@ func (d *_NAME_`Dist') Insert(val _TYPE_) {
 	index := d.Count
 	d.Count += 1
 
-	if index < reservoirSize {
+	if index < ReservoirSize {
 		d.reservoir[index] = float32(val)
 		d.sorted = false
 	} else {
+		window := d.Count
+		// careful, the capitalization of Window is important
+		if Window > 0 && window > Window {
+			window = Window
+		}
 		// fast, but kind of biased. probably okay
-		j := d.lcg.Uint64() % uint64(d.Count)
-		if j < reservoirSize {
+		j := d.lcg.Uint64() % uint64(window)
+		if j < ReservoirSize {
 			d.reservoir[int(j)] = float32(val)
 			d.sorted = false
 		}
 	}
 }
 
-// Average calculates and returns the average of inserted values.
-func (d *_NAME_`Dist') Average() _TYPE_ {
+// FullAverage calculates and returns the average of all inserted values.
+func (d *_NAME_`Dist') FullAverage() _TYPE_ {
 	if d.Count > 0 {
 		return d.Sum / _TYPE_`(d.Count)'
 	}
 	return 0
 }
 
-// Query will return the approximate value at the given quantile, where
-// 0 <= quantile <= 1.
-func (d *_NAME_`Dist') Query(quantile float64) _TYPE_ {
-	if quantile <= 0 {
-		return d.Low
+// ReservoirAverage calculates the average of the current reservoir.
+func (d *_NAME_`Dist') ReservoirAverage() _TYPE_ {
+	amount := ReservoirSize
+	if d.Count < int64(amount) {
+		amount = int(d.Count)
 	}
-	if quantile >= 1 {
-		return d.High
+	if amount <= 0 {
+		return 0
 	}
+	var sum float32
+	for i := 0; i < amount; i++ {
+		sum += d.reservoir[i]
+	}
+	return _TYPE_`(sum / float32(amount))'
+}
 
-	rlen := int(reservoirSize)
+// Query will return the approximate value at the given quantile from the
+// reservoir, where 0 <= quantile <= 1.
+func (d *_NAME_`Dist') Query(quantile float64) _TYPE_ {
+	rlen := int(ReservoirSize)
 	if int64(rlen) > d.Count {
 		rlen = int(d.Count)
 	}
@@ -117,14 +131,22 @@ func (d *_NAME_`Dist') Query(quantile float64) _TYPE_ {
 		return _TYPE_`(d.reservoir[0])'
 	}
 
-	idx_float := quantile * float64(rlen-1)
-	idx := int(idx_float)
-
 	reservoir := d.reservoir[:rlen]
 	if !d.sorted {
 		sort.Sort(float32Slice(reservoir))
 		d.sorted = true
 	}
+
+	if quantile <= 0 {
+		return _TYPE_`(reservoir[0])'
+	}
+	if quantile >= 1 {
+		return _TYPE_`(reservoir[rlen-1])'
+	}
+
+	idx_float := quantile * float64(rlen-1)
+	idx := int(idx_float)
+
 	diff := idx_float - float64(idx)
 	prior := float64(reservoir[idx])
 	return _TYPE_`(prior + diff*(float64(reservoir[idx+1])-prior))'
@@ -140,4 +162,21 @@ func (d *_NAME_`Dist') Copy() *_NAME_`Dist' {
 func (d *_NAME_`Dist') Reset() {
 	d.Low, d.High, d.Recent, d.Count, d.Sum = 0, 0, 0, 0, 0
 	// resetting count will reset the quantile reservoir
+}
+
+func (d *_NAME_`Dist') Stats(cb func(name string, val float64)) {
+	count := d.Count
+	cb("count", float64(count))
+	if count > 0 {
+		cb("sum", d.toFloat64(d.Sum))
+		cb("min", d.toFloat64(d.Low))
+		cb("avg", d.toFloat64(d.FullAverage()))
+		cb("max", d.toFloat64(d.High))
+		cb("rmin", d.toFloat64(d.Query(0)))
+		cb("ravg", d.toFloat64(d.ReservoirAverage()))
+		cb("r50", d.toFloat64(d.Query(.5)))
+		cb("r90", d.toFloat64(d.Query(.9)))
+		cb("rmax", d.toFloat64(d.Query(1)))
+		cb("recent", d.toFloat64(d.Recent))
+	}
 }
