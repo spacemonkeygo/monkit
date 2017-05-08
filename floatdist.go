@@ -42,12 +42,12 @@ type FloatDist struct {
 	Sum float64
 
 	reservoir [ReservoirSize]float32
-	lcg       lcg
+	rng       xorshift128
 	sorted    bool
 }
 
 func initFloatDist(v *FloatDist) {
-	v.lcg = newLCG()
+	v.rng = newXORShift128()
 }
 
 // NewFloatDist creates a distribution of float64s.
@@ -154,7 +154,7 @@ func (d *FloatDist) Query(quantile float64) float64 {
 // Copy returns a full copy of the entire distribution.
 func (d *FloatDist) Copy() *FloatDist {
 	cp := *d
-	cp.lcg = newLCG()
+	cp.rng = newXORShift128()
 	return &cp
 }
 
