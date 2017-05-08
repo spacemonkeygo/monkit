@@ -14,8 +14,19 @@
 
 package monkit
 
+import (
+	"time"
+)
+
 const (
-	reservoirSize = 64
+	ReservoirSize = 64
+)
+
+var (
+	// If Window is > 0, the probability of replacing a datapoint will never
+	// fall below ReservoirSize/Window instead of continuing to fall over time.
+	// Window should be a multiple of ReservoirSize.
+	Window int64 = 1024
 )
 
 // ObservedQuantiles is the set of quantiles the internal distribution
@@ -36,3 +47,15 @@ func (p float32Slice) Less(i, j int) bool {
 //go:generate sh -c "m4 -D_IMPORT_= -D_NAME_=Float -D_TYPE_=float64 distgen.go.m4 > floatdist.go"
 //go:generate sh -c "m4 -D_IMPORT_= -D_NAME_=Int -D_TYPE_=int64 distgen.go.m4 > intdist.go"
 //go:generate gofmt -w -s durdist.go floatdist.go intdist.go
+
+func (d *DurationDist) toFloat64(v time.Duration) float64 {
+	return v.Seconds()
+}
+
+func (d *IntDist) toFloat64(v int64) float64 {
+	return float64(v)
+}
+
+func (d *FloatDist) toFloat64(v float64) float64 {
+	return v
+}

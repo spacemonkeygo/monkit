@@ -26,7 +26,8 @@ func formatDist(data *monkit.DurationDist, indent string) (result string) {
 	for _, q := range monkit.ObservedQuantiles {
 		result += fmt.Sprintf("%s%.02f: %s\n", indent, q, data.Query(q))
 	}
-	result += fmt.Sprintf("%savg: %s\n", indent, data.Average())
+	result += fmt.Sprintf("%savg: %s\n", indent, data.FullAverage())
+	result += fmt.Sprintf("%sravg: %s\n", indent, data.ReservoirAverage())
 	return result
 }
 

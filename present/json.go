@@ -110,13 +110,21 @@ func formatFinishedSpan(s *collect.FinishedSpan) interface{} {
 }
 
 type durationStats struct {
-	Average   time.Duration            `json:"average"`
-	Recent    time.Duration            `json:"recent"`
-	Quantiles map[string]time.Duration `json:"quantiles"`
+	Average          time.Duration            `json:"average"`
+	ReservoirAverage time.Duration            `json:"reservoir_average"`
+	FullAverage      time.Duration            `json:"full_average"`
+	High             time.Duration            `json:"max"`
+	Low              time.Duration            `json:"min"`
+	Recent           time.Duration            `json:"recent"`
+	Quantiles        map[string]time.Duration `json:"quantiles"`
 }
 
 func formatDuration(d *monkit.DurationDist, out *durationStats) {
-	out.Average = d.Average()
+	out.Average = d.FullAverage()
+	out.FullAverage = d.FullAverage()
+	out.ReservoirAverage = d.ReservoirAverage()
+	out.High = d.High
+	out.Low = d.Low
 	out.Recent = d.Recent
 	out.Quantiles = make(map[string]time.Duration,
 		len(monkit.ObservedQuantiles))
