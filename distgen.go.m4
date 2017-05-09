@@ -87,7 +87,7 @@ func (d *_NAME_`Dist') Insert(val _TYPE_) {
 			window = Window
 		}
 		// fast, but kind of biased. probably okay
-		j := d.lcg.Uint64() % uint64(window)
+		j := d.rng.Uint64() % uint64(window)
 		if j < ReservoirSize {
 			d.reservoir[int(j)] = float32(val)
 			d.sorted = false
