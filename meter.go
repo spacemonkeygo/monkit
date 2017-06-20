@@ -67,6 +67,20 @@ func NewMeter() *Meter {
 	return rv
 }
 
+// Reset resets all internal state.
+//
+// Useful when monitoring a counter that has overflowed.
+func (e *Meter) Reset(new_total int64) {
+	e.mtx.Lock()
+	e.total = new_total
+	now := monotime.Monotonic()
+	for _, slice := range e.slices {
+		slice.count = 0
+		slice.start = now
+	}
+	e.mtx.Unlock()
+}
+
 // SetTotal sets the initial total count of the meter.
 func (e *Meter) SetTotal(total int64) {
 	e.mtx.Lock()
