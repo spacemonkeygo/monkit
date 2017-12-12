@@ -52,7 +52,7 @@ func formatSpan(s *monkit.Span) interface{} {
 	js.Orphaned = s.Orphaned()
 	js.Args = make([]string, 0, len(s.Args()))
 	for _, arg := range s.Args() {
-		js.Args = append(js.Args, fmt.Sprint("%#v", arg))
+		js.Args = append(js.Args, fmt.Sprintf("%#v", arg))
 	}
 	js.Annotations = make([][]string, 0, len(s.Annotations()))
 	for _, annotation := range s.Annotations() {
@@ -99,7 +99,7 @@ func formatFinishedSpan(s *collect.FinishedSpan) interface{} {
 	js.Panicked = s.Panicked
 	js.Args = make([]string, 0, len(s.Span.Args()))
 	for _, arg := range s.Span.Args() {
-		js.Args = append(js.Args, fmt.Sprint("%#v", arg))
+		js.Args = append(js.Args, fmt.Sprintf("%#v", arg))
 	}
 	js.Annotations = make([][]string, 0, len(s.Span.Annotations()))
 	for _, annotation := range s.Span.Annotations() {

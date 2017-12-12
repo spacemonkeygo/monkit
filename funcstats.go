@@ -19,7 +19,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/spacemonkeygo/errors"
 	"github.com/spacemonkeygo/monotime"
 )
 
@@ -99,7 +98,7 @@ func (f *FuncStats) end(err error, panicked bool, duration time.Duration) {
 		return
 	}
 	f.failureTimes.Insert(duration)
-	f.errors[errors.GetClass(err).String()] += 1
+	f.errors[getErrorName(err)] += 1
 	f.parentsAndMutex.Unlock()
 }
 
@@ -127,7 +126,8 @@ func (f *FuncStats) Panics() (rv int64) {
 }
 
 // Errors returns the number of errors observed by error type. The error type
-// is determined using github.com/spacemonkeygo/errors.GetClass(err).String()
+// is determined by handlers from AddErrorNameHandler, or a default that works
+// with most error types.
 func (f *FuncStats) Errors() (rv map[string]int64) {
 	f.parentsAndMutex.Lock()
 	rv = make(map[string]int64, len(f.errors))
