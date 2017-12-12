@@ -22,14 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spacemonkeygo/errors"
-	"github.com/spacemonkeygo/errors/errhttp"
 	"gopkg.in/spacemonkeygo/monkit.v2"
-)
-
-var (
-	BadRequest = errors.NewClass("Bad Request", errhttp.SetStatusCode(400))
-	NotFound   = errors.NewClass("Not Found", errhttp.SetStatusCode(404))
 )
 
 // Result writes the expected data to io.Writer and returns any errors if
@@ -135,7 +128,7 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 		regexStr := query.Get("regex")
 		traceIdStr := query.Get("trace_id")
 		if regexStr == "" && traceIdStr == "" {
-			return nil, "", BadRequest.New("at least one of 'regex' or 'trace_id' " +
+			return nil, "", errBadRequest.New("at least one of 'regex' or 'trace_id' " +
 				"query parameters required")
 		}
 		fnMatcher := func(*monkit.Func) bool { return true }
@@ -143,7 +136,7 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 		if regexStr != "" {
 			re, err := regexp.Compile(regexStr)
 			if err != nil {
-				return nil, "", BadRequest.New("invalid regex %#v: %v",
+				return nil, "", errBadRequest.New("invalid regex %#v: %v",
 					regexStr, err)
 			}
 			fnMatcher = func(f *monkit.Func) bool {
@@ -154,7 +147,7 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 			if query.Get("preselect") != "" {
 				preselect, err = strconv.ParseBool(query.Get("preselect"))
 				if err != nil {
-					return nil, "", BadRequest.New("invalid preselect %#v: %v",
+					return nil, "", errBadRequest.New("invalid preselect %#v: %v",
 						query.Get("preselect"), err)
 				}
 			}
@@ -166,7 +159,7 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 					}
 				})
 				if len(funcs) <= 0 {
-					return nil, "", BadRequest.New("regex preselect matches 0 functions")
+					return nil, "", errBadRequest.New("regex preselect matches 0 functions")
 				}
 
 				fnMatcher = func(f *monkit.Func) bool { return funcs[f] }
@@ -178,7 +171,7 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 		if traceIdStr != "" {
 			traceId, err := strconv.ParseUint(traceIdStr, 16, 64)
 			if err != nil {
-				return nil, "", BadRequest.New(
+				return nil, "", errBadRequest.New(
 					"trace_id expected to be hex unsigned 64 bit number: %#v", traceIdStr)
 			}
 			spanMatcher = func(s *monkit.Span) bool {
@@ -197,7 +190,7 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 			}, "application/json; charset=utf-8", nil
 		}
 	}
-	return nil, "", NotFound.New("path not found: %s", path)
+	return nil, "", errNotFound.New("path not found: %s", path)
 }
 
 func shift(path string) (dir, left string) {

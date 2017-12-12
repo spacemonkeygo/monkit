@@ -29,6 +29,11 @@ import (
 	_OTHER_IMPORT_
 )
 
+var (
+	contextCanceled         = context.Canceled
+	contextDeadlineExceeded = context.DeadlineExceeded
+)
+
 // Span represents a 'span' of execution. A span is analogous to a stack frame.
 // Spans are constructed as a side-effect of Tasks.
 type Span struct {
