@@ -203,7 +203,9 @@ func (s *Scope) Task() Task {
 		}
 		initOnce.Do(init)
 		s, exit := newSpan(*ctx, f, args, NewId(), nil)
-		*ctx = s
+		if ctx != &unparented {
+			*ctx = s
+		}
 		return exit
 	})
 }
@@ -227,7 +229,9 @@ func (f *Func) Task(ctx *context.Context, args ...interface{}) func(*error) {
 		return nil
 	}
 	s, exit := newSpan(*ctx, f, args, NewId(), nil)
-	*ctx = s
+	if ctx != &unparented {
+		*ctx = s
+	}
 	return exit
 }
 
@@ -240,7 +244,9 @@ func (f *Func) RemoteTrace(ctx *context.Context, spanId int64, trace *Trace,
 		f.scope.r.observeTrace(trace)
 	}
 	s, exit := newSpan(*ctx, f, args, spanId, trace)
-	*ctx = s
+	if ctx != &unparented {
+		*ctx = s
+	}
 	return exit
 }
 
@@ -254,16 +260,17 @@ func (f *Func) ResetTrace(ctx *context.Context,
 	trace := NewTrace(NewId())
 	f.scope.r.observeTrace(trace)
 	s, exit := newSpan(*ctx, f, args, trace.Id(), trace)
-	*ctx = s
+	if ctx != &unparented {
+		*ctx = s
+	}
 	return exit
 }
 
+var unparented = context.Background()
+
 func cleanCtx(ctx *context.Context) *context.Context {
-	// TODO: maybe we should generate some special parent for these unparented
-	// spans
 	if ctx == nil {
-		n := context.Background()
-		return &n
+		return &unparented
 	}
 	if *ctx == nil {
 		*ctx = context.Background()
