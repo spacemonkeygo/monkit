@@ -46,8 +46,10 @@ func (s *Scope) newSource(name string, constructor func() StatSource) (
 	rv StatSource) {
 
 	s.mtx.RLock()
-	if source, exists := s.sources[name]; exists {
-		s.mtx.RUnlock()
+	source, exists := s.sources[name]
+	s.mtx.RUnlock()
+
+	if exists {
 		return source
 	}
 
