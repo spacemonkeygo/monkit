@@ -25,7 +25,7 @@ import (
 type Scope struct {
 	r       *Registry
 	name    string
-	mtx     sync.Mutex
+	mtx     sync.RWMutex
 	sources map[string]StatSource
 }
 
@@ -44,13 +44,23 @@ func (s *Scope) Func() *Func {
 
 func (s *Scope) newSource(name string, constructor func() StatSource) (
 	rv StatSource) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+
+	s.mtx.RLock()
 	if source, exists := s.sources[name]; exists {
+		s.mtx.RUnlock()
 		return source
 	}
+
+	s.mtx.Lock()
+	if source, exists := s.sources[name]; exists {
+		s.mtx.Unlock()
+		return source
+	}
+
 	ss := constructor()
 	s.sources[name] = ss
+	s.mtx.Unlock()
+
 	return ss
 }
 
