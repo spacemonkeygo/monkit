@@ -21,6 +21,8 @@ func TestCallers(t *testing.T) {
 		stats["gopkg.in/spacemonkeygo/monkit.v2/internal/testpkg1.TestFunc.successes"], 1)
 	assertEqual(t,
 		stats["gopkg.in/spacemonkeygo/monkit.v2/internal/testpkg1.TestFunc.errors"], 1)
+	assertEqual(t,
+		stats["gopkg.in/spacemonkeygo/monkit.v2/internal/testpkg1.test_event.total"], 2)
 }
 
 func assertEqual(t *testing.T, actual, expected float64) {
