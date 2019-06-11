@@ -173,6 +173,7 @@ func (d *IntDist) Stats(cb func(name string, val float64)) {
 		cb("max", d.toFloat64(d.High))
 		cb("rmin", d.toFloat64(d.Query(0)))
 		cb("ravg", d.toFloat64(d.ReservoirAverage()))
+		cb("r10", d.toFloat64(d.Query(.1)))
 		cb("r50", d.toFloat64(d.Query(.5)))
 		cb("r90", d.toFloat64(d.Query(.9)))
 		cb("rmax", d.toFloat64(d.Query(1)))
