@@ -22,27 +22,27 @@ import (
 )
 
 func callerPackage(frames int) string {
-	pc, _, _, ok := runtime.Caller(frames + 1)
-	if !ok {
+	var pc [1]uintptr
+	if runtime.Callers(frames+2, pc[:]) != 1 {
 		return "unknown"
 	}
-	f := runtime.FuncForPC(pc)
-	if f == nil {
+	frame, _ := runtime.CallersFrames(pc[:]).Next()
+	if frame.Func == nil {
 		return "unknown"
 	}
-	return strings.TrimSuffix(f.Name(), ".init")
+	return strings.TrimSuffix(frame.Func.Name(), ".init")
 }
 
 func callerFunc(frames int) string {
-	pc, _, _, ok := runtime.Caller(frames + 2)
-	if !ok {
+	var pc [1]uintptr
+	if runtime.Callers(frames+3, pc[:]) != 1 {
 		return "unknown"
 	}
-	f := runtime.FuncForPC(pc)
-	if f == nil {
+	frame, _ := runtime.CallersFrames(pc[:]).Next()
+	if frame.Func == nil {
 		return "unknown"
 	}
-	slash_pieces := strings.Split(f.Name(), "/")
+	slash_pieces := strings.Split(frame.Func.Name(), "/")
 	dot_pieces := strings.SplitN(slash_pieces[len(slash_pieces)-1], ".", 2)
 	return dot_pieces[len(dot_pieces)-1]
 }
