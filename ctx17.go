@@ -67,9 +67,9 @@ func SpanFromCtx(ctx context.Context) *Span {
 }
 
 func newSpan(ctx context.Context, f *Func, args []interface{},
-	id int64, trace *Trace) (s *Span, exit func(*error)) {
+	id int64, trace *Trace) (sctx context.Context, exit func(*error)) {
 
-	var parent *Span
+	var s, parent *Span
 	if s, ok := ctx.(*Span); ok && s != nil {
 		ctx = s.Context
 		if trace == nil {
@@ -105,11 +105,12 @@ func newSpan(ctx context.Context, f *Func, args []interface{},
 		f.scope.r.rootSpanStart(s)
 	}
 
+	sctx = s
 	if observer != nil {
-		observer.Start(s)
+		sctx = observer.Start(sctx, s)
 	}
 
-	return s, func(errptr *error) {
+	return sctx, func(errptr *error) {
 		rec := recover()
 		panicked := rec != nil
 
@@ -143,7 +144,7 @@ func newSpan(ctx context.Context, f *Func, args []interface{},
 		}
 
 		if observer != nil {
-			observer.Finish(s, err, panicked, finish)
+			observer.Finish(sctx, s, err, panicked, finish)
 		}
 
 		if panicked {
@@ -285,4 +286,56 @@ func cleanCtx(ctx *context.Context) *context.Context {
 		//
 	}
 	return ctx
+}
+
+// SpanCtxObserver is the interface plugins must implement if they want to observe
+// all spans on a given trace as they happen, or add to contexts as they
+// pass through mon.Task()(&ctx)(&err) calls.
+type SpanCtxObserver interface {
+	// Start is called when a Span starts. Start should return the context
+	// this span should use going forward. ctx is the context it is currently
+	// using.
+	Start(ctx context.Context, s *Span) context.Context
+
+	// Finish is called when a Span finishes, along with an error if any, whether
+	// or not it panicked, and what time it finished.
+	Finish(ctx context.Context, s *Span, err error, panicked bool, finish time.Time)
+}
+
+type spanObserverToSpanCtxObserver struct {
+	observer SpanObserver
+}
+
+func (so spanObserverToSpanCtxObserver) Start(ctx context.Context, s *Span) context.Context {
+	so.observer.Start(s)
+	return ctx
+}
+
+func (so spanObserverToSpanCtxObserver) Finish(ctx context.Context, s *Span, err error, panicked bool, finish time.Time) {
+	so.observer.Finish(s, err, panicked, finish)
+}
+
+type spanObserverTuple struct {
+	// cdr is atomic
+	cdr *spanObserverTuple
+	// car never changes
+	car SpanCtxObserver
+}
+
+func (l *spanObserverTuple) Start(ctx context.Context, s *Span) context.Context {
+	ctx = l.car.Start(ctx, s)
+	cdr := loadSpanObserverTuple(&l.cdr)
+	if cdr != nil {
+		ctx = cdr.Start(ctx, s)
+	}
+	return ctx
+}
+
+func (l *spanObserverTuple) Finish(ctx context.Context, s *Span, err error, panicked bool,
+	finish time.Time) {
+	l.car.Finish(ctx, s, err, panicked, finish)
+	cdr := loadSpanObserverTuple(&l.cdr)
+	if cdr != nil {
+		cdr.Finish(ctx, s, err, panicked, finish)
+	}
 }

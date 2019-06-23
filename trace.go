@@ -30,30 +30,6 @@ type SpanObserver interface {
 	Finish(s *Span, err error, panicked bool, finish time.Time)
 }
 
-type spanObserverTuple struct {
-	// cdr is atomic
-	cdr *spanObserverTuple
-	// car never changes
-	car SpanObserver
-}
-
-func (l *spanObserverTuple) Start(s *Span) {
-	l.car.Start(s)
-	cdr := loadSpanObserverTuple(&l.cdr)
-	if cdr != nil {
-		cdr.Start(s)
-	}
-}
-
-func (l *spanObserverTuple) Finish(s *Span, err error, panicked bool,
-	finish time.Time) {
-	l.car.Finish(s, err, panicked, finish)
-	cdr := loadSpanObserverTuple(&l.cdr)
-	if cdr != nil {
-		cdr.Finish(s, err, panicked, finish)
-	}
-}
-
 // Trace represents a 'trace' of execution. A 'trace' is the collection of all
 // of the 'spans' kicked off from the same root execution context. A trace is
 // a concurrency-supporting analog of a stack trace, where a span is somewhat
@@ -75,7 +51,7 @@ func NewTrace(id int64) *Trace {
 	return &Trace{id: id}
 }
 
-func (t *Trace) getObserver() SpanObserver {
+func (t *Trace) getObserver() SpanCtxObserver {
 	observers := loadSpanObserverTuple(&t.spanObservers)
 	if observers == nil {
 		return nil
@@ -89,6 +65,12 @@ func (t *Trace) getObserver() SpanObserver {
 // ObserveSpans lets you register a SpanObserver for all future Spans on the
 // Trace. The returned cancel method will remove your observer from the trace.
 func (t *Trace) ObserveSpans(observer SpanObserver) (cancel func()) {
+	return t.ObserveSpansCtx(spanObserverToSpanCtxObserver{observer: observer})
+}
+
+// ObserveSpansCtx lets you register a SpanCtxObserver for all future Spans on the
+// Trace. The returned cancel method will remove your observer from the trace.
+func (t *Trace) ObserveSpansCtx(observer SpanCtxObserver) (cancel func()) {
 	for {
 		existing := loadSpanObserverTuple(&t.spanObservers)
 		ref := &spanObserverTuple{car: observer, cdr: existing}
