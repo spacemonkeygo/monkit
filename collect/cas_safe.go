@@ -19,7 +19,7 @@ package collect
 import (
 	"sync"
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 // TODO(jeff): make this mutex smaller scoped, perhaps based on the arguments

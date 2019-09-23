@@ -15,7 +15,7 @@
 package environment
 
 import (
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 // OS returns a StatSource that includes various operating system process data

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package environment // import "gopkg.in/spacemonkeygo/monkit.v2/environment"
+package environment // import "gopkg.in/spacemonkeygo/monkit.v3/environment"
 
 import (
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 var (

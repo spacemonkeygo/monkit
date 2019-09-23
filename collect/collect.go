@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 // FinishedSpan is a Span that has completed and contains information about

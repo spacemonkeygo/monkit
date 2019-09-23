@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 // StatsText writes all of the name/value statistics pairs the Registry knows

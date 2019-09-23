@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 // Result writes the expected data to io.Writer and returns any errors if

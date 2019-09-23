@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	"github.com/spacemonkeygo/monotime"
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 var (

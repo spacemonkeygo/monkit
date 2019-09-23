@@ -17,7 +17,7 @@ package present
 import (
 	"net/http"
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 type handler struct {

@@ -19,7 +19,7 @@ package environment
 import (
 	"syscall"
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 // Rusage returns a StatSource that provides as many statistics as possible

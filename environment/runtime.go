@@ -17,7 +17,7 @@ package environment
 import (
 	"runtime"
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 // Runtime returns a StatSource that includes information gathered from the

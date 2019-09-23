@@ -27,9 +27,9 @@ Example usage
 		"log"
 		"net/http"
 
-		"gopkg.in/spacemonkeygo/monkit.v2"
-		"gopkg.in/spacemonkeygo/monkit.v2/environment"
-		"gopkg.in/spacemonkeygo/monkit.v2/present"
+		"gopkg.in/spacemonkeygo/monkit.v3"
+		"gopkg.in/spacemonkeygo/monkit.v3/environment"
+		"gopkg.in/spacemonkeygo/monkit.v3/present"
 	)
 
 	var (
@@ -272,9 +272,9 @@ make the instrumentation we're going to add to your process observable later.
 
 Import the basic monkit packages:
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
-	"gopkg.in/spacemonkeygo/monkit.v2/environment"
-	"gopkg.in/spacemonkeygo/monkit.v2/present"
+	"gopkg.in/spacemonkeygo/monkit.v3"
+	"gopkg.in/spacemonkeygo/monkit.v3/environment"
+	"gopkg.in/spacemonkeygo/monkit.v3/present"
 
 and then register environmental statistics and kick off a goroutine in your
 main method to serve debug requests:
@@ -307,9 +307,9 @@ calls.
 	  "net/url"
 
 	  "github.com/jtolds/webhelp"
-	  "gopkg.in/spacemonkeygo/monkit.v2"
-	  "gopkg.in/spacemonkeygo/monkit.v2/environment"
-	  "gopkg.in/spacemonkeygo/monkit.v2/present"
+	  "gopkg.in/spacemonkeygo/monkit.v3"
+	  "gopkg.in/spacemonkeygo/monkit.v3/environment"
+	  "gopkg.in/spacemonkeygo/monkit.v3/present"
   )
 
   type VLite struct {
@@ -387,9 +387,9 @@ You should now have something like:
 	  "net/url"
 
 	  "github.com/jtolds/webhelp"
-	  "gopkg.in/spacemonkeygo/monkit.v2"
-	  "gopkg.in/spacemonkeygo/monkit.v2/environment"
-	  "gopkg.in/spacemonkeygo/monkit.v2/present"
+	  "gopkg.in/spacemonkeygo/monkit.v3"
+	  "gopkg.in/spacemonkeygo/monkit.v3/environment"
+	  "gopkg.in/spacemonkeygo/monkit.v3/present"
   )
 
   var mon = monkit.Package()
@@ -576,4 +576,4 @@ https://github.com/spacemonkeygo/monkit-zipkin
 We plan to have more (for HTrace, OpenTracing, etc, etc), soon!
 
 */
-package monkit // import "gopkg.in/spacemonkeygo/monkit.v2"
+package monkit // import "gopkg.in/spacemonkeygo/monkit.v3"

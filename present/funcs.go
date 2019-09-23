@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 func formatDist(data *monkit.DurationDist, indent string) (result string) {

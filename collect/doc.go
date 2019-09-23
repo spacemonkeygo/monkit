@@ -12,4 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package collect // import "gopkg.in/spacemonkeygo/monkit.v2/collect"
+package collect // import "gopkg.in/spacemonkeygo/monkit.v3/collect"

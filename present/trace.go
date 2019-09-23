@@ -22,8 +22,8 @@ import (
 	"text/template"
 	"time"
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
-	"gopkg.in/spacemonkeygo/monkit.v2/collect"
+	"gopkg.in/spacemonkeygo/monkit.v3"
+	"gopkg.in/spacemonkeygo/monkit.v3/collect"
 )
 
 const (
@@ -305,7 +305,7 @@ func watchForSpansWithKeepalive(reg *monkit.Registry, w io.Writer,
 		}
 	}()
 
-	spans, err := WatchForSpans(ctx, reg, matcher)
+	spans, err := collect.WatchForSpans(ctx, reg, matcher)
 
 	abortTimer()
 	if write_err != nil {

@@ -2,7 +2,7 @@
 
 Package monkit is a flexible code instrumenting and data collection library.
 
-See documentation at https://godoc.org/gopkg.in/spacemonkeygo/monkit.v2
+See documentation at https://godoc.org/gopkg.in/spacemonkeygo/monkit.v3
 
 Software is hard. Like, really hard.
 [Just the worst](http://www.stilldrinking.org/programming-sucks). Sometimes it
@@ -42,9 +42,9 @@ import (
 	"log"
 	"net/http"
 
-	"gopkg.in/spacemonkeygo/monkit.v2"
-	"gopkg.in/spacemonkeygo/monkit.v2/environment"
-	"gopkg.in/spacemonkeygo/monkit.v2/present"
+	"gopkg.in/spacemonkeygo/monkit.v3"
+	"gopkg.in/spacemonkeygo/monkit.v3/environment"
+	"gopkg.in/spacemonkeygo/monkit.v3/present"
 )
 
 var (
@@ -294,9 +294,9 @@ make the instrumentation we're going to add to your process observable later.
 Import the basic monkit packages:
 
 ```go
-"gopkg.in/spacemonkeygo/monkit.v2"
-"gopkg.in/spacemonkeygo/monkit.v2/environment"
-"gopkg.in/spacemonkeygo/monkit.v2/present"
+"gopkg.in/spacemonkeygo/monkit.v3"
+"gopkg.in/spacemonkeygo/monkit.v3/environment"
+"gopkg.in/spacemonkeygo/monkit.v3/present"
 ```
 
 and then register environmental statistics and kick off a goroutine in your
@@ -333,9 +333,9 @@ import (
   "net/url"
 
   "github.com/jtolds/webhelp"
-  "gopkg.in/spacemonkeygo/monkit.v2"
-  "gopkg.in/spacemonkeygo/monkit.v2/environment"
-  "gopkg.in/spacemonkeygo/monkit.v2/present"
+  "gopkg.in/spacemonkeygo/monkit.v3"
+  "gopkg.in/spacemonkeygo/monkit.v3/environment"
+  "gopkg.in/spacemonkeygo/monkit.v3/present"
 )
 
 type VLite struct {
@@ -421,9 +421,9 @@ import (
   "net/url"
 
   "github.com/jtolds/webhelp"
-  "gopkg.in/spacemonkeygo/monkit.v2"
-  "gopkg.in/spacemonkeygo/monkit.v2/environment"
-  "gopkg.in/spacemonkeygo/monkit.v2/present"
+  "gopkg.in/spacemonkeygo/monkit.v3"
+  "gopkg.in/spacemonkeygo/monkit.v3/environment"
+  "gopkg.in/spacemonkeygo/monkit.v3/present"
 )
 
 var mon = monkit.Package()

@@ -26,7 +26,7 @@ import (
 	"sync"
 
 	_OTHER_IMPORT_
-	"gopkg.in/spacemonkeygo/monkit.v2"
+	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
 // WatchForSpans will watch for spans that 'matcher' returns true for. As soon
