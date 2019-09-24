@@ -24,22 +24,22 @@ import (
 func TestTagSet(t *testing.T) {
 	assert := func(ts *TagSet, key string, value string, ok bool) {
 		t.Helper()
-		gotValue, gotOk := ts.getAll()[key]
+		gotValue, gotOk := ts.all[key]
 		if gotValue != value || gotOk != ok {
 			t.Fatalf("exp:%q != got:%q || exp:%v != got:%v", value, gotValue, ok, gotOk)
 		}
 	}
 
 	ts0 := new(TagSet)
-	ts0.Set("k0", "0")
-	ts1 := ts0.Apply(nil)
-	ts1.Set("k0", "1")
-	ts2 := ts0.Apply(nil)
-	ts2.Set("k1", "2")
-	ts0.Set("k0", "3")
-	ts3 := ts0.Apply(nil)
-	ts3.Set("k0", "4")
-	ts0.Set("k0", "5")
+	ts0 = ts0.Set("k0", "0")
+	ts1 := ts0.SetAll(nil)
+	ts1 = ts1.Set("k0", "1")
+	ts2 := ts0.SetAll(nil)
+	ts2 = ts2.Set("k1", "2")
+	ts0 = ts0.Set("k0", "3")
+	ts3 := ts0.SetAll(nil)
+	ts3 = ts3.Set("k0", "4")
+	ts0 = ts0.Set("k0", "5")
 
 	assert(ts0, "k0", "5", true)
 	assert(ts0, "k1", "", false)
@@ -63,37 +63,31 @@ func TestTagSetFuzz(t *testing.T) {
 
 	for i := 0; i < 10000; i++ {
 		switch rand.Intn(10) {
-		case 0, 1, 2, 3, 4, 5, 6:
+		case 0, 1, 2, 3, 4, 5, 6, 7:
 			key, value := fmt.Sprint(rand.Intn(10)), fmt.Sprint(rand.Intn(10))
-			ts.Set(key, value)
+			ts = ts.Set(key, value)
+			tagSets[idx] = ts
 			expected[idx][key] = value
-
-		case 7:
-			a, b := rand.Intn(len(expected)), rand.Intn(len(expected))
-			merged := cloneKVs(expected[a])
-			for key, value := range expected[b] {
-				merged[key] = value
-			}
-
-			ts = tagSets[a].Apply(tagSets[b])
-			tagSets = append(tagSets, ts)
-			expected = append(expected, merged)
-			idx = len(tagSets) - 1
 
 		case 8:
 			idx = rand.Intn(len(expected))
 			ts = tagSets[idx]
 
 		case 9:
-			ts = ts.Apply(nil)
+			cloned := make(map[string]string, len(expected[idx]))
+			for key, value := range expected[idx] {
+				cloned[key] = value
+			}
+
+			ts = ts.SetAll(nil)
 			tagSets = append(tagSets, ts)
-			expected = append(expected, cloneKVs(expected[idx]))
+			expected = append(expected, cloned)
 			idx = len(tagSets) - 1
 		}
 	}
 
 	for i := range tagSets {
-		if got := tagSets[i].getAll(); !reflect.DeepEqual(expected[i], got) {
+		if got := tagSets[i].all; !reflect.DeepEqual(expected[i], got) {
 			t.Fatal("mismatch: exp:", expected[i], "got:", got)
 		}
 	}

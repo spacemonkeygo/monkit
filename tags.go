@@ -19,111 +19,34 @@ import (
 	"strings"
 )
 
-// cloneKVs clones the input key value map and returns it. If the input
-// is nil, then the returned value is also nil.
-func cloneKVs(in map[string]string) map[string]string {
-	if in == nil {
-		return nil
-	}
-	out := make(map[string]string, len(in))
-	for key, value := range in {
-		out[key] = value
-	}
-	return out
-}
-
-// TagSet holds an unordered collection of string key value pairs. It has
-// methods to cheaply clone and inspect.
 type TagSet struct {
-	parent *TagSet           // the parent of this tag set
-	cow    bool              // if true, copy kvs before modifying it
-	kvs    map[string]string // key, value pairs in this layer
-	all    map[string]string // cached value
-	str    string            // cached value
+	all map[string]string
 }
 
-// copy returns a shallow copy of the tag set.
-func (t *TagSet) copy() *TagSet {
-	tc := *t
-	return &tc
+func (t *TagSet) Set(key, value string) *TagSet {
+	return t.SetAll(map[string]string{key: value})
 }
 
-// Apply returns a copy of the tag set with all the values in ts set on
-// the receiver tag set. It is O(1) in the number of keys in each tag set.
-// Passing in nil will return a copy of the receiver.
-func (t *TagSet) Apply(ts *TagSet) *TagSet {
-	t.cow = true
-	if ts != nil {
-		ts.cow = true
+func (t *TagSet) SetAll(kvs map[string]string) *TagSet {
+	all := make(map[string]string, len(t.all)+len(kvs))
+	for key, value := range t.all {
+		all[key] = value
 	}
-	return &TagSet{
-		parent: t.copy(),
-		cow:    true,
-		kvs:    ts.getAll(),
+	for key, value := range kvs {
+		all[key] = value
 	}
-}
-
-// Set associates the tag key with the given tag value.
-func (t *TagSet) Set(key, value string) {
-	if t.cow {
-		t.kvs = cloneKVs(t.kvs)
-		t.all = cloneKVs(t.all)
-		t.cow = false
-	}
-	if t.kvs == nil {
-		t.kvs = make(map[string]string)
-	}
-
-	t.str = ""
-	t.kvs[key] = value
-	if t.all != nil {
-		t.all[key] = value
-	}
-}
-
-func (t *TagSet) getAll() map[string]string {
-	if t == nil {
-		return nil
-	}
-	t.cacheAll()
-	return t.all
-}
-
-func (t *TagSet) cacheAll() {
-	if t == nil || t.all != nil {
-		return
-	}
-	t.all = make(map[string]string)
-	for key, value := range t.parent.getAll() {
-		t.all[key] = value
-	}
-	for key, value := range t.kvs {
-		t.all[key] = value
-	}
+	return &TagSet{all: all}
 }
 
 // String returns a string form of the tag set suitable for sending to influxdb.
 func (t *TagSet) String() string {
-	if t.str == "" {
-		t.str = t.cacheString()
-	}
-	return t.str
-}
-
-// cacheString caches a string representation of the tag set.
-func (t *TagSet) cacheString() string {
 	type kv struct {
 		key   string
 		value string
 	}
 	var kvs []kv
 
-	for key, value := range t.parent.getAll() {
-		if _, ok := t.kvs[key]; !ok {
-			kvs = append(kvs, kv{key, value})
-		}
-	}
-	for key, value := range t.kvs {
+	for key, value := range t.all {
 		kvs = append(kvs, kv{key, value})
 	}
 	sort.Slice(kvs, func(i, j int) bool {
