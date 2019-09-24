@@ -25,6 +25,12 @@ type TagSet struct {
 	str string // cached string form
 }
 
+// All returns a map of all the key/value pairs in the tag set. It
+// should not be modified.
+func (t *TagSet) All() map[string]string {
+	return t.all
+}
+
 // Len returns the number of tags in the tag set.
 func (t *TagSet) Len() int { return len(t.all) }
 

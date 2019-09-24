@@ -50,7 +50,7 @@ func StatsText(r *monkit.Registry, w io.Writer) (err error) {
 func StatsJSON(r *monkit.Registry, w io.Writer) (err error) {
 	lw := newListWriter(w)
 	r.Stats(func(series monkit.Series, val float64) {
-		lw.elem([]interface{}{series.String(), val})
+		lw.elem([]interface{}{series.Measurement, series.Tags.All(), series.Field, val})
 	})
 	return lw.done()
 }
