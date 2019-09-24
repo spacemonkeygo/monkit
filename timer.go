@@ -15,7 +15,6 @@
 package monkit
 
 import (
-	"sort"
 	"sync"
 	"time"
 
@@ -38,9 +37,8 @@ import (
 //
 // Timers implement StatSource.
 type Timer struct {
-	mtx    sync.Mutex
-	times  *DurationDist
-	splits map[string]*DurationDist
+	mtx   sync.Mutex
+	times *DurationDist
 }
 
 // NewTimer constructs a new Timer.
@@ -60,24 +58,6 @@ type RunningTimer struct {
 	start   time.Duration
 	t       *Timer
 	stopped bool
-}
-
-// Split constructs new named child DurationDists and adds the current elapsed
-// time to them.
-func (r *RunningTimer) Split(name string) time.Duration {
-	elapsed := r.Elapsed()
-	r.t.mtx.Lock()
-	if !r.stopped {
-		if r.t.splits == nil {
-			r.t.splits = map[string]*DurationDist{}
-		}
-		if r.t.splits[name] == nil {
-			r.t.splits[name] = NewDurationDist()
-		}
-		r.t.splits[name].Insert(elapsed)
-	}
-	r.t.mtx.Unlock()
-	return elapsed
 }
 
 // Elapsed just returns the amount of time since the timer started
@@ -106,47 +86,14 @@ func (t *Timer) Values() *DurationDist {
 	return rv
 }
 
-// SplitValues returns the timer values for the named split
-func (t *Timer) SplitValues(name string) (rv *DurationDist) {
-	t.mtx.Lock()
-	if t.splits != nil {
-		found := t.splits[name]
-		if found != nil {
-			rv = found.Copy()
-		}
-	}
-	t.mtx.Unlock()
-	if rv == nil {
-		rv = NewDurationDist()
-	}
-	return rv
-}
-
 // Stats implements the StatSource interface
-func (t *Timer) Stats(cb func(name string, val float64)) {
+func (t *Timer) Stats(cb func(series Series, val float64)) {
 	t.mtx.Lock()
 	times := t.times.Copy()
-	splits := make(map[string]*DurationDist, len(t.splits))
-	for name, dist := range t.splits {
-		splits[name] = dist.Copy()
-	}
 	t.mtx.Unlock()
 
-	call := func(prefix string, times *DurationDist) {
-		times.Stats(func(name string, val float64) {
-			cb(prefix+name, val)
-		})
-	}
-
-	call("", times)
-
-	splitNames := make([]string, 0, len(splits))
-	for name := range splits {
-		splitNames = append(splitNames, name)
-	}
-	sort.Strings(splitNames)
-
-	for _, name := range splitNames {
-		call(name+" - ", splits[name])
-	}
+	times.Stats(func(series Series, val float64) {
+		series.Measurement = "timer"
+		cb(series, val)
+	})
 }

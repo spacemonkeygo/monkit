@@ -146,10 +146,10 @@ func (e *Meter) Total() float64 {
 }
 
 // Stats implements the StatSource interface
-func (e *Meter) Stats(cb func(name string, val float64)) {
+func (e *Meter) Stats(cb func(series Series, val float64)) {
 	rate, total := e.stats(monotime.Monotonic())
-	cb("rate", rate)
-	cb("total", float64(total))
+	cb(NewSeries("meter", "rate"), rate)
+	cb(NewSeries("meter", "total"), float64(total))
 }
 
 // DiffMeter is a StatSource that shows the difference between
@@ -172,12 +172,12 @@ func NewDiffMeter(meter1, meter2 *Meter) *DiffMeter {
 }
 
 // Stats implements the StatSource interface
-func (m *DiffMeter) Stats(cb func(name string, val float64)) {
+func (m *DiffMeter) Stats(cb func(series Series, val float64)) {
 	now := monotime.Monotonic()
 	rate1, total1 := m.meter1.stats(now)
 	rate2, total2 := m.meter2.stats(now)
-	cb("rate", rate1-rate2)
-	cb("total", float64(total1-total2))
+	cb(NewSeries("diff_meter", "rate"), rate1-rate2)
+	cb(NewSeries("diff_meter", "total"), float64(total1-total2))
 }
 
 type ticker struct {

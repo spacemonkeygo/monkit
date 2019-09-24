@@ -16,6 +16,7 @@ package environment
 
 import (
 	"runtime"
+	"runtime/debug"
 
 	"gopkg.in/spacemonkeygo/monkit.v3"
 )
@@ -25,12 +26,34 @@ import (
 // other live memory data. Not expected to be called directly, as this
 // StatSource is added by Register.
 func Runtime() monkit.StatSource {
-	return monkit.StatSourceFunc(func(cb func(name string, val float64)) {
-		cb("goroutines", float64(runtime.NumGoroutine()))
+	durDist := monkit.NewDurationDist()
+	lastNumGC := int64(0)
 
-		var stats runtime.MemStats
-		runtime.ReadMemStats(&stats)
-		monkit.Prefix("memory.", monkit.StatSourceFromStruct(stats)).Stats(cb)
+	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
+		cb(monkit.NewSeries("runtime", "goroutines"), float64(runtime.NumGoroutine()))
+
+		{
+			var stats runtime.MemStats
+			runtime.ReadMemStats(&stats)
+			monkit.StatSourceFromStruct(stats).Stats(func(series monkit.Series, val float64) {
+				series.Measurement = "runtime"
+				series.Tags = series.Tags.Set("subsystem", "memory")
+				cb(series, val)
+			})
+		}
+
+		{
+			var stats debug.GCStats
+			debug.ReadGCStats(&stats)
+			if lastNumGC != stats.NumGC && len(stats.Pause) > 0 {
+				durDist.Insert(stats.Pause[0])
+			}
+			durDist.Stats(func(series monkit.Series, val float64) {
+				series.Measurement = "runtime"
+				series.Tags = series.Tags.Set("subsystem", "gc_pauses")
+				cb(series, val)
+			})
+		}
 	})
 }
 

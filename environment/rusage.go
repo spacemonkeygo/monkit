@@ -26,11 +26,14 @@ import (
 // gathered from the Rusage syscall. Not expected to be called directly, as
 // this StatSource is added by Register.
 func Rusage() monkit.StatSource {
-	return monkit.StatSourceFunc(func(cb func(name string, val float64)) {
+	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
 		var rusage syscall.Rusage
 		err := syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
 		if err == nil {
-			monkit.StatSourceFromStruct(&rusage).Stats(cb)
+			monkit.StatSourceFromStruct(&rusage).Stats(func(series monkit.Series, val float64) {
+				series.Measurement = "rusage"
+				cb(series, val)
+			})
 		}
 	})
 }

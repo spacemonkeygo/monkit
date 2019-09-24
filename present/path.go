@@ -112,16 +112,19 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 		}
 
 	case "stats":
-		prefix := query.Get("prefix")
 		switch second {
 		case "", "text":
 			return func(w io.Writer) error {
-				return FilteredStatsText(reg, w, prefix)
+				return StatsText(reg, w)
 			}, "text/plain; charset=utf-8", nil
 		case "json":
 			return func(w io.Writer) error {
-				return FilteredStatsJSON(reg, w, prefix)
+				return StatsJSON(reg, w)
 			}, "application/json; charset=utf-8", nil
+		case "old":
+			return func(w io.Writer) error {
+				return StatsOld(reg, w)
+			}, "text/plain; charset=utf-8", nil
 		}
 
 	case "trace":

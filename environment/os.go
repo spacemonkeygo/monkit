@@ -23,14 +23,12 @@ import (
 // /proc if available. Not expected to be called directly, as this StatSource
 // is added by Register.
 func OS() monkit.StatSource {
-	return monkit.StatSourceFunc(func(cb func(name string, val float64)) {
+	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
 		fds, err := fdCount()
 		if err == nil {
-			cb("fds", float64(fds))
+			cb(monkit.NewSeries("os", "fds"), float64(fds))
 		}
-		proc(func(name string, val float64) {
-			cb("proc."+name, val)
-		})
+		proc(cb)
 	})
 }
 

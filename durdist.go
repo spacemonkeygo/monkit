@@ -164,20 +164,20 @@ func (d *DurationDist) Reset() {
 	// resetting count will reset the quantile reservoir
 }
 
-func (d *DurationDist) Stats(cb func(name string, val float64)) {
+func (d *DurationDist) Stats(cb func(series Series, val float64)) {
 	count := d.Count
-	cb("count", float64(count))
+	cb(NewSeries("duration_dist", "count"), float64(count))
 	if count > 0 {
-		cb("sum", d.toFloat64(d.Sum))
-		cb("min", d.toFloat64(d.Low))
-		cb("avg", d.toFloat64(d.FullAverage()))
-		cb("max", d.toFloat64(d.High))
-		cb("rmin", d.toFloat64(d.Query(0)))
-		cb("ravg", d.toFloat64(d.ReservoirAverage()))
-		cb("r10", d.toFloat64(d.Query(.1)))
-		cb("r50", d.toFloat64(d.Query(.5)))
-		cb("r90", d.toFloat64(d.Query(.9)))
-		cb("rmax", d.toFloat64(d.Query(1)))
-		cb("recent", d.toFloat64(d.Recent))
+		cb(NewSeries("duration_dist", "sum"), d.toFloat64(d.Sum))
+		cb(NewSeries("duration_dist", "min"), d.toFloat64(d.Low))
+		cb(NewSeries("duration_dist", "avg"), d.toFloat64(d.FullAverage()))
+		cb(NewSeries("duration_dist", "max"), d.toFloat64(d.High))
+		cb(NewSeries("duration_dist", "rmin"), d.toFloat64(d.Query(0)))
+		cb(NewSeries("duration_dist", "ravg"), d.toFloat64(d.ReservoirAverage()))
+		cb(NewSeries("duration_dist", "r10"), d.toFloat64(d.Query(.1)))
+		cb(NewSeries("duration_dist", "r50"), d.toFloat64(d.Query(.5)))
+		cb(NewSeries("duration_dist", "r90"), d.toFloat64(d.Query(.9)))
+		cb(NewSeries("duration_dist", "rmax"), d.toFloat64(d.Query(1)))
+		cb(NewSeries("duration_dist", "recent"), d.toFloat64(d.Recent))
 	}
 }

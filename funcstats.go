@@ -143,9 +143,9 @@ func (f *FuncStats) parents(cb func(f *Func)) {
 }
 
 // Stats implements the StatSource interface
-func (f *FuncStats) Stats(cb func(name string, val float64)) {
-	cb("current", float64(f.Current()))
-	cb("highwater", float64(f.Highwater()))
+func (f *FuncStats) Stats(cb func(series Series, val float64)) {
+	cb(NewSeries("func_stats", "current"), float64(f.Current()))
+	cb(NewSeries("func_stats", "highwater"), float64(f.Highwater()))
 	f.parentsAndMutex.Lock()
 	panics := f.panics
 	errs := make(map[string]int64, len(f.errors))
@@ -156,22 +156,25 @@ func (f *FuncStats) Stats(cb func(name string, val float64)) {
 	ft := f.failureTimes.Copy()
 	f.parentsAndMutex.Unlock()
 
-	cb("success", float64(st.Count)) // DEPRECATED
-	cb("successes", float64(st.Count))
+	cb(NewSeries("func_stats", "successes"), float64(st.Count))
 	e_count := int64(0)
 	for errname, count := range errs {
 		e_count += count
-		cb(fmt.Sprintf("error %s", errname), float64(count))
+		cb(NewSeries("func_stats", fmt.Sprintf("error %s", errname)), float64(count))
 	}
-	cb("errors", float64(e_count))
-	cb("panics", float64(panics))
-	cb("failures", float64(e_count+panics))
-	cb("total", float64(st.Count+e_count+panics))
-	st.Stats(func(name string, val float64) {
-		cb("success times "+name, val)
+	cb(NewSeries("func_stats", "errors"), float64(e_count))
+	cb(NewSeries("func_stats", "panics"), float64(panics))
+	cb(NewSeries("func_stats", "failures"), float64(e_count+panics))
+	cb(NewSeries("func_stats", "total"), float64(st.Count+e_count+panics))
+	st.Stats(func(series Series, val float64) {
+		series.Measurement = "func_stats"
+		series.Tags = series.Tags.Set("kind", "success")
+		cb(series, val)
 	})
-	ft.Stats(func(name string, val float64) {
-		cb("failure times "+name, val)
+	ft.Stats(func(series Series, val float64) {
+		series.Measurement = "func_stats"
+		series.Tags = series.Tags.Set("kind", "failure")
+		cb(series, val)
 	})
 }
 

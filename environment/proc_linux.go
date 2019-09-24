@@ -21,17 +21,25 @@ import (
 	"gopkg.in/spacemonkeygo/monkit.v3"
 )
 
-func proc(cb func(name string, val float64)) {
+func proc(cb func(series monkit.Series, val float64)) {
 	var stat procSelfStat
 	err := readProcSelfStat(&stat)
 	if err == nil {
-		monkit.Prefix("stat.", monkit.StatSourceFromStruct(&stat)).Stats(cb)
+		monkit.StatSourceFromStruct(&stat).Stats(func(series monkit.Series, val float64) {
+			series.Measurement = "proc"
+			series.Tags = series.Tags.Set("kind", "stat")
+			cb(series, val)
+		})
 	}
 
 	var statm procSelfStatm
 	err = readProcSelfStatm(&statm)
 	if err == nil {
-		monkit.Prefix("statm.", monkit.StatSourceFromStruct(&statm)).Stats(cb)
+		monkit.StatSourceFromStruct(&statm).Stats(func(series monkit.Series, val float64) {
+			series.Measurement = "proc"
+			series.Tags = series.Tags.Set("kind", "statm")
+			cb(series, val)
+		})
 	}
 }
 

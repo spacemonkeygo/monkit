@@ -113,16 +113,16 @@ func (c *Counter) Reset() (val, low, high int64) {
 }
 
 // Stats implements the StatSource interface
-func (c *Counter) Stats(cb func(name string, val float64)) {
+func (c *Counter) Stats(cb func(series Series, val float64)) {
 	c.mtx.Lock()
 	val, low, high, nonempty := c.val, c.low, c.high, c.nonempty
 	c.mtx.Unlock()
 	if nonempty {
-		cb("high", float64(high))
-		cb("low", float64(low))
+		cb(NewSeries("counter", "high"), float64(high))
+		cb(NewSeries("counter", "low"), float64(low))
 	} else {
-		cb("high", math.NaN())
-		cb("low", math.NaN())
+		cb(NewSeries("counter", "high"), math.NaN())
+		cb(NewSeries("counter", "low"), math.NaN())
 	}
-	cb("val", float64(val))
+	cb(NewSeries("counter", "value"), float64(val))
 }

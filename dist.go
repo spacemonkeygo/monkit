@@ -43,9 +43,9 @@ func (p float32Slice) Less(i, j int) bool {
 	return p[i] < p[j]
 }
 
-//go:generate sh -c "m4 -D_IMPORT_='\"time\"' -D_NAME_=Duration -D_TYPE_=time.Duration distgen.go.m4 > durdist.go"
-//go:generate sh -c "m4 -D_IMPORT_= -D_NAME_=Float -D_TYPE_=float64 distgen.go.m4 > floatdist.go"
-//go:generate sh -c "m4 -D_IMPORT_= -D_NAME_=Int -D_TYPE_=int64 distgen.go.m4 > intdist.go"
+//go:generate sh -c "m4 -D_IMPORT_='\"time\"' -D_NAME_=Duration -D_LOWER_NAME_=duration -D_TYPE_=time.Duration distgen.go.m4 > durdist.go"
+//go:generate sh -c "m4 -D_IMPORT_= -D_NAME_=Float -D_LOWER_NAME_=float -D_TYPE_=float64 distgen.go.m4 > floatdist.go"
+//go:generate sh -c "m4 -D_IMPORT_= -D_NAME_=Int -D_LOWER_NAME_=int -D_TYPE_=int64 distgen.go.m4 > intdist.go"
 //go:generate gofmt -w -s durdist.go floatdist.go intdist.go
 
 func (d *DurationDist) toFloat64(v time.Duration) float64 {

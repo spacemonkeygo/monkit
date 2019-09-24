@@ -164,20 +164,20 @@ func (d *_NAME_`Dist') Reset() {
 	// resetting count will reset the quantile reservoir
 }
 
-func (d *_NAME_`Dist') Stats(cb func(name string, val float64)) {
+func (d *_NAME_`Dist') Stats(cb func(series Series, val float64)) {
 	count := d.Count
-	cb("count", float64(count))
+	cb(NewSeries("_LOWER_NAME_`_dist"', "count"), float64(count))
 	if count > 0 {
-		cb("sum", d.toFloat64(d.Sum))
-		cb("min", d.toFloat64(d.Low))
-		cb("avg", d.toFloat64(d.FullAverage()))
-		cb("max", d.toFloat64(d.High))
-		cb("rmin", d.toFloat64(d.Query(0)))
-		cb("ravg", d.toFloat64(d.ReservoirAverage()))
-		cb("r10", d.toFloat64(d.Query(.1)))
-		cb("r50", d.toFloat64(d.Query(.5)))
-		cb("r90", d.toFloat64(d.Query(.9)))
-		cb("rmax", d.toFloat64(d.Query(1)))
-		cb("recent", d.toFloat64(d.Recent))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "sum"), d.toFloat64(d.Sum))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "min"), d.toFloat64(d.Low))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "avg"), d.toFloat64(d.FullAverage()))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "max"), d.toFloat64(d.High))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "rmin"), d.toFloat64(d.Query(0)))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "ravg"), d.toFloat64(d.ReservoirAverage()))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "r10"), d.toFloat64(d.Query(.1)))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "r50"), d.toFloat64(d.Query(.5)))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "r90"), d.toFloat64(d.Query(.9)))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "rmax"), d.toFloat64(d.Query(1)))
+		cb(NewSeries("_LOWER_NAME_`_dist"', "recent"), d.toFloat64(d.Recent))
 	}
 }

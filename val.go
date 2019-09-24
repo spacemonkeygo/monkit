@@ -50,11 +50,14 @@ func (v *IntVal) Observe(val int64) {
 }
 
 // Stats implements the StatSource interface.
-func (v *IntVal) Stats(cb func(name string, val float64)) {
+func (v *IntVal) Stats(cb func(series Series, val float64)) {
 	v.mtx.Lock()
 	vd := v.dist.Copy()
 	v.mtx.Unlock()
-	vd.Stats(cb)
+	vd.Stats(func(series Series, val float64) {
+		series.Measurement = "int_val"
+		cb(series, val)
+	})
 }
 
 // Quantile returns an estimate of the requested quantile of observed values.
@@ -97,11 +100,14 @@ func (v *FloatVal) Observe(val float64) {
 }
 
 // Stats implements the StatSource interface.
-func (v *FloatVal) Stats(cb func(name string, val float64)) {
+func (v *FloatVal) Stats(cb func(series Series, val float64)) {
 	v.mtx.Lock()
 	vd := v.dist.Copy()
 	v.mtx.Unlock()
-	vd.Stats(cb)
+	vd.Stats(func(series Series, val float64) {
+		series.Measurement = "float_val"
+		cb(series, val)
+	})
 }
 
 // Quantile returns an estimate of the requested quantile of observed values.
@@ -148,14 +154,14 @@ func (v *BoolVal) Observe(val bool) {
 }
 
 // Stats implements the StatSource interface.
-func (v *BoolVal) Stats(cb func(name string, val float64)) {
+func (v *BoolVal) Stats(cb func(series Series, val float64)) {
 	trues := atomic.LoadInt64(&v.trues)
 	falses := atomic.LoadInt64(&v.falses)
 	recent := atomic.LoadInt32(&v.recent)
-	cb("disposition", float64(trues-falses))
-	cb("false", float64(falses))
-	cb("recent", float64(recent))
-	cb("true", float64(trues))
+	cb(NewSeries("bool_val", "disposition"), float64(trues-falses))
+	cb(NewSeries("bool_val", "false"), float64(falses))
+	cb(NewSeries("bool_val", "recent"), float64(recent))
+	cb(NewSeries("bool_val", "true"), float64(trues))
 }
 
 // StructVal keeps track of a structure of data. Constructed using
@@ -189,7 +195,7 @@ func (v *StructVal) Observe(val interface{}) {
 }
 
 // Stats implements the StatSource interface.
-func (v *StructVal) Stats(cb func(name string, val float64)) {
+func (v *StructVal) Stats(cb func(series Series, val float64)) {
 	v.mtx.Lock()
 	recent := v.recent
 	v.mtx.Unlock()

@@ -215,31 +215,43 @@ func (s *Scope) Counter(name string) *Counter {
 // Gauge registers a callback that returns a float as the given name in the
 // Scope's StatSource table.
 func (s *Scope) Gauge(name string, cb func() float64) {
+	type gauge struct{ StatSource }
+
 	// gauges allow overwriting
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
+
 	if source, exists := s.sources[name]; exists {
 		if _, ok := source.(gauge); !ok {
 			panic(fmt.Sprintf("%s already used for another stats source: %#v",
 				name, source))
 		}
 	}
-	s.sources[name] = gauge{cb: cb}
+
+	s.sources[name] = gauge{StatSource: StatSourceFunc(
+		func(scb func(series Series, value float64)) {
+			scb(NewSeries("gauge", "value"), cb())
+		}),
+	}
 }
 
 // Chain registers a full StatSource as the given name in the Scope's
 // StatSource table.
 func (s *Scope) Chain(name string, source StatSource) {
+	type chain struct{ StatSource }
+
 	// chains allow overwriting
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
+
 	if source, exists := s.sources[name]; exists {
 		if _, ok := source.(chain); !ok {
 			panic(fmt.Sprintf("%s already used for another stats source: %#v",
 				name, source))
 		}
 	}
-	s.sources[name] = chain{source: source}
+
+	s.sources[name] = chain{StatSource: source}
 }
 
 func (s *Scope) allSources() (sources []namedSource) {
@@ -254,38 +266,19 @@ func (s *Scope) allSources() (sources []namedSource) {
 }
 
 // Stats implements the StatSource interface.
-func (s *Scope) Stats(cb func(name string, val float64)) {
+func (s *Scope) Stats(cb func(series Series, val float64)) {
 	for _, namedSource := range s.allSources() {
-		namedSource.source.Stats(func(name string, val float64) {
-			cb(fmt.Sprintf("%s.%s", namedSource.name, name), val)
+		namedSource.source.Stats(func(series Series, val float64) {
+			series.Tags = series.Tags.Set("name", namedSource.name)
+			cb(series, val)
 		})
-	}
-}
-
-// FilteredStats implements the FilterableStatSource interface.
-func (s *Scope) FilteredStats(prefix string,
-	cb func(name string, val float64)) {
-	for _, namedSource := range s.allSources() {
-		to_add := namedSource.name + "."
-		if subfilter, ok := filterPrefix(to_add, prefix); ok {
-			if fs, ok := namedSource.source.(FilterableStatSource); ok {
-				fs.FilteredStats(subfilter, func(name string, val float64) {
-					cb(to_add+name, val)
-				})
-				continue
-			}
-			namedSource.source.Stats(Filter(subfilter,
-				func(name string, val float64) {
-					cb(to_add+name, val)
-				}))
-		}
 	}
 }
 
 // Name returns the name of the Scope, often the Package name.
 func (s *Scope) Name() string { return s.name }
 
-var _ FilterableStatSource = (*Scope)(nil)
+var _ StatSource = (*Scope)(nil)
 
 type namedSource struct {
 	name   string
