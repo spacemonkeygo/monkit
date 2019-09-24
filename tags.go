@@ -19,18 +19,27 @@ import (
 	"strings"
 )
 
+// TagSet is an immutible collection of tag, value pairs.
 type TagSet struct {
 	all map[string]string
+	str string // cached string form
 }
 
+// Len returns the number of tags in the tag set.
+func (t *TagSet) Len() int { return len(t.all) }
+
+// Set returns a new tag set with the key associated to the value.
 func (t *TagSet) Set(key, value string) *TagSet {
 	return t.SetAll(map[string]string{key: value})
 }
 
+// SetAll returns a new tag set with the key value pairs in the map all set.
 func (t *TagSet) SetAll(kvs map[string]string) *TagSet {
-	all := make(map[string]string, len(t.all)+len(kvs))
-	for key, value := range t.all {
-		all[key] = value
+	all := make(map[string]string)
+	if t != nil {
+		for key, value := range t.all {
+			all[key] = value
+		}
 	}
 	for key, value := range kvs {
 		all[key] = value
@@ -40,6 +49,16 @@ func (t *TagSet) SetAll(kvs map[string]string) *TagSet {
 
 // String returns a string form of the tag set suitable for sending to influxdb.
 func (t *TagSet) String() string {
+	if t.str == "" {
+		var builder strings.Builder
+		t.writeTags(&builder)
+		t.str = builder.String()
+	}
+	return t.str
+}
+
+// writeTags writes the tags in the tag set to the builder.
+func (t *TagSet) writeTags(builder *strings.Builder) {
 	type kv struct {
 		key   string
 		value string
@@ -53,20 +72,35 @@ func (t *TagSet) String() string {
 		return kvs[i].key < kvs[j].key
 	})
 
-	var builder strings.Builder
 	for i, kv := range kvs {
 		if i > 0 {
 			builder.WriteByte(',')
 		}
-		writeTag(&builder, kv.key)
+		writeTag(builder, kv.key)
 		builder.WriteByte('=')
-		writeTag(&builder, kv.value)
+		writeTag(builder, kv.value)
 	}
-
-	return builder.String()
 }
 
-// writeTag writes a tag key or value to the builder.
+// writeMeasurement writes a measurement to the builder.
+func writeMeasurement(builder *strings.Builder, measurement string) {
+	if strings.IndexByte(measurement, ',') == -1 &&
+		strings.IndexByte(measurement, ' ') == -1 {
+
+		builder.WriteString(measurement)
+		return
+	}
+
+	for i := 0; i < len(measurement); i++ {
+		if measurement[i] == ',' ||
+			measurement[i] == ' ' {
+			builder.WriteByte('\\')
+		}
+		builder.WriteByte(measurement[i])
+	}
+}
+
+// writeTag writes a tag key, value, or field key to the builder.
 func writeTag(builder *strings.Builder, tag string) {
 	if strings.IndexByte(tag, ',') == -1 &&
 		strings.IndexByte(tag, '=') == -1 &&
