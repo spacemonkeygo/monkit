@@ -20,7 +20,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"gopkg.in/spacemonkeygo/monkit.v3"
+	"github.com/spacemonkeygo/monkit/v3"
 )
 
 func loadSpan(addr **monkit.Span) (s *monkit.Span) {

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/spacemonkeygo/monkit.v3"
+	"github.com/spacemonkeygo/monkit/v3"
 )
 
 // StatsOld writes all of the name/value statistics pairs the Registry knows

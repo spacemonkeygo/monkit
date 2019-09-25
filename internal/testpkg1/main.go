@@ -3,7 +3,7 @@ package testpkg1
 import (
 	"context"
 
-	monkit "gopkg.in/spacemonkeygo/monkit.v3"
+	monkit "github.com/spacemonkeygo/monkit/v3"
 )
 
 var (

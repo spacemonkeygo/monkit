@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"sync"
 
-	"gopkg.in/spacemonkeygo/monkit.v3"
+	"github.com/spacemonkeygo/monkit/v3"
 )
 
 // WatchForSpans will watch for spans that 'matcher' returns true for. As soon

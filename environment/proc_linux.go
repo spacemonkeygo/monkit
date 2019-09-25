@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"gopkg.in/spacemonkeygo/monkit.v3"
+	"github.com/spacemonkeygo/monkit/v3"
 )
 
 func proc(cb func(series monkit.Series, val float64)) {

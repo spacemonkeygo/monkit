@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"gopkg.in/spacemonkeygo/monkit.v3/internal/testpkg1"
+	"github.com/spacemonkeygo/monkit/v3/internal/testpkg1"
 
-	monkit "gopkg.in/spacemonkeygo/monkit.v3"
+	monkit "github.com/spacemonkeygo/monkit/v3"
 )
 
 func TestCallers(t *testing.T) {
@@ -16,13 +16,13 @@ func TestCallers(t *testing.T) {
 	testpkg1.TestFunc(ctx, fmt.Errorf("new error"))
 	stats := monkit.Collect(monkit.Default)
 	assertEqual(t,
-		stats["gopkg.in/spacemonkeygo/monkit.v3/internal/testpkg1.TestFunc.total"], 2)
+		stats["github.com/spacemonkeygo/monkit/v3/internal/testpkg1.TestFunc.total"], 2)
 	assertEqual(t,
-		stats["gopkg.in/spacemonkeygo/monkit.v3/internal/testpkg1.TestFunc.successes"], 1)
+		stats["github.com/spacemonkeygo/monkit/v3/internal/testpkg1.TestFunc.successes"], 1)
 	assertEqual(t,
-		stats["gopkg.in/spacemonkeygo/monkit.v3/internal/testpkg1.TestFunc.errors"], 1)
+		stats["github.com/spacemonkeygo/monkit/v3/internal/testpkg1.TestFunc.errors"], 1)
 	assertEqual(t,
-		stats["gopkg.in/spacemonkeygo/monkit.v3/internal/testpkg1.test_event.total"], 2)
+		stats["github.com/spacemonkeygo/monkit/v3/internal/testpkg1.test_event.total"], 2)
 }
 
 func assertEqual(t *testing.T, actual, expected float64) {

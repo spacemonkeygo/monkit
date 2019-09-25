@@ -20,8 +20,8 @@ import (
 	"io"
 	"time"
 
-	"gopkg.in/spacemonkeygo/monkit.v3"
-	"gopkg.in/spacemonkeygo/monkit.v3/collect"
+	"github.com/spacemonkeygo/monkit/v3"
+	"github.com/spacemonkeygo/monkit/v3/collect"
 )
 
 func formatSpan(s *monkit.Span) interface{} {

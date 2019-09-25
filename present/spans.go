@@ -19,7 +19,7 @@ import (
 	"io"
 	"strings"
 
-	"gopkg.in/spacemonkeygo/monkit.v3"
+	"github.com/spacemonkeygo/monkit/v3"
 )
 
 func outputDotSpan(w io.Writer, s *monkit.Span) error {

@@ -18,7 +18,7 @@ import (
 	"runtime"
 	"runtime/debug"
 
-	"gopkg.in/spacemonkeygo/monkit.v3"
+	"github.com/spacemonkeygo/monkit/v3"
 )
 
 // Runtime returns a StatSource that includes information gathered from the

@@ -12,4 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package present // import "gopkg.in/spacemonkeygo/monkit.v3/present"
+package present // import "github.com/spacemonkeygo/monkit/v3/present"
