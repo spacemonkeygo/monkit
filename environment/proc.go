@@ -12,32 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build !windows
-
 package environment
 
 import (
-	"syscall"
-
 	"github.com/spacemonkeygo/monkit/v3"
 )
 
-// Rusage returns a StatSource that provides as many statistics as possible
-// gathered from the Rusage syscall. Not expected to be called directly, as
-// this StatSource is added by Register.
-func Rusage() monkit.StatSource {
-	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
-		var rusage syscall.Rusage
-		err := syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
-		if err == nil {
-			monkit.StatSourceFromStruct(&rusage).Stats(func(series monkit.Series, val float64) {
-				series.Measurement = "environment"
-				cb(series, val)
-			})
-		}
-	})
+// Proc returns a StatSource that includes various operating system process data
+// from /proc if available. Not expected to be called directly, as this StatSource
+// is added by Register.
+func Proc() monkit.StatSource {
+	return monkit.StatSourceFunc(proc)
 }
 
 func init() {
-	registrations["rusage"] = Rusage()
+	registrations["proc"] = Proc()
 }

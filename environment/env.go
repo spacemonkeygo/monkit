@@ -28,7 +28,7 @@ func Register(registry *monkit.Registry) {
 	if registry == nil {
 		registry = monkit.Default
 	}
-	pkg := registry.ScopeNamed("env")
+	pkg := registry.Package()
 	for name, source := range registrations {
 		pkg.Chain(name, source)
 	}

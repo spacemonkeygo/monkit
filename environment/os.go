@@ -19,16 +19,14 @@ import (
 )
 
 // OS returns a StatSource that includes various operating system process data
-// such as the number of file descriptors open and other information from
-// /proc if available. Not expected to be called directly, as this StatSource
-// is added by Register.
+// such as the number of file descriptors. Not expected to be called directly,
+// as this StatSource is added by Register.
 func OS() monkit.StatSource {
 	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
 		fds, err := fdCount()
 		if err == nil {
-			cb(monkit.NewSeries("os", "fds"), float64(fds))
+			cb(monkit.NewSeries("environment", "fds"), float64(fds))
 		}
-		proc(cb)
 	})
 }
 

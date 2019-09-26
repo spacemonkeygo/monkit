@@ -28,11 +28,19 @@ type TagSet struct {
 // All returns a map of all the key/value pairs in the tag set. It
 // should not be modified.
 func (t *TagSet) All() map[string]string {
+	if t == nil {
+		return nil
+	}
 	return t.all
 }
 
 // Len returns the number of tags in the tag set.
-func (t *TagSet) Len() int { return len(t.all) }
+func (t *TagSet) Len() int {
+	if t == nil {
+		return 0
+	}
+	return len(t.all)
+}
 
 // Set returns a new tag set with the key associated to the value.
 func (t *TagSet) Set(key, value string) *TagSet {
@@ -55,6 +63,9 @@ func (t *TagSet) SetAll(kvs map[string]string) *TagSet {
 
 // String returns a string form of the tag set suitable for sending to influxdb.
 func (t *TagSet) String() string {
+	if t == nil {
+		return ""
+	}
 	if t.str == "" {
 		var builder strings.Builder
 		t.writeTags(&builder)

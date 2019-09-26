@@ -19,8 +19,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/spacemonkeygo/monotime"
 	"github.com/spacemonkeygo/monkit/v3"
+	"github.com/spacemonkeygo/monotime"
 )
 
 var (
@@ -34,12 +34,12 @@ var (
 // called directly, as this StatSource is added by Register.
 func Process() monkit.StatSource {
 	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
-		cb(monkit.NewSeries("process", "control"), 1)
+		cb(monkit.NewSeries("environment", "control"), 1)
 		c, err := processCRC()
 		if err == nil {
-			cb(monkit.NewSeries("process", "crc"), float64(c))
+			cb(monkit.NewSeries("environment", "crc"), float64(c))
 		}
-		cb(monkit.NewSeries("process", "uptime"), (monotime.Monotonic() - startTime).Seconds())
+		cb(monkit.NewSeries("environment", "uptime"), (monotime.Monotonic() - startTime).Seconds())
 	})
 }
 
