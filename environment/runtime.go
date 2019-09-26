@@ -30,14 +30,13 @@ func Runtime() monkit.StatSource {
 	lastNumGC := int64(0)
 
 	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
-		cb(monkit.NewSeries("environment", "goroutines"), float64(runtime.NumGoroutine()))
+		cb(monkit.NewSeries("runtime", "goroutines"), float64(runtime.NumGoroutine()))
 
 		{
 			var stats runtime.MemStats
 			runtime.ReadMemStats(&stats)
 			monkit.StatSourceFromStruct(stats).Stats(func(series monkit.Series, val float64) {
-				series.Measurement = "environment"
-				series.Tags = series.Tags.Set("subsystem", "memory")
+				series.Measurement = "runtime_memory"
 				cb(series, val)
 			})
 		}
@@ -49,8 +48,7 @@ func Runtime() monkit.StatSource {
 				durDist.Insert(stats.Pause[0])
 			}
 			durDist.Stats(func(series monkit.Series, val float64) {
-				series.Measurement = "environment"
-				series.Tags = series.Tags.Set("subsystem", "gc_pauses")
+				series.Measurement = "runtime_gc"
 				cb(series, val)
 			})
 		}

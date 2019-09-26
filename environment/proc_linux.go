@@ -26,7 +26,7 @@ func proc(cb func(series monkit.Series, val float64)) {
 	err := readProcSelfStat(&stat)
 	if err == nil {
 		monkit.StatSourceFromStruct(&stat).Stats(func(series monkit.Series, val float64) {
-			series.Measurement = "environment"
+			series.Measurement = "proc_stat"
 			cb(series, val)
 		})
 	}
@@ -35,7 +35,7 @@ func proc(cb func(series monkit.Series, val float64)) {
 	err = readProcSelfStatm(&statm)
 	if err == nil {
 		monkit.StatSourceFromStruct(&statm).Stats(func(series monkit.Series, val float64) {
-			series.Measurement = "environment"
+			series.Measurement = "proc_statm"
 			cb(series, val)
 		})
 	}

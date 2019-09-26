@@ -25,7 +25,7 @@ func OS() monkit.StatSource {
 	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
 		fds, err := fdCount()
 		if err == nil {
-			cb(monkit.NewSeries("environment", "fds"), float64(fds))
+			cb(monkit.NewSeries("fds", "count"), float64(fds))
 		}
 	})
 }

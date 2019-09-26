@@ -15,7 +15,6 @@
 package monkit
 
 import (
-	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -160,20 +159,20 @@ func (f *FuncStats) Stats(cb func(series Series, val float64)) {
 	e_count := int64(0)
 	for errname, count := range errs {
 		e_count += count
-		cb(NewSeries("func_stats", fmt.Sprintf("error %s", errname)), float64(count))
+		series := NewSeries("func_stats", "count")
+		series.Tags = series.Tags.Set("error_name", errname)
+		cb(series, float64(count))
 	}
 	cb(NewSeries("func_stats", "errors"), float64(e_count))
 	cb(NewSeries("func_stats", "panics"), float64(panics))
 	cb(NewSeries("func_stats", "failures"), float64(e_count+panics))
 	cb(NewSeries("func_stats", "total"), float64(st.Count+e_count+panics))
 	st.Stats(func(series Series, val float64) {
-		series.Measurement = "func_stats"
-		series.Tags = series.Tags.Set("kind", "success")
+		series.Measurement = "func_stats_success"
 		cb(series, val)
 	})
 	ft.Stats(func(series Series, val float64) {
-		series.Measurement = "func_stats"
-		series.Tags = series.Tags.Set("kind", "failure")
+		series.Measurement = "func_stats_failure"
 		cb(series, val)
 	})
 }

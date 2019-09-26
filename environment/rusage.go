@@ -31,7 +31,7 @@ func Rusage() monkit.StatSource {
 		err := syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
 		if err == nil {
 			monkit.StatSourceFromStruct(&rusage).Stats(func(series monkit.Series, val float64) {
-				series.Measurement = "environment"
+				series.Measurement = "rusage"
 				cb(series, val)
 			})
 		}
