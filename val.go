@@ -176,13 +176,16 @@ func (v *BoolVal) Stats(cb func(series Series, val float64)) {
 //   }
 //
 type StructVal struct {
-	mtx    sync.Mutex
-	recent interface{}
+	mtx         sync.Mutex
+	measurement string
+	recent      interface{}
 }
 
 // NewStructVal creates a StructVal
-func NewStructVal() *StructVal {
-	return &StructVal{}
+func NewStructVal(measurement string) *StructVal {
+	return &StructVal{
+		measurement: measurement,
+	}
 }
 
 // Observe observes a struct value. Only the fields convertable to float64 will
@@ -201,6 +204,6 @@ func (v *StructVal) Stats(cb func(series Series, val float64)) {
 	v.mtx.Unlock()
 
 	if recent != nil {
-		StatSourceFromStruct(recent).Stats(cb)
+		StatSourceFromStruct(v.measurement, recent).Stats(cb)
 	}
 }

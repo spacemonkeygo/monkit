@@ -174,20 +174,24 @@ func (s *Scope) BoolValf(template string, args ...interface{}) *BoolVal {
 }
 
 // StructVal retrieves or creates a StructVal after the given name.
-func (s *Scope) StructVal(name string) *StructVal {
-	source := s.newSource(name, func() StatSource { return NewStructVal() })
+func (s *Scope) StructVal(measurement, name string) *StructVal {
+	source := s.newSource(name, func() StatSource { return NewStructVal(measurement) })
 	m, ok := source.(*StructVal)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
 			name, source))
+	}
+	if m.measurement != measurement {
+		panic(fmt.Sprintf("%s already used with measurement name %q != %q",
+			name, m.measurement, measurement))
 	}
 	return m
 }
 
 // StructValf retrieves or creates a StructVal after the given printf-formatted
 // name.
-func (s *Scope) StructValf(template string, args ...interface{}) *StructVal {
-	return s.StructVal(fmt.Sprintf(template, args...))
+func (s *Scope) StructValf(measurement string, template string, args ...interface{}) *StructVal {
+	return s.StructVal(measurement, fmt.Sprintf(template, args...))
 }
 
 // Timer retrieves or creates a Timer after the given name.

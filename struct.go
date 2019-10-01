@@ -24,7 +24,7 @@ func (emptyStatSource) Stats(cb func(series Series, val float64)) {}
 
 // StatSourceFromStruct uses the reflect package to implement the Stats call
 // across all float64-castable fields of the struct.
-func StatSourceFromStruct(structData interface{}) StatSource {
+func StatSourceFromStruct(measurement string, structData interface{}) StatSource {
 	val := deref(reflect.ValueOf(structData))
 
 	typ := val.Type()
@@ -38,14 +38,14 @@ func StatSourceFromStruct(structData interface{}) StatSource {
 			field_type := field.Type()
 
 			if field_type.Kind() == reflect.Struct && field.CanInterface() {
-				child_source := StatSourceFromStruct(field.Interface())
+				child_source := StatSourceFromStruct(measurement, field.Interface())
 				child_source.Stats(func(series Series, val float64) {
 					series.Field = typ.Field(i).Name + "." + series.Field
 					cb(series, val)
 				})
 
 			} else if field_type.ConvertibleTo(f64Type) {
-				cb(NewSeries("struct", typ.Field(i).Name), field.Convert(f64Type).Float())
+				cb(NewSeries(measurement, typ.Field(i).Name), field.Convert(f64Type).Float())
 			}
 		}
 	})
