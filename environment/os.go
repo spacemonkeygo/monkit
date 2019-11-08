@@ -22,14 +22,12 @@ import (
 // such as the number of file descriptors. Not expected to be called directly,
 // as this StatSource is added by Register.
 func OS() monkit.StatSource {
-	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
+	return monkit.StatSourceFunc(func(cb func(key monkit.SeriesKey, field string, val float64)) {
 		fds, err := fdCount()
 		if err == nil {
-			cb(monkit.NewSeries("fds", "count"), float64(fds))
+			cb(monkit.NewSeriesKey("fds"), "count", float64(fds))
 		}
 	})
 }
 
-func init() {
-	registrations["os"] = OS()
-}
+func init() { registrations = append(registrations, OS()) }

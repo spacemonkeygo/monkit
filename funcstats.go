@@ -43,18 +43,22 @@ type FuncStats struct {
 	panics       int64
 	successTimes DurationDist
 	failureTimes DurationDist
+	key          SeriesKey
 }
 
-func initFuncStats(f *FuncStats) {
+func initFuncStats(f *FuncStats, key SeriesKey) {
+	f.key = key
 	f.errors = map[string]int64{}
-	initDurationDist(&f.successTimes)
-	initDurationDist(&f.failureTimes)
+
+	key.Measurement += "_times"
+	initDurationDist(&f.successTimes, key.WithTag("kind", "success"))
+	initDurationDist(&f.failureTimes, key.WithTag("kind", "failure"))
 }
 
 // NewFuncStats creates a FuncStats
-func NewFuncStats() (f *FuncStats) {
+func NewFuncStats(key SeriesKey) (f *FuncStats) {
 	f = &FuncStats{}
-	initFuncStats(f)
+	initFuncStats(f, key)
 	return f
 }
 
@@ -142,9 +146,10 @@ func (f *FuncStats) parents(cb func(f *Func)) {
 }
 
 // Stats implements the StatSource interface
-func (f *FuncStats) Stats(cb func(series Series, val float64)) {
-	cb(NewSeries("func_stats", "current"), float64(f.Current()))
-	cb(NewSeries("func_stats", "highwater"), float64(f.Highwater()))
+func (f *FuncStats) Stats(cb func(key SeriesKey, field string, val float64)) {
+	cb(f.key, "current", float64(f.Current()))
+	cb(f.key, "highwater", float64(f.Highwater()))
+
 	f.parentsAndMutex.Lock()
 	panics := f.panics
 	errs := make(map[string]int64, len(f.errors))
@@ -155,26 +160,19 @@ func (f *FuncStats) Stats(cb func(series Series, val float64)) {
 	ft := f.failureTimes.Copy()
 	f.parentsAndMutex.Unlock()
 
-	cb(NewSeries("func_stats", "successes"), float64(st.Count))
+	cb(f.key, "successes", float64(st.Count))
 	e_count := int64(0)
 	for errname, count := range errs {
 		e_count += count
-		series := NewSeries("func_stats", "count")
-		series.Tags = series.Tags.Set("error_name", errname)
-		cb(series, float64(count))
+		cb(f.key.WithTag("error_name", errname), "count", float64(count))
 	}
-	cb(NewSeries("func_stats", "errors"), float64(e_count))
-	cb(NewSeries("func_stats", "panics"), float64(panics))
-	cb(NewSeries("func_stats", "failures"), float64(e_count+panics))
-	cb(NewSeries("func_stats", "total"), float64(st.Count+e_count+panics))
-	st.Stats(func(series Series, val float64) {
-		series.Measurement = "func_stats_success"
-		cb(series, val)
-	})
-	ft.Stats(func(series Series, val float64) {
-		series.Measurement = "func_stats_failure"
-		cb(series, val)
-	})
+	cb(f.key, "errors", float64(e_count))
+	cb(f.key, "panics", float64(panics))
+	cb(f.key, "failures", float64(e_count+panics))
+	cb(f.key, "total", float64(st.Count+e_count+panics))
+
+	st.Stats(cb)
+	ft.Stats(cb)
 }
 
 // SuccessTimes returns a DurationDist of successes

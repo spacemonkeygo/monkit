@@ -37,25 +37,25 @@ type Func struct {
 	// constructor things
 	id    int64
 	scope *Scope
-	name  string
+	key   SeriesKey
 }
 
-func newFunc(s *Scope, name string) (f *Func) {
+func newFunc(s *Scope, key SeriesKey) (f *Func) {
 	f = &Func{
 		id:    NewId(),
 		scope: s,
-		name:  name,
+		key:   key,
 	}
-	initFuncStats(&f.FuncStats)
+	initFuncStats(&f.FuncStats, key)
 	return f
 }
 
 // ShortName returns the name of the function within the package
-func (f *Func) ShortName() string { return f.name }
+func (f *Func) ShortName() string { return f.key.Tags.Get("name") }
 
 // FullName returns the name of the function including the package
 func (f *Func) FullName() string {
-	return fmt.Sprintf("%s.%s", f.scope.name, f.name)
+	return fmt.Sprintf("%s.%s", f.scope.name, f.key.Tags.Get("name"))
 }
 
 // Id returns a unique integer referencing this function

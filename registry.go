@@ -207,11 +207,10 @@ func (r *Registry) Funcs(cb func(f *Func)) {
 }
 
 // Stats implements the StatSource interface.
-func (r *Registry) Stats(cb func(series Series, val float64)) {
+func (r *Registry) Stats(cb func(key SeriesKey, field string, val float64)) {
 	r.Scopes(func(s *Scope) {
-		s.Stats(func(series Series, val float64) {
-			series.Tags = series.Tags.Set("scope", s.name)
-			cb(series, val)
+		s.Stats(func(key SeriesKey, field string, val float64) {
+			cb(key.WithTag("scope", s.name), field, val)
 		})
 	})
 }
@@ -237,7 +236,7 @@ func Funcs(cb func(f *Func)) { Default.Funcs(cb) }
 func Package() *Scope { return Default.ScopeNamed(callerPackage(1)) }
 
 // Stats is just a wrapper around Default.Stats
-func Stats(cb func(series Series, val float64)) { Default.Stats(cb) }
+func Stats(cb func(key SeriesKey, field string, val float64)) { Default.Stats(cb) }
 
 type spanSorter []*Span
 

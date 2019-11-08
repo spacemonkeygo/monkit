@@ -41,19 +41,21 @@ type FloatDist struct {
 	// reset.
 	Sum float64
 
+	key       SeriesKey
 	reservoir [ReservoirSize]float32
 	rng       xorshift128
 	sorted    bool
 }
 
-func initFloatDist(v *FloatDist) {
+func initFloatDist(v *FloatDist, key SeriesKey) {
+	v.key = key
 	v.rng = newXORShift128()
 }
 
 // NewFloatDist creates a distribution of float64s.
-func NewFloatDist() (d *FloatDist) {
+func NewFloatDist(key SeriesKey) (d *FloatDist) {
 	d = &FloatDist{}
-	initFloatDist(d)
+	initFloatDist(d, key)
 	return d
 }
 
@@ -163,20 +165,20 @@ func (d *FloatDist) Reset() {
 	// resetting count will reset the quantile reservoir
 }
 
-func (d *FloatDist) Stats(cb func(series Series, val float64)) {
+func (d *FloatDist) Stats(cb func(key SeriesKey, field string, val float64)) {
 	count := d.Count
-	cb(NewSeries("float_dist", "count"), float64(count))
+	cb(d.key, "count", float64(count))
 	if count > 0 {
-		cb(NewSeries("float_dist", "sum"), d.toFloat64(d.Sum))
-		cb(NewSeries("float_dist", "min"), d.toFloat64(d.Low))
-		cb(NewSeries("float_dist", "avg"), d.toFloat64(d.FullAverage()))
-		cb(NewSeries("float_dist", "max"), d.toFloat64(d.High))
-		cb(NewSeries("float_dist", "rmin"), d.toFloat64(d.Query(0)))
-		cb(NewSeries("float_dist", "ravg"), d.toFloat64(d.ReservoirAverage()))
-		cb(NewSeries("float_dist", "r10"), d.toFloat64(d.Query(.1)))
-		cb(NewSeries("float_dist", "r50"), d.toFloat64(d.Query(.5)))
-		cb(NewSeries("float_dist", "r90"), d.toFloat64(d.Query(.9)))
-		cb(NewSeries("float_dist", "rmax"), d.toFloat64(d.Query(1)))
-		cb(NewSeries("float_dist", "recent"), d.toFloat64(d.Recent))
+		cb(d.key, "sum", d.toFloat64(d.Sum))
+		cb(d.key, "min", d.toFloat64(d.Low))
+		cb(d.key, "avg", d.toFloat64(d.FullAverage()))
+		cb(d.key, "max", d.toFloat64(d.High))
+		cb(d.key, "rmin", d.toFloat64(d.Query(0)))
+		cb(d.key, "ravg", d.toFloat64(d.ReservoirAverage()))
+		cb(d.key, "r10", d.toFloat64(d.Query(.1)))
+		cb(d.key, "r50", d.toFloat64(d.Query(.5)))
+		cb(d.key, "r90", d.toFloat64(d.Query(.9)))
+		cb(d.key, "rmax", d.toFloat64(d.Query(1)))
+		cb(d.key, "recent", d.toFloat64(d.Recent))
 	}
 }

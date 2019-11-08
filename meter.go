@@ -54,10 +54,11 @@ type Meter struct {
 	mtx    sync.Mutex
 	total  int64
 	slices [ticksToKeep]meterBucket
+	key    SeriesKey
 }
 
 // NewMeter constructs a Meter
-func NewMeter() *Meter {
+func NewMeter(key SeriesKey) *Meter {
 	rv := &Meter{}
 	now := monotime.Monotonic()
 	for i := 0; i < ticksToKeep; i++ {
@@ -146,10 +147,10 @@ func (e *Meter) Total() float64 {
 }
 
 // Stats implements the StatSource interface
-func (e *Meter) Stats(cb func(series Series, val float64)) {
+func (e *Meter) Stats(cb func(key SeriesKey, field string, val float64)) {
 	rate, total := e.stats(monotime.Monotonic())
-	cb(NewSeries("meter", "rate"), rate)
-	cb(NewSeries("meter", "total"), float64(total))
+	cb(e.key, "rate", rate)
+	cb(e.key, "total", float64(total))
 }
 
 // DiffMeter is a StatSource that shows the difference between
@@ -164,20 +165,21 @@ func (e *Meter) Stats(cb func(series Series, val float64)) {
 //
 type DiffMeter struct {
 	meter1, meter2 *Meter
+	key            SeriesKey
 }
 
 // Constructs a DiffMeter.
-func NewDiffMeter(meter1, meter2 *Meter) *DiffMeter {
+func NewDiffMeter(key SeriesKey, meter1, meter2 *Meter) *DiffMeter {
 	return &DiffMeter{meter1: meter1, meter2: meter2}
 }
 
 // Stats implements the StatSource interface
-func (m *DiffMeter) Stats(cb func(series Series, val float64)) {
+func (m *DiffMeter) Stats(cb func(key SeriesKey, field string, val float64)) {
 	now := monotime.Monotonic()
 	rate1, total1 := m.meter1.stats(now)
 	rate2, total2 := m.meter2.stats(now)
-	cb(NewSeries("diff_meter", "rate"), rate1-rate2)
-	cb(NewSeries("diff_meter", "total"), float64(total1-total2))
+	cb(m.key, "rate", rate1-rate2)
+	cb(m.key, "total", float64(total1-total2))
 }
 
 type ticker struct {

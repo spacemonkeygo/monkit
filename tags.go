@@ -25,6 +25,14 @@ type TagSet struct {
 	str string // cached string form
 }
 
+// Get returns the value associated with the key.
+func (t *TagSet) Get(key string) string {
+	if t == nil || t.all == nil {
+		return ""
+	}
+	return t.all[key]
+}
+
 // All returns a map of all the key/value pairs in the tag set. It
 // should not be modified.
 func (t *TagSet) All() map[string]string {

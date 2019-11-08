@@ -26,19 +26,16 @@ import (
 // other live memory data. Not expected to be called directly, as this
 // StatSource is added by Register.
 func Runtime() monkit.StatSource {
-	durDist := monkit.NewDurationDist()
+	durDist := monkit.NewDurationDist(monkit.NewSeriesKey("runtime_gcstats"))
 	lastNumGC := int64(0)
 
-	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
-		cb(monkit.NewSeries("runtime", "goroutines"), float64(runtime.NumGoroutine()))
+	return monkit.StatSourceFunc(func(cb func(key monkit.SeriesKey, field string, val float64)) {
+		cb(monkit.NewSeriesKey("goroutines"), "count", float64(runtime.NumGoroutine()))
 
 		{
 			var stats runtime.MemStats
 			runtime.ReadMemStats(&stats)
-			monkit.StatSourceFromStruct(stats).Stats(func(series monkit.Series, val float64) {
-				series.Measurement = "runtime_memory"
-				cb(series, val)
-			})
+			monkit.StatSourceFromStruct(monkit.NewSeriesKey("runtime_memstats"), stats).Stats(cb)
 		}
 
 		{
@@ -47,14 +44,9 @@ func Runtime() monkit.StatSource {
 			if lastNumGC != stats.NumGC && len(stats.Pause) > 0 {
 				durDist.Insert(stats.Pause[0])
 			}
-			durDist.Stats(func(series monkit.Series, val float64) {
-				series.Measurement = "runtime_gc"
-				cb(series, val)
-			})
+			durDist.Stats(cb)
 		}
 	})
 }
 
-func init() {
-	registrations["runtime"] = Runtime()
-}
+func init() { registrations = append(registrations, Runtime()) }

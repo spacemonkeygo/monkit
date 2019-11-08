@@ -16,7 +16,6 @@ package monkit
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 )
 
@@ -27,6 +26,7 @@ type Scope struct {
 	name    string
 	mtx     sync.RWMutex
 	sources map[string]StatSource
+	chains  []StatSource
 }
 
 func newScope(r *Registry, name string) *Scope {
@@ -69,7 +69,9 @@ func (s *Scope) newSource(name string, constructor func() StatSource) (
 // FuncNamed retrieves or creates a Func named after the given name. See
 // Func() for automatic name determination.
 func (s *Scope) FuncNamed(name string) *Func {
-	source := s.newSource(name, func() StatSource { return newFunc(s, name) })
+	source := s.newSource("func:"+name, func() StatSource {
+		return newFunc(s, NewSeriesKey("function").WithTag("name", name))
+	})
 	f, ok := source.(*Func)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -95,7 +97,7 @@ func (s *Scope) Funcs(cb func(f *Func)) {
 
 // Meter retrieves or creates a Meter named after the given name. See Event.
 func (s *Scope) Meter(name string) *Meter {
-	source := s.newSource(name, func() StatSource { return NewMeter() })
+	source := s.newSource(name, func() StatSource { return NewMeter(NewSeriesKey(name)) })
 	m, ok := source.(*Meter)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -114,7 +116,7 @@ func (s *Scope) Event(name string) {
 // submeters.
 func (s *Scope) DiffMeter(name string, m1, m2 *Meter) {
 	source := s.newSource(name, func() StatSource {
-		return NewDiffMeter(m1, m2)
+		return NewDiffMeter(NewSeriesKey(name), m1, m2)
 	})
 	if _, ok := source.(*DiffMeter); !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -124,7 +126,7 @@ func (s *Scope) DiffMeter(name string, m1, m2 *Meter) {
 
 // IntVal retrieves or creates an IntVal after the given name.
 func (s *Scope) IntVal(name string) *IntVal {
-	source := s.newSource(name, func() StatSource { return NewIntVal() })
+	source := s.newSource(name, func() StatSource { return NewIntVal(NewSeriesKey(name)) })
 	m, ok := source.(*IntVal)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -141,7 +143,7 @@ func (s *Scope) IntValf(template string, args ...interface{}) *IntVal {
 
 // FloatVal retrieves or creates a FloatVal after the given name.
 func (s *Scope) FloatVal(name string) *FloatVal {
-	source := s.newSource(name, func() StatSource { return NewFloatVal() })
+	source := s.newSource(name, func() StatSource { return NewFloatVal(NewSeriesKey(name)) })
 	m, ok := source.(*FloatVal)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -158,7 +160,7 @@ func (s *Scope) FloatValf(template string, args ...interface{}) *FloatVal {
 
 // BoolVal retrieves or creates a BoolVal after the given name.
 func (s *Scope) BoolVal(name string) *BoolVal {
-	source := s.newSource(name, func() StatSource { return NewBoolVal() })
+	source := s.newSource(name, func() StatSource { return NewBoolVal(NewSeriesKey(name)) })
 	m, ok := source.(*BoolVal)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -174,29 +176,19 @@ func (s *Scope) BoolValf(template string, args ...interface{}) *BoolVal {
 }
 
 // StructVal retrieves or creates a StructVal after the given name.
-func (s *Scope) StructVal(measurement, name string) *StructVal {
-	source := s.newSource(name, func() StatSource { return NewStructVal(measurement) })
+func (s *Scope) StructVal(name string) *StructVal {
+	source := s.newSource(name, func() StatSource { return NewStructVal(NewSeriesKey(name)) })
 	m, ok := source.(*StructVal)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
 			name, source))
 	}
-	if m.measurement != measurement {
-		panic(fmt.Sprintf("%s already used with measurement name %q != %q",
-			name, m.measurement, measurement))
-	}
 	return m
-}
-
-// StructValf retrieves or creates a StructVal after the given printf-formatted
-// name.
-func (s *Scope) StructValf(measurement string, template string, args ...interface{}) *StructVal {
-	return s.StructVal(measurement, fmt.Sprintf(template, args...))
 }
 
 // Timer retrieves or creates a Timer after the given name.
 func (s *Scope) Timer(name string) *Timer {
-	source := s.newSource(name, func() StatSource { return NewTimer() })
+	source := s.newSource(name, func() StatSource { return NewTimer(NewSeriesKey(name)) })
 	m, ok := source.(*Timer)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -207,7 +199,7 @@ func (s *Scope) Timer(name string) *Timer {
 
 // Counter retrieves or creates a Counter after the given name.
 func (s *Scope) Counter(name string) *Counter {
-	source := s.newSource(name, func() StatSource { return NewCounter() })
+	source := s.newSource(name, func() StatSource { return NewCounter(NewSeriesKey(name)) })
 	m, ok := source.(*Counter)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -233,49 +225,44 @@ func (s *Scope) Gauge(name string, cb func() float64) {
 	}
 
 	s.sources[name] = gauge{StatSource: StatSourceFunc(
-		func(scb func(series Series, value float64)) {
-			scb(NewSeries("gauge", "value"), cb())
+		func(scb func(key SeriesKey, field string, value float64)) {
+			scb(NewSeriesKey(name), "value", cb())
 		}),
 	}
 }
 
 // Chain registers a full StatSource as the given name in the Scope's
 // StatSource table.
-func (s *Scope) Chain(name string, source StatSource) {
-	type chain struct{ StatSource }
-
+func (s *Scope) Chain(source StatSource) {
 	// chains allow overwriting
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	if source, exists := s.sources[name]; exists {
-		if _, ok := source.(chain); !ok {
-			panic(fmt.Sprintf("%s already used for another stats source: %#v",
-				name, source))
-		}
-	}
-
-	s.sources[name] = chain{StatSource: source}
+	s.chains = append(s.chains, source)
 }
 
-func (s *Scope) allSources() (sources []namedSource) {
+func (s *Scope) allNamedSources() (sources []namedSource) {
 	s.mtx.Lock()
 	sources = make([]namedSource, 0, len(s.sources))
 	for name, source := range s.sources {
 		sources = append(sources, namedSource{name: name, source: source})
 	}
 	s.mtx.Unlock()
-	sort.Sort(namedSourceList(sources))
 	return sources
 }
 
 // Stats implements the StatSource interface.
-func (s *Scope) Stats(cb func(series Series, val float64)) {
-	for _, namedSource := range s.allSources() {
-		namedSource.source.Stats(func(series Series, val float64) {
-			series.Tags = series.Tags.Set("name", namedSource.name)
-			cb(series, val)
-		})
+func (s *Scope) Stats(cb func(key SeriesKey, field string, val float64)) {
+	for _, namedSource := range s.allNamedSources() {
+		namedSource.source.Stats(cb)
+	}
+
+	s.mtx.Lock()
+	chains := append([]StatSource(nil), s.chains...)
+	s.mtx.Unlock()
+
+	for _, source := range chains {
+		source.Stats(cb)
 	}
 }
 

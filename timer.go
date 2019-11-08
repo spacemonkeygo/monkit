@@ -39,11 +39,12 @@ import (
 type Timer struct {
 	mtx   sync.Mutex
 	times *DurationDist
+	key   string
 }
 
 // NewTimer constructs a new Timer.
-func NewTimer() *Timer {
-	return &Timer{times: NewDurationDist()}
+func NewTimer(key SeriesKey) *Timer {
+	return &Timer{times: NewDurationDist(key)}
 }
 
 // Start constructs a RunningTimer
@@ -87,13 +88,10 @@ func (t *Timer) Values() *DurationDist {
 }
 
 // Stats implements the StatSource interface
-func (t *Timer) Stats(cb func(series Series, val float64)) {
+func (t *Timer) Stats(cb func(key SeriesKey, field string, val float64)) {
 	t.mtx.Lock()
 	times := t.times.Copy()
 	t.mtx.Unlock()
 
-	times.Stats(func(series Series, val float64) {
-		series.Measurement = "timer"
-		cb(series, val)
-	})
+	times.Stats(cb)
 }

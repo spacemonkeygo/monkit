@@ -25,6 +25,4 @@ func Proc() monkit.StatSource {
 	return monkit.StatSourceFunc(proc)
 }
 
-func init() {
-	registrations["proc"] = Proc()
-}
+func init() { registrations = append(registrations, Proc()) }

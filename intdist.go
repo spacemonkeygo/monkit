@@ -41,19 +41,21 @@ type IntDist struct {
 	// reset.
 	Sum int64
 
+	key       SeriesKey
 	reservoir [ReservoirSize]float32
 	rng       xorshift128
 	sorted    bool
 }
 
-func initIntDist(v *IntDist) {
+func initIntDist(v *IntDist, key SeriesKey) {
+	v.key = key
 	v.rng = newXORShift128()
 }
 
 // NewIntDist creates a distribution of int64s.
-func NewIntDist() (d *IntDist) {
+func NewIntDist(key SeriesKey) (d *IntDist) {
 	d = &IntDist{}
-	initIntDist(d)
+	initIntDist(d, key)
 	return d
 }
 
@@ -163,20 +165,20 @@ func (d *IntDist) Reset() {
 	// resetting count will reset the quantile reservoir
 }
 
-func (d *IntDist) Stats(cb func(series Series, val float64)) {
+func (d *IntDist) Stats(cb func(key SeriesKey, field string, val float64)) {
 	count := d.Count
-	cb(NewSeries("int_dist", "count"), float64(count))
+	cb(d.key, "count", float64(count))
 	if count > 0 {
-		cb(NewSeries("int_dist", "sum"), d.toFloat64(d.Sum))
-		cb(NewSeries("int_dist", "min"), d.toFloat64(d.Low))
-		cb(NewSeries("int_dist", "avg"), d.toFloat64(d.FullAverage()))
-		cb(NewSeries("int_dist", "max"), d.toFloat64(d.High))
-		cb(NewSeries("int_dist", "rmin"), d.toFloat64(d.Query(0)))
-		cb(NewSeries("int_dist", "ravg"), d.toFloat64(d.ReservoirAverage()))
-		cb(NewSeries("int_dist", "r10"), d.toFloat64(d.Query(.1)))
-		cb(NewSeries("int_dist", "r50"), d.toFloat64(d.Query(.5)))
-		cb(NewSeries("int_dist", "r90"), d.toFloat64(d.Query(.9)))
-		cb(NewSeries("int_dist", "rmax"), d.toFloat64(d.Query(1)))
-		cb(NewSeries("int_dist", "recent"), d.toFloat64(d.Recent))
+		cb(d.key, "sum", d.toFloat64(d.Sum))
+		cb(d.key, "min", d.toFloat64(d.Low))
+		cb(d.key, "avg", d.toFloat64(d.FullAverage()))
+		cb(d.key, "max", d.toFloat64(d.High))
+		cb(d.key, "rmin", d.toFloat64(d.Query(0)))
+		cb(d.key, "ravg", d.toFloat64(d.ReservoirAverage()))
+		cb(d.key, "r10", d.toFloat64(d.Query(.1)))
+		cb(d.key, "r50", d.toFloat64(d.Query(.5)))
+		cb(d.key, "r90", d.toFloat64(d.Query(.9)))
+		cb(d.key, "rmax", d.toFloat64(d.Query(1)))
+		cb(d.key, "recent", d.toFloat64(d.Recent))
 	}
 }

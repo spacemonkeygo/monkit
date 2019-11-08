@@ -42,19 +42,21 @@ type DurationDist struct {
 	// reset.
 	Sum time.Duration
 
+	key       SeriesKey
 	reservoir [ReservoirSize]float32
 	rng       xorshift128
 	sorted    bool
 }
 
-func initDurationDist(v *DurationDist) {
+func initDurationDist(v *DurationDist, key SeriesKey) {
+	v.key = key
 	v.rng = newXORShift128()
 }
 
 // NewDurationDist creates a distribution of time.Durations.
-func NewDurationDist() (d *DurationDist) {
+func NewDurationDist(key SeriesKey) (d *DurationDist) {
 	d = &DurationDist{}
-	initDurationDist(d)
+	initDurationDist(d, key)
 	return d
 }
 
@@ -164,20 +166,20 @@ func (d *DurationDist) Reset() {
 	// resetting count will reset the quantile reservoir
 }
 
-func (d *DurationDist) Stats(cb func(series Series, val float64)) {
+func (d *DurationDist) Stats(cb func(key SeriesKey, field string, val float64)) {
 	count := d.Count
-	cb(NewSeries("duration_dist", "count"), float64(count))
+	cb(d.key, "count", float64(count))
 	if count > 0 {
-		cb(NewSeries("duration_dist", "sum"), d.toFloat64(d.Sum))
-		cb(NewSeries("duration_dist", "min"), d.toFloat64(d.Low))
-		cb(NewSeries("duration_dist", "avg"), d.toFloat64(d.FullAverage()))
-		cb(NewSeries("duration_dist", "max"), d.toFloat64(d.High))
-		cb(NewSeries("duration_dist", "rmin"), d.toFloat64(d.Query(0)))
-		cb(NewSeries("duration_dist", "ravg"), d.toFloat64(d.ReservoirAverage()))
-		cb(NewSeries("duration_dist", "r10"), d.toFloat64(d.Query(.1)))
-		cb(NewSeries("duration_dist", "r50"), d.toFloat64(d.Query(.5)))
-		cb(NewSeries("duration_dist", "r90"), d.toFloat64(d.Query(.9)))
-		cb(NewSeries("duration_dist", "rmax"), d.toFloat64(d.Query(1)))
-		cb(NewSeries("duration_dist", "recent"), d.toFloat64(d.Recent))
+		cb(d.key, "sum", d.toFloat64(d.Sum))
+		cb(d.key, "min", d.toFloat64(d.Low))
+		cb(d.key, "avg", d.toFloat64(d.FullAverage()))
+		cb(d.key, "max", d.toFloat64(d.High))
+		cb(d.key, "rmin", d.toFloat64(d.Query(0)))
+		cb(d.key, "ravg", d.toFloat64(d.ReservoirAverage()))
+		cb(d.key, "r10", d.toFloat64(d.Query(.1)))
+		cb(d.key, "r50", d.toFloat64(d.Query(.5)))
+		cb(d.key, "r90", d.toFloat64(d.Query(.9)))
+		cb(d.key, "rmax", d.toFloat64(d.Query(1)))
+		cb(d.key, "recent", d.toFloat64(d.Recent))
 	}
 }

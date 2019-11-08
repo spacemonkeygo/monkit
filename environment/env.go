@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	registrations = map[string]monkit.StatSource{}
+	registrations = []monkit.StatSource{}
 )
 
 // Register attaches all of this package's environment data to the given
@@ -29,7 +29,7 @@ func Register(registry *monkit.Registry) {
 		registry = monkit.Default
 	}
 	pkg := registry.Package()
-	for name, source := range registrations {
-		pkg.Chain(name, source)
+	for _, source := range registrations {
+		pkg.Chain(source)
 	}
 }

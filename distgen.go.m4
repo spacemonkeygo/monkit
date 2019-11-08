@@ -42,19 +42,21 @@ type _NAME_`Dist' struct {
 	// reset.
 	Sum _TYPE_
 
+	key       SeriesKey
 	reservoir [ReservoirSize]float32
 	rng       xorshift128
 	sorted    bool
 }
 
-func `init'_NAME_`Dist'(v *_NAME_`Dist') {
+func `init'_NAME_`Dist'(v *_NAME_`Dist', key SeriesKey) {
+	v.key = key
 	v.rng = newXORShift128()
 }
 
 // `New'_NAME_`Dist' creates a distribution of _TYPE_`s'.
-func `New'_NAME_`Dist'() (d *_NAME_`Dist') {
+func `New'_NAME_`Dist'(key SeriesKey) (d *_NAME_`Dist') {
 	d = &_NAME_`Dist'{}
-	`init'_NAME_`Dist'(d)
+	`init'_NAME_`Dist'(d, key)
 	return d
 }
 
@@ -164,20 +166,20 @@ func (d *_NAME_`Dist') Reset() {
 	// resetting count will reset the quantile reservoir
 }
 
-func (d *_NAME_`Dist') Stats(cb func(series Series, val float64)) {
+func (d *_NAME_`Dist') Stats(cb func(key SeriesKey, field string, val float64)) {
 	count := d.Count
-	cb(NewSeries("_LOWER_NAME_`_dist"', "count"), float64(count))
+	cb(d.key, "count", float64(count))
 	if count > 0 {
-		cb(NewSeries("_LOWER_NAME_`_dist"', "sum"), d.toFloat64(d.Sum))
-		cb(NewSeries("_LOWER_NAME_`_dist"', "min"), d.toFloat64(d.Low))
-		cb(NewSeries("_LOWER_NAME_`_dist"', "avg"), d.toFloat64(d.FullAverage()))
-		cb(NewSeries("_LOWER_NAME_`_dist"', "max"), d.toFloat64(d.High))
-		cb(NewSeries("_LOWER_NAME_`_dist"', "rmin"), d.toFloat64(d.Query(0)))
-		cb(NewSeries("_LOWER_NAME_`_dist"', "ravg"), d.toFloat64(d.ReservoirAverage()))
-		cb(NewSeries("_LOWER_NAME_`_dist"', "r10"), d.toFloat64(d.Query(.1)))
-		cb(NewSeries("_LOWER_NAME_`_dist"', "r50"), d.toFloat64(d.Query(.5)))
-		cb(NewSeries("_LOWER_NAME_`_dist"', "r90"), d.toFloat64(d.Query(.9)))
-		cb(NewSeries("_LOWER_NAME_`_dist"', "rmax"), d.toFloat64(d.Query(1)))
-		cb(NewSeries("_LOWER_NAME_`_dist"', "recent"), d.toFloat64(d.Recent))
+		cb(d.key, "sum", d.toFloat64(d.Sum))
+		cb(d.key, "min", d.toFloat64(d.Low))
+		cb(d.key, "avg", d.toFloat64(d.FullAverage()))
+		cb(d.key, "max", d.toFloat64(d.High))
+		cb(d.key, "rmin", d.toFloat64(d.Query(0)))
+		cb(d.key, "ravg", d.toFloat64(d.ReservoirAverage()))
+		cb(d.key, "r10", d.toFloat64(d.Query(.1)))
+		cb(d.key, "r50", d.toFloat64(d.Query(.5)))
+		cb(d.key, "r90", d.toFloat64(d.Query(.9)))
+		cb(d.key, "rmax", d.toFloat64(d.Query(1)))
+		cb(d.key, "recent", d.toFloat64(d.Recent))
 	}
 }

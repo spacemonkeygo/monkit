@@ -18,43 +18,51 @@ import (
 	"strings"
 )
 
-// Series represents an individual time series for monkit to output.
-type Series struct {
+// SeriesKey represents an individual time series for monkit to output.
+type SeriesKey struct {
 	Measurement string
 	Tags        *TagSet
-	Field       string
 }
 
-// NewSeries constructs a new series with the minimal fields.
-func NewSeries(measurement, field string) Series {
-	return Series{
-		Measurement: measurement,
-		Field:       field,
-	}
+// NewSeriesKey constructs a new series with the minimal fields.
+func NewSeriesKey(measurement string) SeriesKey {
+	return SeriesKey{Measurement: measurement}
+}
+
+// WithTag returns a copy of the SeriesKey with the tag set
+func (s SeriesKey) WithTag(key, value string) SeriesKey {
+	s.Tags = s.Tags.Set(key, value)
+	return s
 }
 
 // String returns a string representation of the series. For example, it returns
-// something like `measurement,tag0=val0,tag1=val1 field`.
-func (s Series) String() string {
+// something like `measurement,tag0=val0,tag1=val1`.
+func (s SeriesKey) String() string {
 	var builder strings.Builder
 	writeMeasurement(&builder, s.Measurement)
 	if s.Tags.Len() > 0 {
 		builder.WriteByte(',')
 		builder.WriteString(s.Tags.String())
 	}
+	return builder.String()
+}
+
+func (s SeriesKey) WithField(field string) string {
+	var builder strings.Builder
+	builder.WriteString(s.String())
 	builder.WriteByte(' ')
-	writeTag(&builder, s.Field)
+	writeTag(&builder, field)
 	return builder.String()
 }
 
 // StatSource represents anything that can return named floating point values.
 type StatSource interface {
-	Stats(cb func(series Series, val float64))
+	Stats(cb func(key SeriesKey, field string, val float64))
 }
 
-type StatSourceFunc func(cb func(series Series, val float64))
+type StatSourceFunc func(cb func(key SeriesKey, field string, val float64))
 
-func (f StatSourceFunc) Stats(cb func(series Series, val float64)) {
+func (f StatSourceFunc) Stats(cb func(key SeriesKey, field string, val float64)) {
 	f(cb)
 }
 
@@ -62,8 +70,8 @@ func (f StatSourceFunc) Stats(cb func(series Series, val float64)) {
 // a key/value map.
 func Collect(mon StatSource) map[string]float64 {
 	rv := make(map[string]float64)
-	mon.Stats(func(series Series, val float64) {
-		rv[series.String()] = val
+	mon.Stats(func(key SeriesKey, field string, val float64) {
+		rv[key.WithField(field)] = val
 	})
 	return rv
 }

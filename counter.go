@@ -35,11 +35,12 @@ type Counter struct {
 	mtx            sync.Mutex
 	val, low, high int64
 	nonempty       bool
+	key            SeriesKey
 }
 
 // NewCounter constructs a counter
-func NewCounter() *Counter {
-	return &Counter{}
+func NewCounter(key SeriesKey) *Counter {
+	return &Counter{key: key}
 }
 
 func (c *Counter) set(val int64) {
@@ -113,16 +114,16 @@ func (c *Counter) Reset() (val, low, high int64) {
 }
 
 // Stats implements the StatSource interface
-func (c *Counter) Stats(cb func(series Series, val float64)) {
+func (c *Counter) Stats(cb func(key SeriesKey, field string, val float64)) {
 	c.mtx.Lock()
 	val, low, high, nonempty := c.val, c.low, c.high, c.nonempty
 	c.mtx.Unlock()
 	if nonempty {
-		cb(NewSeries("counter", "high"), float64(high))
-		cb(NewSeries("counter", "low"), float64(low))
+		cb(c.key, "high", float64(high))
+		cb(c.key, "low", float64(low))
 	} else {
-		cb(NewSeries("counter", "high"), math.NaN())
-		cb(NewSeries("counter", "low"), math.NaN())
+		cb(c.key, "high", math.NaN())
+		cb(c.key, "low", math.NaN())
 	}
-	cb(NewSeries("counter", "value"), float64(val))
+	cb(c.key, "value", float64(val))
 }

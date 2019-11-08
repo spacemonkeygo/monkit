@@ -24,11 +24,11 @@ import (
 // StatsOld writes all of the name/value statistics pairs the Registry knows
 // to w in a text format.
 func StatsOld(r *monkit.Registry, w io.Writer) (err error) {
-	r.Stats(func(series monkit.Series, val float64) {
+	r.Stats(func(key monkit.SeriesKey, field string, val float64) {
 		if err != nil {
 			return
 		}
-		_, err = fmt.Fprintf(w, "%s=%f\n", series.String(), val)
+		_, err = fmt.Fprintf(w, "%s=%f\n", key.WithField(field), val)
 	})
 	return err
 }
@@ -36,11 +36,11 @@ func StatsOld(r *monkit.Registry, w io.Writer) (err error) {
 // StatsText writes all of the name/value statistics pairs the Registry knows
 // to w in a text format.
 func StatsText(r *monkit.Registry, w io.Writer) (err error) {
-	r.Stats(func(series monkit.Series, val float64) {
+	r.Stats(func(key monkit.SeriesKey, field string, val float64) {
 		if err != nil {
 			return
 		}
-		_, err = fmt.Fprintf(w, "%s=%f\n", series.String(), val)
+		_, err = fmt.Fprintf(w, "%s=%f\n", key.WithField(field), val)
 	})
 	return err
 }
@@ -49,8 +49,8 @@ func StatsText(r *monkit.Registry, w io.Writer) (err error) {
 // to w in a JSON format.
 func StatsJSON(r *monkit.Registry, w io.Writer) (err error) {
 	lw := newListWriter(w)
-	r.Stats(func(series monkit.Series, val float64) {
-		lw.elem([]interface{}{series.Measurement, series.Tags.All(), series.Field, val})
+	r.Stats(func(key monkit.SeriesKey, field string, val float64) {
+		lw.elem([]interface{}{key.Measurement, key.Tags.All(), field, val})
 	})
 	return lw.done()
 }

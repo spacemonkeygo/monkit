@@ -20,11 +20,11 @@ var f64Type = reflect.TypeOf(float64(0))
 
 type emptyStatSource struct{}
 
-func (emptyStatSource) Stats(cb func(series Series, val float64)) {}
+func (emptyStatSource) Stats(cb func(key SeriesKey, field string, val float64)) {}
 
 // StatSourceFromStruct uses the reflect package to implement the Stats call
 // across all float64-castable fields of the struct.
-func StatSourceFromStruct(measurement string, structData interface{}) StatSource {
+func StatSourceFromStruct(key SeriesKey, structData interface{}) StatSource {
 	val := deref(reflect.ValueOf(structData))
 
 	typ := val.Type()
@@ -32,20 +32,19 @@ func StatSourceFromStruct(measurement string, structData interface{}) StatSource
 		return emptyStatSource{}
 	}
 
-	return StatSourceFunc(func(cb func(series Series, val float64)) {
+	return StatSourceFunc(func(cb func(key SeriesKey, field string, val float64)) {
 		for i := 0; i < typ.NumField(); i++ {
 			field := deref(val.Field(i))
 			field_type := field.Type()
 
 			if field_type.Kind() == reflect.Struct && field.CanInterface() {
-				child_source := StatSourceFromStruct(measurement, field.Interface())
-				child_source.Stats(func(series Series, val float64) {
-					series.Field = typ.Field(i).Name + "." + series.Field
-					cb(series, val)
+				child_source := StatSourceFromStruct(key, field.Interface())
+				child_source.Stats(func(key SeriesKey, field string, val float64) {
+					cb(key, typ.Field(i).Name+"."+field, val)
 				})
 
 			} else if field_type.ConvertibleTo(f64Type) {
-				cb(NewSeries(measurement, typ.Field(i).Name), field.Convert(f64Type).Float())
+				cb(key, typ.Field(i).Name, field.Convert(f64Type).Float())
 			}
 		}
 	})

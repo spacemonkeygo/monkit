@@ -33,13 +33,13 @@ var (
 // unique running processes being monitored there are. Not expected to be
 // called directly, as this StatSource is added by Register.
 func Process() monkit.StatSource {
-	return monkit.StatSourceFunc(func(cb func(series monkit.Series, val float64)) {
-		cb(monkit.NewSeries("control", "value"), 1)
+	return monkit.StatSourceFunc(func(cb func(key monkit.SeriesKey, field string, val float64)) {
+		cb(monkit.NewSeriesKey("process"), "control", 1)
 		c, err := processCRC()
 		if err == nil {
-			cb(monkit.NewSeries("crc", "value"), float64(c))
+			cb(monkit.NewSeriesKey("process"), "crc", float64(c))
 		}
-		cb(monkit.NewSeries("uptime", "value"), (monotime.Monotonic() - startTime).Seconds())
+		cb(monkit.NewSeriesKey("process"), "uptime", (monotime.Monotonic() - startTime).Seconds())
 	})
 }
 
@@ -67,6 +67,4 @@ func getProcessCRC() (uint32, error) {
 	return c.Sum32(), err
 }
 
-func init() {
-	registrations["process"] = Process()
-}
+func init() { registrations = append(registrations, Process()) }

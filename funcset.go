@@ -35,7 +35,7 @@ type funcSet struct {
 var (
 	// used to signify that we've specifically added a nil function, since nil is
 	// used internally to specify an empty set.
-	nilFunc = &Func{name: "nil function"}
+	nilFunc = &Func{}
 )
 
 func (s *funcSet) Add(f *Func) {

@@ -36,9 +36,9 @@ type IntVal struct {
 }
 
 // NewIntVal creates an IntVal
-func NewIntVal() (v *IntVal) {
+func NewIntVal(key SeriesKey) (v *IntVal) {
 	v = &IntVal{}
-	initIntDist(&v.dist)
+	initIntDist(&v.dist, key)
 	return v
 }
 
@@ -50,14 +50,12 @@ func (v *IntVal) Observe(val int64) {
 }
 
 // Stats implements the StatSource interface.
-func (v *IntVal) Stats(cb func(series Series, val float64)) {
+func (v *IntVal) Stats(cb func(key SeriesKey, field string, val float64)) {
 	v.mtx.Lock()
 	vd := v.dist.Copy()
 	v.mtx.Unlock()
-	vd.Stats(func(series Series, val float64) {
-		series.Measurement = "int_val"
-		cb(series, val)
-	})
+
+	vd.Stats(cb)
 }
 
 // Quantile returns an estimate of the requested quantile of observed values.
@@ -86,9 +84,9 @@ type FloatVal struct {
 }
 
 // NewFloatVal creates a FloatVal
-func NewFloatVal() (v *FloatVal) {
+func NewFloatVal(key SeriesKey) (v *FloatVal) {
 	v = &FloatVal{}
-	initFloatDist(&v.dist)
+	initFloatDist(&v.dist, key)
 	return v
 }
 
@@ -100,14 +98,12 @@ func (v *FloatVal) Observe(val float64) {
 }
 
 // Stats implements the StatSource interface.
-func (v *FloatVal) Stats(cb func(series Series, val float64)) {
+func (v *FloatVal) Stats(cb func(key SeriesKey, field string, val float64)) {
 	v.mtx.Lock()
 	vd := v.dist.Copy()
 	v.mtx.Unlock()
-	vd.Stats(func(series Series, val float64) {
-		series.Measurement = "float_val"
-		cb(series, val)
-	})
+
+	vd.Stats(cb)
 }
 
 // Quantile returns an estimate of the requested quantile of observed values.
@@ -135,11 +131,12 @@ type BoolVal struct {
 	trues  int64
 	falses int64
 	recent int32
+	key    SeriesKey
 }
 
 // NewBoolVal creates a BoolVal
-func NewBoolVal() *BoolVal {
-	return &BoolVal{}
+func NewBoolVal(key SeriesKey) *BoolVal {
+	return &BoolVal{key: key}
 }
 
 // Observe observes a boolean value
@@ -154,14 +151,14 @@ func (v *BoolVal) Observe(val bool) {
 }
 
 // Stats implements the StatSource interface.
-func (v *BoolVal) Stats(cb func(series Series, val float64)) {
+func (v *BoolVal) Stats(cb func(key SeriesKey, field string, val float64)) {
 	trues := atomic.LoadInt64(&v.trues)
 	falses := atomic.LoadInt64(&v.falses)
 	recent := atomic.LoadInt32(&v.recent)
-	cb(NewSeries("bool_val", "disposition"), float64(trues-falses))
-	cb(NewSeries("bool_val", "false"), float64(falses))
-	cb(NewSeries("bool_val", "recent"), float64(recent))
-	cb(NewSeries("bool_val", "true"), float64(trues))
+	cb(v.key, "disposition", float64(trues-falses))
+	cb(v.key, "false", float64(falses))
+	cb(v.key, "recent", float64(recent))
+	cb(v.key, "true", float64(trues))
 }
 
 // StructVal keeps track of a structure of data. Constructed using
@@ -176,16 +173,14 @@ func (v *BoolVal) Stats(cb func(series Series, val float64)) {
 //   }
 //
 type StructVal struct {
-	mtx         sync.Mutex
-	measurement string
-	recent      interface{}
+	mtx    sync.Mutex
+	recent interface{}
+	key    SeriesKey
 }
 
 // NewStructVal creates a StructVal
-func NewStructVal(measurement string) *StructVal {
-	return &StructVal{
-		measurement: measurement,
-	}
+func NewStructVal(key SeriesKey) *StructVal {
+	return &StructVal{key: key}
 }
 
 // Observe observes a struct value. Only the fields convertable to float64 will
@@ -198,12 +193,12 @@ func (v *StructVal) Observe(val interface{}) {
 }
 
 // Stats implements the StatSource interface.
-func (v *StructVal) Stats(cb func(series Series, val float64)) {
+func (v *StructVal) Stats(cb func(key SeriesKey, field string, val float64)) {
 	v.mtx.Lock()
 	recent := v.recent
 	v.mtx.Unlock()
 
 	if recent != nil {
-		StatSourceFromStruct(v.measurement, recent).Stats(cb)
+		StatSourceFromStruct(v.key, recent).Stats(cb)
 	}
 }
