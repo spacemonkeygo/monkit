@@ -18,4 +18,4 @@ package environment
 
 import "github.com/spacemonkeygo/monkit/v3"
 
-func proc(cb func(series monkit.Series, val float64)) {}
+func proc(cb func(series monkit.SeriesKey, field string, val float64)) {}
