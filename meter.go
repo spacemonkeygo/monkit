@@ -59,7 +59,7 @@ type Meter struct {
 
 // NewMeter constructs a Meter
 func NewMeter(key SeriesKey) *Meter {
-	rv := &Meter{}
+	rv := &Meter{key: key}
 	now := monotime.Monotonic()
 	for i := 0; i < ticksToKeep; i++ {
 		rv.slices[i].start = now
@@ -170,7 +170,7 @@ type DiffMeter struct {
 
 // Constructs a DiffMeter.
 func NewDiffMeter(key SeriesKey, meter1, meter2 *Meter) *DiffMeter {
-	return &DiffMeter{meter1: meter1, meter2: meter2}
+	return &DiffMeter{key: key, meter1: meter1, meter2: meter2}
 }
 
 // Stats implements the StatSource interface

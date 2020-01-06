@@ -39,7 +39,6 @@ import (
 type Timer struct {
 	mtx   sync.Mutex
 	times *DurationDist
-	key   string
 }
 
 // NewTimer constructs a new Timer.
