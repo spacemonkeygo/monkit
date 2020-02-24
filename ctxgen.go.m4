@@ -340,3 +340,19 @@ func (l *spanObserverTuple) Finish(ctx context.Context, s *Span, err error, pani
 		cdr.Finish(ctx, s, err, panicked, finish)
 	}
 }
+
+type resetContext struct {
+	context.Context
+}
+
+func (r resetContext) Value(key interface{}) interface{} {
+	if key == spanKey {
+		return nil
+	}
+	return r.Context.Value(key)
+}
+
+// ResetContextSpan returns a new context with Span information removed.
+func ResetContextSpan(ctx context.Context) context.Context {
+	return resetContext{Context: ctx}
+}
