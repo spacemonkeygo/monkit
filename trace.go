@@ -37,8 +37,8 @@ type SpanObserver interface {
 // like a stack frame.
 type Trace struct {
 	// sync/atomic things
-	spanObservers *spanObserverTuple
 	spanCount     int64
+	spanObservers *spanObserverTuple
 
 	// immutable things from construction
 	id int64
