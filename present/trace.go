@@ -16,6 +16,7 @@ package present
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
 	"io"
 	"strings"
@@ -151,7 +152,7 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 		switch {
 		case s.Panicked:
 			color = "rgb(255,0,0)"
-		case unwrapError(s.Err) == contextCanceled:
+		case unwrapError(s.Err) == context.Canceled:
 			color = "rgb(255,255,0)"
 		case s.Err != nil:
 			color = "rgb(255,144,0)"
@@ -278,7 +279,9 @@ func SpansToJSON(w io.Writer, spans []*collect.FinishedSpan) error {
 func watchForSpansWithKeepalive(reg *monkit.Registry, w io.Writer,
 	matcher func(s *monkit.Span) bool, keepalive []byte) (
 	spans []*collect.FinishedSpan, write_err error) {
-	ctx, cancel := contextWithCancel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	abortTimerCh := make(chan struct{})
 	var abortTimerChClosed bool

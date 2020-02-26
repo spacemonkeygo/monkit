@@ -16,6 +16,7 @@ package monkit
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -37,6 +38,7 @@ type SpanObserver interface {
 type Trace struct {
 	// sync/atomic things
 	spanObservers *spanObserverTuple
+	spanCount     int64
 
 	// immutable things from construction
 	id int64
@@ -126,3 +128,9 @@ func (t *Trace) Set(key, val interface{}) {
 	}
 	t.mtx.Unlock()
 }
+
+func (t *Trace) incrementSpans() { atomic.AddInt64(&t.spanCount, 1) }
+func (t *Trace) decrementSpans() { atomic.AddInt64(&t.spanCount, -1) }
+
+// Spans returns the number of spans currently associated with the Trace.
+func (t *Trace) Spans() int64 { return atomic.LoadInt64(&t.spanCount) }

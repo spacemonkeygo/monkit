@@ -15,6 +15,7 @@
 package monkit
 
 import (
+	"context"
 	"io"
 	"net"
 	"os"
@@ -81,9 +82,9 @@ func getErrorName(err error) string {
 		return "Short Buffer Error"
 	case io.ErrShortWrite:
 		return "Short Write Error"
-	case contextCanceled:
+	case context.Canceled:
 		return "Canceled"
-	case contextDeadlineExceeded:
+	case context.DeadlineExceeded:
 		return "Timeout"
 	}
 	if isErrnoError(err) {
