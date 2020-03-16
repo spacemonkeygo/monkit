@@ -39,10 +39,10 @@ func callerFunc(frames int) string {
 		return "unknown"
 	}
 	frame, _ := runtime.CallersFrames(pc[:]).Next()
-	if frame.Func == nil {
+	if frame.Function == "" {
 		return "unknown"
 	}
-	slash_pieces := strings.Split(frame.Func.Name(), "/")
+	slash_pieces := strings.Split(frame.Function, "/")
 	dot_pieces := strings.SplitN(slash_pieces[len(slash_pieces)-1], ".", 2)
 	return dot_pieces[len(dot_pieces)-1]
 }
