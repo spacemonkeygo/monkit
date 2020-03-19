@@ -15,6 +15,8 @@
 package monkit
 
 import (
+	crand "crypto/rand"
+	"encoding/binary"
 	"math/rand"
 	"sync/atomic"
 	"time"
@@ -26,9 +28,15 @@ var (
 )
 
 func init() {
-	rng := rand.New(rand.NewSource(time.Now().Unix()))
-	idCounter = uint64(rng.Int63())
-	inc = uint64(rng.Int63() | 3)
+	var buf [16]byte
+	if _, err := crand.Read(buf[:]); err == nil {
+		idCounter = binary.BigEndian.Uint64(buf[0:8]) >> 1
+		inc = binary.BigEndian.Uint64(buf[0:8])>>1 | 3
+	} else {
+		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		idCounter = uint64(rng.Int63())
+		inc = uint64(rng.Int63() | 3)
+	}
 }
 
 // NewId returns a random integer intended for use when constructing new
