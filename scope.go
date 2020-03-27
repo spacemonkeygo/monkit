@@ -67,13 +67,13 @@ func (s *Scope) newSource(name string, constructor func() StatSource) (
 	return ss
 }
 
-// FuncNamed retrieves or creates a Func named using the given name and tags.
-// See Func() for automatic name determination.
+// FuncNamed retrieves or creates a Func named using the given name and
+// SeriesTags. See Func() for automatic name determination.
 //
-// Each unique combination of tags (key/value) will result in a unique Func.
-// Tags are not sorted, so keep the order consistent to avoid creating new
-// Funcs.
-func (s *Scope) FuncNamed(name string, tags ...Tag) *Func {
+// Each unique combination of keys/values in each SeriesTag will result in a
+// unique Func. SeriesTags are not sorted, so keep the order consistent to avoid
+// unintentionally creating new unique Funcs.
+func (s *Scope) FuncNamed(name string, tags ...SeriesTag) *Func {
 	var sourceName strings.Builder
 	sourceName.WriteString("func:")
 	sourceName.WriteString(name)

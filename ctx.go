@@ -177,11 +177,13 @@ type Task func(ctx *context.Context, args ...interface{}) func(*error)
 //     ...
 //   }
 //
-// Task allows you to include a series of Tags. Each unique tag key/value
-// combination creates a unique Func. Example:
+// Task allows you to include SeriesTags. WARNING: Each unique tag key/value
+// combination creates a unique Func and a unique series. SeriesTags should
+// only be used for low-cardinality values that you intentionally wish to
+// result in a unique series. Example:
 //
 //   func MyFunc(ctx context.Context, arg1, arg2 string) (err error) {
-//     defer mon.Task(monkit.NewTag("key1", "val1"))(&ctx)(&err)
+//     defer mon.Task(monkit.NewSeriesTag("key1", "val1"))(&ctx)(&err)
 //     ...
 //   }
 //
@@ -191,7 +193,7 @@ type Task func(ctx *context.Context, args ...interface{}) func(*error)
 //
 // If you want to control Trace creation, see Func.ResetTrace and
 // Func.RemoteTrace
-func (s *Scope) Task(tags ...Tag) Task {
+func (s *Scope) Task(tags ...SeriesTag) Task {
 	var initOnce sync.Once
 	var f *Func
 	init := func() {

@@ -68,7 +68,7 @@ func taskArgs(f *Func, args []interface{}) bool {
 // TaskNamed is like Task except you can choose the name of the associated
 // Func.
 //
-// You may also include any tags which should be included with the Task.
-func (s *Scope) TaskNamed(name string, tags ...Tag) Task {
+// You may also include any SeriesTags which should be included with the Task.
+func (s *Scope) TaskNamed(name string, tags ...SeriesTag) Task {
 	return s.FuncNamed(name, tags...).Task
 }
