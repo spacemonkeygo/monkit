@@ -16,6 +16,7 @@ package monkit
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -66,11 +67,28 @@ func (s *Scope) newSource(name string, constructor func() StatSource) (
 	return ss
 }
 
-// FuncNamed retrieves or creates a Func named after the given name. See
-// Func() for automatic name determination.
-func (s *Scope) FuncNamed(name string) *Func {
-	source := s.newSource("func:"+name, func() StatSource {
-		return newFunc(s, NewSeriesKey("function").WithTag("name", name))
+// FuncNamed retrieves or creates a Func named using the given name and tags.
+// See Func() for automatic name determination.
+//
+// Each unique combination of tags (key/value) will result in a unique Func.
+// Tags are not sorted, so keep the order consistent to avoid creating new
+// Funcs.
+func (s *Scope) FuncNamed(name string, tags ...Tag) *Func {
+	var sourceName strings.Builder
+	sourceName.WriteString("func:")
+	sourceName.WriteString(name)
+	for _, tag := range tags {
+		sourceName.WriteByte(',')
+		sourceName.WriteString(tag.Key)
+		sourceName.WriteByte('=')
+		sourceName.WriteString(tag.Val)
+	}
+	source := s.newSource(sourceName.String(), func() StatSource {
+		key := NewSeriesKey("function").WithTag("name", name)
+		for _, tag := range tags {
+			key = key.WithTag(tag.Key, tag.Val)
+		}
+		return newFunc(s, key)
 	})
 	f, ok := source.(*Func)
 	if !ok {

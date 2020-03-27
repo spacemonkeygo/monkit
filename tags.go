@@ -19,6 +19,16 @@ import (
 	"strings"
 )
 
+// Tag is a key/value pair representing a tag
+type Tag struct {
+	Key, Val string
+}
+
+// NewTag creates a new tag
+func NewTag(key, val string) Tag {
+	return Tag{key, val}
+}
+
 // TagSet is an immutible collection of tag, value pairs.
 type TagSet struct {
 	all map[string]string
