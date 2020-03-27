@@ -19,6 +19,17 @@ import (
 	"strings"
 )
 
+// SeriesTag is a key/value pair. When used with a measurement name, each set
+// of unique key/value pairs represents a new unique series.
+type SeriesTag struct {
+	Key, Val string
+}
+
+// NewTag creates a new tag
+func NewSeriesTag(key, val string) SeriesTag {
+	return SeriesTag{key, val}
+}
+
 // TagSet is an immutible collection of tag, value pairs.
 type TagSet struct {
 	all map[string]string
