@@ -17,8 +17,6 @@ package monkit
 import (
 	"sync/atomic"
 	"time"
-
-	"github.com/spacemonkeygo/monotime"
 )
 
 // FuncStats keeps track of statistics about a possible function's execution.
@@ -202,11 +200,11 @@ func (f *FuncStats) FailureTimes() *DurationDist {
 //
 func (f *FuncStats) Observe() func(errptr *error) {
 	f.start(nil)
-	start := monotime.Now()
+	start := time.Now()
 	return func(errptr *error) {
 		rec := recover()
 		panicked := rec != nil
-		finish := monotime.Now()
+		finish := time.Now()
 		var err error
 		if errptr != nil {
 			err = *errptr

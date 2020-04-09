@@ -17,8 +17,6 @@ package monkit
 import (
 	"sync"
 	"time"
-
-	"github.com/spacemonkeygo/monotime"
 )
 
 const (
@@ -32,7 +30,7 @@ var (
 
 type meterBucket struct {
 	count int64
-	start time.Duration
+	start time.Time
 }
 
 // Meter keeps track of events and their rates over time.
@@ -60,7 +58,7 @@ type Meter struct {
 // NewMeter constructs a Meter
 func NewMeter(key SeriesKey) *Meter {
 	rv := &Meter{key: key}
-	now := monotime.Monotonic()
+	now := time.Now()
 	for i := 0; i < ticksToKeep; i++ {
 		rv.slices[i].start = now
 	}
@@ -74,7 +72,7 @@ func NewMeter(key SeriesKey) *Meter {
 func (e *Meter) Reset(new_total int64) {
 	e.mtx.Lock()
 	e.total = new_total
-	now := monotime.Monotonic()
+	now := time.Now()
 	for _, slice := range e.slices {
 		slice.count = 0
 		slice.start = now
@@ -103,7 +101,7 @@ func (e *Meter) Mark64(amount int64) {
 	e.mtx.Unlock()
 }
 
-func (e *Meter) tick(now time.Duration) {
+func (e *Meter) tick(now time.Time) {
 	e.mtx.Lock()
 	// only advance meter buckets if something happened. otherwise
 	// rare events will always just have zero rates.
@@ -115,7 +113,7 @@ func (e *Meter) tick(now time.Duration) {
 	e.mtx.Unlock()
 }
 
-func (e *Meter) stats(now time.Duration) (rate float64, total int64) {
+func (e *Meter) stats(now time.Time) (rate float64, total int64) {
 	current := int64(0)
 	e.mtx.Lock()
 	start := e.slices[0].start
@@ -125,7 +123,7 @@ func (e *Meter) stats(now time.Duration) (rate float64, total int64) {
 	total = e.total
 	e.mtx.Unlock()
 	total += current
-	duration := (now - start).Seconds()
+	duration := now.Sub(start).Seconds()
 	if duration > 0 {
 		rate = float64(current) / duration
 	} else {
@@ -136,19 +134,19 @@ func (e *Meter) stats(now time.Duration) (rate float64, total int64) {
 
 // Rate returns the rate over the internal sliding window
 func (e *Meter) Rate() float64 {
-	rate, _ := e.stats(monotime.Monotonic())
+	rate, _ := e.stats(time.Now())
 	return rate
 }
 
 // Total returns the total over the internal sliding window
 func (e *Meter) Total() float64 {
-	_, total := e.stats(monotime.Monotonic())
+	_, total := e.stats(time.Now())
 	return float64(total)
 }
 
 // Stats implements the StatSource interface
 func (e *Meter) Stats(cb func(key SeriesKey, field string, val float64)) {
-	rate, total := e.stats(monotime.Monotonic())
+	rate, total := e.stats(time.Now())
 	cb(e.key, "rate", rate)
 	cb(e.key, "total", float64(total))
 }
@@ -175,7 +173,7 @@ func NewDiffMeter(key SeriesKey, meter1, meter2 *Meter) *DiffMeter {
 
 // Stats implements the StatSource interface
 func (m *DiffMeter) Stats(cb func(key SeriesKey, field string, val float64)) {
-	now := monotime.Monotonic()
+	now := time.Now()
 	rate1, total1 := m.meter1.stats(now)
 	rate2, total2 := m.meter2.stats(now)
 	cb(m.key, "rate", rate1-rate2)
@@ -204,7 +202,7 @@ func (t *ticker) run() {
 		t.mtx.Lock()
 		meters := t.meters // this is safe since we only use append
 		t.mtx.Unlock()
-		now := monotime.Monotonic()
+		now := time.Now()
 		for _, m := range meters {
 			m.tick(now)
 		}

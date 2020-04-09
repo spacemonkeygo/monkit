@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"sort"
 	"time"
-
-	"github.com/spacemonkeygo/monotime"
 )
 
 type ctxKey int
@@ -61,7 +59,7 @@ func (s *Span) orphan() {
 
 // Duration returns the current amount of time the Span has been running
 func (s *Span) Duration() time.Duration {
-	return monotime.Now().Sub(s.start)
+	return time.Since(s.start)
 }
 
 // Start returns the time the Span started.

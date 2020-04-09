@@ -17,8 +17,6 @@ package monkit
 import (
 	"sync"
 	"time"
-
-	"github.com/spacemonkeygo/monotime"
 )
 
 // Timer is a threadsafe convenience wrapper around a DurationDist. You should
@@ -49,20 +47,20 @@ func NewTimer(key SeriesKey) *Timer {
 // Start constructs a RunningTimer
 func (t *Timer) Start() *RunningTimer {
 	return &RunningTimer{
-		start: monotime.Monotonic(),
+		start: time.Now(),
 		t:     t}
 }
 
 // RunningTimer should be constructed from a Timer.
 type RunningTimer struct {
-	start   time.Duration
+	start   time.Time
 	t       *Timer
 	stopped bool
 }
 
 // Elapsed just returns the amount of time since the timer started
 func (r *RunningTimer) Elapsed() time.Duration {
-	return monotime.Monotonic() - r.start
+	return time.Since(r.start)
 }
 
 // Stop stops the timer, adds the duration to the statistics information, and

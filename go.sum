@@ -1,5 +1,3 @@
-github.com/spacemonkeygo/monotime v0.0.0-20180824235756-e3f48a95f98a h1:8+cCjxhToanKmxLIbuyBNe2EnpgwhiivsIaRJstDRFA=
-github.com/spacemonkeygo/monotime v0.0.0-20180824235756-e3f48a95f98a/go.mod h1:ul4bvvnCOPZgq8w0nTkSmWVg/hauVpFS97Am1YM1XXo=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/net v0.0.0-20190923162816-aa69164e4478 h1:l5EDrHhldLYb3ZRHDUhXF7Om7MvYXnkV9/iQNo1lX6g=
 golang.org/x/net v0.0.0-20190923162816-aa69164e4478/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=

@@ -18,13 +18,13 @@ import (
 	"hash/crc32"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/spacemonkeygo/monkit/v3"
-	"github.com/spacemonkeygo/monotime"
 )
 
 var (
-	startTime = monotime.Monotonic()
+	startTime = time.Now()
 )
 
 // Process returns a StatSource including generic process data, such as
@@ -39,7 +39,7 @@ func Process() monkit.StatSource {
 		if err == nil {
 			cb(monkit.NewSeriesKey("process"), "crc", float64(c))
 		}
-		cb(monkit.NewSeriesKey("process"), "uptime", (monotime.Monotonic() - startTime).Seconds())
+		cb(monkit.NewSeriesKey("process"), "uptime", time.Since(startTime).Seconds())
 	})
 }
 

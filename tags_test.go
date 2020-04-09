@@ -59,7 +59,7 @@ func TestTagSet(t *testing.T) {
 func TestTagSetFuzz(t *testing.T) {
 	ts, idx := new(TagSet), 0
 	tagSets := []*TagSet{ts}
-	expected := []map[string]string{map[string]string{}}
+	expected := []map[string]string{{}}
 
 	for i := 0; i < 10000; i++ {
 		switch rand.Intn(10) {
