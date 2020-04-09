@@ -17,6 +17,8 @@ package monkit
 import (
 	"sync"
 	"time"
+
+	"github.com/spacemonkeygo/monkit/v3/monotime"
 )
 
 // Timer is a threadsafe convenience wrapper around a DurationDist. You should
@@ -47,7 +49,7 @@ func NewTimer(key SeriesKey) *Timer {
 // Start constructs a RunningTimer
 func (t *Timer) Start() *RunningTimer {
 	return &RunningTimer{
-		start: time.Now(),
+		start: monotime.Now(),
 		t:     t}
 }
 

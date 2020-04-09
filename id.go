@@ -19,7 +19,8 @@ import (
 	"encoding/binary"
 	"math/rand"
 	"sync/atomic"
-	"time"
+
+	"github.com/spacemonkeygo/monkit/v3/monotime"
 )
 
 var (
@@ -33,7 +34,7 @@ func init() {
 		idCounter = binary.BigEndian.Uint64(buf[0:8]) >> 1
 		inc = binary.BigEndian.Uint64(buf[0:8])>>1 | 3
 	} else {
-		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		rng := rand.New(rand.NewSource(monotime.Now().UnixNano()))
 		idCounter = uint64(rng.Int63())
 		inc = uint64(rng.Int63() | 3)
 	}

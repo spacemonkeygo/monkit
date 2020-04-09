@@ -21,10 +21,11 @@ import (
 	"time"
 
 	"github.com/spacemonkeygo/monkit/v3"
+	"github.com/spacemonkeygo/monkit/v3/monotime"
 )
 
 var (
-	startTime = time.Now()
+	startTime = monotime.Now()
 )
 
 // Process returns a StatSource including generic process data, such as

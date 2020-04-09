@@ -18,6 +18,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/spacemonkeygo/monkit/v3/monotime"
 )
 
 // Span represents a 'span' of execution. A span is analogous to a stack frame.
@@ -77,7 +79,7 @@ func newSpan(ctx context.Context, f *Func, args []interface{},
 
 	s = &Span{
 		id:      id,
-		start:   time.Now(),
+		start:   monotime.Now(),
 		f:       f,
 		trace:   trace,
 		parent:  parent,
@@ -104,7 +106,7 @@ func newSpan(ctx context.Context, f *Func, args []interface{},
 		rec := recover()
 		panicked := rec != nil
 
-		finish := time.Now()
+		finish := monotime.Now()
 
 		var err error
 		if errptr != nil {
