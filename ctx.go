@@ -137,7 +137,9 @@ func newSpan(ctx context.Context, f *Func, args []interface{},
 
 		trace.decrementSpans()
 
-		if observer != nil {
+		// Re-fetch the observer, in case the value has changed since newSpan
+		// was called
+		if observer := trace.getObserver(); observer != nil {
 			observer.Finish(sctx, s, err, panicked, finish)
 		}
 
