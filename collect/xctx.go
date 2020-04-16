@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"sync"
 
-	"golang.org/x/net/context"
 	"github.com/spacemonkeygo/monkit/v3"
+	"golang.org/x/net/context"
 )
 
 // WatchForSpans will watch for spans that 'matcher' returns true for. As soon
