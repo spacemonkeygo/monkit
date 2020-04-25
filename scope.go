@@ -40,7 +40,7 @@ func newScope(r *Registry, name string) *Scope {
 // Func retrieves or creates a Func named after the currently executing
 // function name (via runtime.Caller. See FuncNamed to choose your own name.
 func (s *Scope) Func() *Func {
-	return s.FuncNamed(callerFunc(1))
+	return s.FuncNamed(callerFunc(0))
 }
 
 func (s *Scope) newSource(name string, constructor func() StatSource) (
