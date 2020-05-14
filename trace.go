@@ -119,13 +119,6 @@ func (t *Trace) GetAll() (val map[interface{}]interface{}) {
 	return new
 }
 
-// SetAll replace all key/value on a trace with a new sets of key/value.
-func (t *Trace) copyFrom(s *Trace) {
-	t.mtx.Lock()
-	defer t.mtx.Unlock()
-	t.vals = s.vals
-}
-
 // Get returns a value associated with a key on a trace. See Set.
 func (t *Trace) Get(key interface{}) (val interface{}) {
 	t.mtx.Lock()
@@ -145,6 +138,13 @@ func (t *Trace) Set(key, val interface{}) {
 		t.vals[key] = val
 	}
 	t.mtx.Unlock()
+}
+
+// copyFrom replace all key/value on a trace with a new sets of key/value.
+func (t *Trace) copyFrom(s *Trace) {
+	t.mtx.Lock()
+	defer t.mtx.Unlock()
+	t.vals = s.vals
 }
 
 func (t *Trace) incrementSpans() { atomic.AddInt64(&t.spanCount, 1) }
