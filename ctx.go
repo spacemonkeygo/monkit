@@ -289,7 +289,7 @@ func (f *Func) RestartTrace(ctx *context.Context, args ...interface{}) func(*err
 		return nil
 	}
 	trace := NewTrace(NewId())
-	trace.SetAll(existingTrace.GetAll())
+	trace.copyFrom(existingTrace)
 	f.scope.r.observeTrace(trace)
 	s, exit := newSpan(*ctx, f, args, trace.Id(), trace)
 
