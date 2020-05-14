@@ -112,14 +112,18 @@ func (t *Trace) Id() int64 { return t.id }
 func (t *Trace) GetAll() (val map[interface{}]interface{}) {
 	t.mtx.Lock()
 	defer t.mtx.Unlock()
-	return t.vals
+	new := make(map[interface{}]interface{}, len(t.vals))
+	for k, v := range t.vals {
+		new[k] = v
+	}
+	return new
 }
 
 // SetAll replace all key/value on a trace with a new sets of key/value.
-func (t *Trace) SetAll(vals map[interface{}]interface{}) {
+func (t *Trace) copyFrom(s *Trace) {
 	t.mtx.Lock()
 	defer t.mtx.Unlock()
-	t.vals = vals
+	t.vals = s.vals
 }
 
 // Get returns a value associated with a key on a trace. See Set.
