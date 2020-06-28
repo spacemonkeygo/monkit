@@ -49,6 +49,7 @@ Example usage
 
 		mon.BoolVal("was-4").Observe(res == 4)
 		mon.IntVal("res").Observe(int64(res))
+		mon.DurationVal("took").Observe(t2.Sub(t1))
 		mon.Counter("calls").Inc(1)
 		mon.Gauge("arg1", func() float64 { return float64(arg1) })
 		mon.Meter("arg2").Mark(arg2)

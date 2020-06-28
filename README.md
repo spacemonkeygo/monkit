@@ -63,7 +63,8 @@ func ComputeThing(ctx context.Context, arg1, arg2 int) (res int, err error) {
 	}
 
 	mon.BoolVal("was-4").Observe(res == 4)
-	mon.IntVal("res").Observe(int64(res))
+  mon.IntVal("res").Observe(int64(res))
+  mon.DurationVal("since").Observe(time.Since(then))
 	mon.Counter("calls").Inc(1)
 	mon.Gauge("arg1", func() float64 { return float64(arg1) })
 	mon.Meter("arg2").Mark(arg2)
