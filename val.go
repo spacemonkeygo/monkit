@@ -17,6 +17,7 @@ package monkit
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // IntVal is a convenience wrapper around an IntDist. Constructed using
@@ -201,4 +202,52 @@ func (v *StructVal) Stats(cb func(key SeriesKey, field string, val float64)) {
 	if recent != nil {
 		StatSourceFromStruct(v.key, recent).Stats(cb)
 	}
+}
+
+// DurationVal is a convenience wrapper around an DurationVal. Constructed using
+// NewDurationVal, though its expected usage is like:
+//
+//   var mon = monkit.Package()
+//
+//   func MyFunc() {
+//     ...
+//     mon.DurationVal("time").Observe(val)
+//     ...
+//   }
+//
+type DurationVal struct {
+	mtx  sync.Mutex
+	dist DurationDist
+}
+
+// NewDurationVal creates an DurationVal
+func NewDurationVal(key SeriesKey) (v *DurationVal) {
+	v = &DurationVal{}
+	initDurationDist(&v.dist, key)
+	return v
+}
+
+// Observe observes an integer value
+func (v *DurationVal) Observe(val time.Duration) {
+	v.mtx.Lock()
+	v.dist.Insert(val)
+	v.mtx.Unlock()
+}
+
+// Stats implements the StatSource interface.
+func (v *DurationVal) Stats(cb func(key SeriesKey, field string, val float64)) {
+	v.mtx.Lock()
+	vd := v.dist.Copy()
+	v.mtx.Unlock()
+
+	vd.Stats(cb)
+}
+
+// Quantile returns an estimate of the requested quantile of observed values.
+// 0 <= quantile <= 1
+func (v *DurationVal) Quantile(quantile float64) (rv time.Duration) {
+	v.mtx.Lock()
+	rv = v.dist.Query(quantile)
+	v.mtx.Unlock()
+	return rv
 }

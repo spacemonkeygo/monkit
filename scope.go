@@ -204,6 +204,17 @@ func (s *Scope) StructVal(name string) *StructVal {
 	return m
 }
 
+// DurationVal retrieves or creates a DurationVal after the given name.
+func (s *Scope) DurationVal(name string) *DurationVal {
+	source := s.newSource(name, func() StatSource { return NewDurationVal(NewSeriesKey(name)) })
+	m, ok := source.(*DurationVal)
+	if !ok {
+		panic(fmt.Sprintf("%s already used for another stats source: %#v",
+			name, source))
+	}
+	return m
+}
+
 // Timer retrieves or creates a Timer after the given name.
 func (s *Scope) Timer(name string) *Timer {
 	source := s.newSource(name, func() StatSource { return NewTimer(NewSeriesKey(name)) })
