@@ -34,18 +34,31 @@ type Annotation struct {
 
 func (s *Span) addChild(child *Span) {
 	s.mtx.Lock()
-	s.children.Add(child)
 	done := s.done
+	parent := s.parent
+	if !done {
+		s.children.Add(child)
+	}
 	s.mtx.Unlock()
+
 	if done {
-		child.orphan()
+		if parent == nil {
+			child.orphan()
+		} else {
+			parent.addChild(child)
+		}
 	}
 }
 
 func (s *Span) removeChild(child *Span) {
 	s.mtx.Lock()
+	parent := s.parent
 	s.children.Remove(child)
 	s.mtx.Unlock()
+
+	if parent != nil {
+		parent.removeChild(child)
+	}
 }
 
 func (s *Span) orphan() {
