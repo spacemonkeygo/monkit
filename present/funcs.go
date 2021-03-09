@@ -28,6 +28,8 @@ func formatDist(data *monkit.DurationDist, indent string) (result string) {
 	}
 	result += fmt.Sprintf("%savg: %s\n", indent, data.FullAverage())
 	result += fmt.Sprintf("%sravg: %s\n", indent, data.ReservoirAverage())
+	result += fmt.Sprintf("%srecent: %s\n", indent, data.Recent)
+	result += fmt.Sprintf("%ssum: %s\n", indent, data.Sum)
 	return result
 }
 
