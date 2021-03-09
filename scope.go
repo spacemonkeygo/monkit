@@ -74,7 +74,13 @@ func (s *Scope) newSource(name string, constructor func() StatSource) (
 // unique Func. SeriesTags are not sorted, so keep the order consistent to avoid
 // unintentionally creating new unique Funcs.
 func (s *Scope) FuncNamed(name string, tags ...SeriesTag) *Func {
+	var sourceNameSize int
+	sourceNameSize += 5 + len(name) + len(tags)*2
+	for _, tag := range tags {
+		sourceNameSize += len(tag.Key) + len(tag.Val)
+	}
 	var sourceName strings.Builder
+	sourceName.Grow(sourceNameSize)
 	sourceName.WriteString("func:")
 	sourceName.WriteString(name)
 	for _, tag := range tags {
@@ -83,6 +89,7 @@ func (s *Scope) FuncNamed(name string, tags ...SeriesTag) *Func {
 		sourceName.WriteByte('=')
 		sourceName.WriteString(tag.Val)
 	}
+
 	source := s.newSource(sourceName.String(), func() StatSource {
 		key := NewSeriesKey("function").WithTag("name", name)
 		for _, tag := range tags {

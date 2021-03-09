@@ -59,3 +59,28 @@ func (m *mockSpanObserver) Start(s *Span) {
 func (m *mockSpanObserver) Finish(s *Span, err error, panicked bool, finish time.Time) {
 	m.finishes++
 }
+
+func BenchmarkTask(b *testing.B) {
+	mon := Package()
+	pctx := context.Background()
+	for i := 0; i < b.N; i++ {
+		var err error
+		func() {
+			ctx := pctx
+			defer mon.Task()(&ctx)(&err)
+		}()
+	}
+}
+func BenchmarkTaskNested(b *testing.B) {
+	mon := Package()
+	pctx := context.Background()
+	var errout error
+	defer mon.Task()(&pctx)(&errout)
+	for i := 0; i < b.N; i++ {
+		var err error
+		func() {
+			ctx := pctx
+			defer mon.Task()(&ctx)(&err)
+		}()
+	}
+}

@@ -42,7 +42,32 @@ func callerFunc(frames int) string {
 	if frame.Function == "" {
 		return "unknown"
 	}
-	slash_pieces := strings.Split(frame.Function, "/")
-	dot_pieces := strings.SplitN(slash_pieces[len(slash_pieces)-1], ".", 2)
-	return dot_pieces[len(dot_pieces)-1]
+	funcname, ok := extractFuncName(frame.Function)
+	if !ok {
+		return "unknown"
+	}
+	return funcname
+}
+
+// extractFuncName splits fully qualified function name:
+//
+// Input:
+//   "github.com/spacemonkeygo/monkit/v3.BenchmarkTask.func1"
+// Output:
+//   funcname: "BenchmarkTask.func1"
+func extractFuncName(fullyQualifiedName string) (funcname string, ok bool) {
+	lastSlashPos := strings.LastIndexByte(fullyQualifiedName, '/')
+	if lastSlashPos < 0 || lastSlashPos+1 >= len(fullyQualifiedName) {
+		// fullyQualifiedName ended with slash.
+		return "", false
+	}
+
+	qualifiedName := fullyQualifiedName[lastSlashPos+1:]
+	packageDotPos := strings.IndexByte(qualifiedName, '.')
+	if packageDotPos < 0 || packageDotPos+1 >= len(qualifiedName) {
+		// qualifiedName ended with a dot
+		return "", false
+	}
+
+	return qualifiedName[packageDotPos+1:], true
 }

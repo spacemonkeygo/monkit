@@ -198,16 +198,15 @@ type Task func(ctx *context.Context, args ...interface{}) func(*error)
 func (s *Scope) Task(tags ...SeriesTag) Task {
 	var initOnce sync.Once
 	var f *Func
-	init := func() {
-		f = s.FuncNamed(callerFunc(3), tags...)
-	}
 	return Task(func(ctx *context.Context,
 		args ...interface{}) func(*error) {
 		ctx = cleanCtx(ctx)
 		if ctx == &taskSecret && taskArgs(f, args) {
 			return nil
 		}
-		initOnce.Do(init)
+		initOnce.Do(func() {
+			f = s.FuncNamed(callerFunc(3), tags...)
+		})
 		s, exit := newSpan(*ctx, f, args, NewId(), nil)
 		if ctx != &unparented {
 			*ctx = s
