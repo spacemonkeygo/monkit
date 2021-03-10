@@ -47,13 +47,25 @@ var (
 
   <style type="text/css">
     .func .parent { visibility: hidden; }
-    .func.asParent { stroke: green; stroke-width: 0.5; cursor: pointer; }
-    .func.selected { stroke: black; stroke-width: 0.5; cursor: pointer; }
-    .func.selected .parent { stroke: green; visibility: visible; }
-    .func.selected .parent line { marker-end: url(#head-green); }
-    .func.asChild { stroke: purple; stroke-width: 0.5; cursor: pointer; }
-    .func.asChild .parent { stroke: purple; visibility: visible; }
-    .func.asChild .parent line { marker-end: url(#head-purple); }
+    .func { stroke: black; stroke-width: 0.5; }
+
+    .func.hover-asParent { stroke: green; stroke-width: 1; cursor: pointer; }
+    .func.hover-selected { stroke: black; stroke-width: 1; cursor: pointer; }
+    .func.hover-selected .parent { stroke: green; visibility: visible; }
+    .func.hover-selected .parent line { marker-end: url(#head-green); }
+    .func.hover-selected text { visibility: visible; }
+    .func.hover-asChild { stroke: purple; stroke-width: 1; cursor: pointer; }
+    .func.hover-asChild .parent { stroke: purple; visibility: visible; }
+    .func.hover-asChild .parent line { marker-end: url(#head-purple); }
+
+    .func.click-asParent { stroke: green; stroke-width: 1; cursor: pointer; }
+    .func.click-selected { stroke: black; stroke-width: 1; cursor: pointer; }
+    .func.click-selected .parent { stroke: green; visibility: visible; }
+    .func.click-selected .parent line { marker-end: url(#head-green); }
+    .func.click-selected text { visibility: visible; }
+    .func.click-asChild { stroke: purple; stroke-width: 1; cursor: pointer; }
+    .func.click-asChild .parent { stroke: purple; visibility: visible; }
+    .func.click-asChild .parent line { marker-end: url(#head-purple); }
   </style>
   <script>
   //<![CDATA[
@@ -63,20 +75,38 @@ var (
     function deselect(el, classname) {
       if (el) { el.classList.remove(classname); }
     }
-    function mouseApply(fn, self, parent) {
-      fn(document.getElementById("id-" + parent), "asParent");
-      fn(document.getElementById("id-" + self), "selected");
+    function toggle(el, classname) {
+      if (el) { el.classList.toggle(classname) }
+    }
+    function mouseApply(fn, self, parent, prefix, tooltip) {
+      fn(document.getElementById("id-" + parent), prefix + "-asParent");
+      fn(document.getElementById("id-" + self), prefix + "-selected");
       var children = document.getElementsByClassName("parent-" + self);
       for (var i = 0; i < children.length; i++) {
-        fn(children[i], "asChild");
+        fn(children[i], prefix + "-asChild");
+      }
+      if (tooltip != null) {
+         document.getElementById("tooltip").textContent = tooltip;
       }
     }
-    function mouseover(self, parent) {
-      mouseApply(select, self, parent);
+    function mouseover(self, parent, tooltip) {
+      mouseApply(select, self, parent, "hover", tooltip);
     }
     function mouseout(self, parent) {
-      mouseApply(deselect, self, parent);
+      mouseApply(deselect, self, parent, "hover", "");
     }
+    function mouseclick(self, parent) {
+      mouseApply(toggle, self, parent, "click", null);
+    }
+
+    function moveFixed(evt) {
+      var fixed = document.getElementById("fixed");
+      var tfm = fixed.transform.baseVal.getItem(0);
+      tfm.setTranslate(0, document.documentElement.scrollTop);
+    }
+
+    window.onscroll = moveFixed;
+    window.onload = moveFixed;
   //]]>
   </script>
   <defs>
@@ -88,35 +118,135 @@ var (
         refX="0.1" refY="2" fill="purple">
       <path d="M0,0 V4 L2,2 Z"/>
     </marker>
-  </defs>`))
+  </defs>
+ `))
 
 	svgFooter = template.Must(template.New("footer").Parse(`
+  <g id="fixed" transform="translate(0 0)">
+    <rect width="100%" height="30"/>
+    <text id="tooltip" y="20" x="10" font-size="20" fill="white"></text>
+  </g>
 </svg>
 `))
 
 	svgFunc = template.Must(template.New("func").Parse(`
-  <g id="id-{{.SpanId}}" class="func parent-{{.ParentId}}"
-    onmouseover="mouseover('{{.SpanId}}', '{{.ParentId}}');"
-    onmouseout="mouseout('{{.SpanId}}', '{{.ParentId}}');">
-    <rect x="{{.SpanLeft}}" y="{{.SpanTop}}"
-        width="{{.SpanWidth}}" height="{{.SpanHeight}}"
-        fill="{{.SpanColor}}" />
-    <text x="0" y="{{.TextTop}}" fill="rgb(0,0,0)" font-size="{{.FontSize}}">
-      {{.FuncName}}({{.FuncArgs}}) ({{.FuncDuration}})
-    </text>
-    <g class="parent">
-      <line stroke-width="2"
-          x1="{{.SpanLeft}}" x2="{{.ParentLeft}}"
-          y1="{{.SpanMid}}" y2="{{.ParentMid}}" />
-    </g>
+  <g id="id-{{.SpanId}}" class="func parent-{{.ParentId}}" onmouseover="mouseover('{{.SpanId}}', '{{.ParentId}}', '{{.FuncName}}({{.FuncArgs}}) Duration:{{.FuncDuration}} Started:{{.FuncStartDuration}}');" onmouseout="mouseout('{{.SpanId}}', '{{.ParentId}}');" onclick="mouseclick('{{.SpanId}}', '{{.ParentId}}');">
+    <clipPath id="clip-{{.SpanId}}"><rect x="{{.SpanLeft}}" y="{{.SpanTop}}" width="{{.SpanWidth}}" height="{{.SpanHeight}}"/></clipPath>
+    <rect id="rect-{{.SpanId}}" x="{{.SpanLeft}}" y="{{.SpanTop}}" width="{{.SpanWidth}}" height="{{.SpanHeight}}" fill="{{.SpanColor}}"/>
+    <text id="text-{{.SpanId}}" x="{{.SpanLeft}}" y="{{.TextTop}}" fill="rgb(0,0,0)" font-size="{{.FontSize}}" clip-path="url(#clip-{{.SpanId}})">{{.FuncName}}({{.FuncArgs}}) ({{.FuncDuration}})</text>
+    <g class="parent"><line stroke-width="2" x1="{{.SpanLeft}}" x2="{{.ParentLeft}}" y1="{{.SpanMid}}" y2="{{.ParentMid}}" /></g>
   </g>`))
 )
+
+type spanInformation struct {
+	Span        *collect.FinishedSpan
+	Parent      int64
+	Children    []int64
+	LargestTime time.Time
+	Layout      bool
+	Rows        [][]int64
+	Row         int
+}
+
+func computeSpanTree(spans []*collect.FinishedSpan) map[int64]*spanInformation {
+	out := make(map[int64]*spanInformation)
+	for _, span := range spans {
+		id := span.Span.Id()
+		if out[id] == nil {
+			out[id] = new(spanInformation)
+		}
+		out[id].Span = span
+
+		if span.Finish.After(out[id].LargestTime) {
+			out[id].LargestTime = span.Finish
+		}
+
+		if parent := span.Span.Parent(); parent != nil {
+			pid := parent.Id()
+			out[id].Parent = pid
+
+			if pedges := out[pid]; pedges == nil {
+				out[pid] = new(spanInformation)
+			}
+			out[pid].Children = append(out[pid].Children, id)
+
+			if span.Finish.After(out[pid].LargestTime) {
+				out[pid].LargestTime = span.Finish
+			}
+		}
+	}
+	return out
+}
+
+func computeLayoutInformation(spans []*collect.FinishedSpan) (map[int64]*spanInformation, int) {
+	spanTree := computeSpanTree(spans)
+	for _, span := range spans {
+		includeSpanInLayoutInformation(spanTree, span)
+	}
+
+	usedRows := 1
+	for _, spanInfo := range spanTree {
+		if spanInfo.Parent == 0 {
+			usedRows += computeRow(spanTree, spanInfo, usedRows)
+		}
+	}
+
+	return spanTree, usedRows + 1
+}
+
+func includeSpanInLayoutInformation(spanTree map[int64]*spanInformation, span *collect.FinishedSpan) {
+	id := span.Span.Id()
+	si := spanTree[id]
+	if si.Layout {
+		return
+	}
+	si.Layout = true
+
+	parSpan := span.Span.Parent()
+	if parSpan == nil || spanTree[parSpan.Id()] == nil {
+		return
+	}
+
+	psi, ok := spanTree[parSpan.Id()]
+	if !ok {
+		includeSpanInLayoutInformation(spanTree, spanTree[parSpan.Id()].Span)
+		psi = spanTree[parSpan.Id()]
+	}
+
+	start := span.Span.Start()
+	found := false
+	for i, children := range psi.Rows {
+		if len(children) == 0 || start.After(spanTree[children[len(children)-1]].LargestTime) {
+			psi.Rows[i] = append(psi.Rows[i], id)
+			found = true
+			break
+		}
+	}
+	if !found {
+		psi.Rows = append(psi.Rows, []int64{id})
+	}
+}
+
+func computeRow(spanTree map[int64]*spanInformation, si *spanInformation, startingRow int) int {
+	si.Row = startingRow
+	usedRows := startingRow + 1
+	for _, children := range si.Rows {
+		maxHeight := 0
+		for _, child := range children {
+			childHeight := computeRow(spanTree, spanTree[child], usedRows)
+			if childHeight > maxHeight {
+				maxHeight = childHeight
+			}
+		}
+		usedRows += maxHeight
+	}
+	return usedRows - startingRow
+}
 
 // SpansToSVG takes a list of FinishedSpans and writes them to w in SVG format.
 // It draws a trace using the Spans where the Spans are ordered by start time.
 func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 	var minStart, maxEnd time.Time
-	graphHeight := (barHeight + barSep) * len(spans)
 
 	for _, s := range spans {
 		start := s.Span.Start()
@@ -130,9 +260,24 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 	}
 	collect.StartTimeSorter(spans).Sort()
 
+	var earliestTime time.Time
+	if len(spans) > 0 {
+		earliestTime = spans[0].Span.Start()
+	}
+
+	lis, maxRow := computeLayoutInformation(spans)
+	graphHeight := (barHeight+barSep)*maxRow + 20
+
 	timeToX := func(t time.Time) int {
 		return int(((t.UnixNano() - minStart.UnixNano()) * graphWidth) /
 			(maxEnd.UnixNano() - minStart.UnixNano()))
+	}
+
+	max := func(x, y int) int {
+		if x > y {
+			return x
+		}
+		return y
 	}
 
 	err := svgHeader.Execute(w, map[string]interface{}{
@@ -143,10 +288,8 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 		return err
 	}
 
-	positionBySpanId := map[int64]int{}
-
-	for id, s := range spans {
-		positionBySpanId[s.Span.Id()] = id
+	for _, s := range spans {
+		id := lis[s.Span.Id()].Row
 
 		color := "rgb(128,128,255)"
 		switch {
@@ -159,35 +302,37 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 		}
 
 		templateVals := struct {
-			SpanId       int64
-			SpanLeft     int
-			SpanTop      int
-			SpanWidth    int
-			SpanHeight   int
-			SpanColor    string
-			TextTop      int
-			FontSize     int
-			FuncName     string
-			FuncArgs     string
-			FuncDuration string
-			SpanMid      int
+			SpanId            int64
+			SpanLeft          int
+			SpanTop           int
+			SpanWidth         int
+			SpanHeight        int
+			SpanColor         string
+			TextTop           int
+			FontSize          int
+			FuncName          string
+			FuncArgs          string
+			FuncDuration      string
+			FuncStartDuration string
+			SpanMid           int
 
 			ParentId   int64
 			ParentLeft int
 			ParentMid  int
 		}{
-			SpanId:       s.Span.Id(),
-			SpanLeft:     timeToX(s.Span.Start()),
-			SpanTop:      id * (barHeight + barSep),
-			SpanWidth:    timeToX(s.Finish) - timeToX(s.Span.Start()),
-			SpanHeight:   barHeight,
-			SpanColor:    color,
-			TextTop:      (id+1)*(barHeight+barSep) - barSep - fontOffset,
-			FontSize:     fontSize,
-			FuncName:     s.Span.Func().FullName(),
-			FuncArgs:     strings.Join(s.Span.Args(), " "),
-			FuncDuration: s.Finish.Sub(s.Span.Start()).String(),
-			SpanMid:      id*(barHeight+barSep) + barHeight/2,
+			SpanId:            s.Span.Id(),
+			SpanLeft:          timeToX(s.Span.Start()),
+			SpanTop:           id * (barHeight + barSep),
+			SpanWidth:         max(timeToX(s.Finish)-timeToX(s.Span.Start()), 1),
+			SpanHeight:        barHeight,
+			SpanColor:         color,
+			TextTop:           (id+1)*(barHeight+barSep) - barSep - fontOffset,
+			FontSize:          fontSize,
+			FuncName:          s.Span.Func().FullName(),
+			FuncArgs:          strings.Join(s.Span.Args(), " "),
+			FuncDuration:      s.Finish.Sub(s.Span.Start()).String(),
+			FuncStartDuration: s.Span.Start().Sub(earliestTime).String(),
+			SpanMid:           id*(barHeight+barSep) + barHeight/2,
 		}
 
 		var buf bytes.Buffer
@@ -204,12 +349,14 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 		}
 		templateVals.FuncArgs = buf.String()
 
-		parent := s.Span.Parent()
-		if parent != nil {
+		if parent := s.Span.Parent(); parent != nil {
+			row := 0
+			if pli := lis[parent.Id()]; pli != nil {
+				row = pli.Row
+			}
 			templateVals.ParentId = parent.Id()
 			templateVals.ParentLeft = timeToX(parent.Start())
-			templateVals.ParentMid = barHeight/2 +
-				positionBySpanId[parent.Id()]*(barHeight+barSep)
+			templateVals.ParentMid = barHeight/2 + row*(barHeight+barSep)
 		}
 
 		err := svgFunc.Execute(w, templateVals)
