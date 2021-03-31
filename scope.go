@@ -67,21 +67,15 @@ func (s *Scope) newSource(name string, constructor func() StatSource) (
 	return ss
 }
 
-// FuncNamed retrieves or creates a Func named using the given name and
-// SeriesTags. See Func() for automatic name determination.
-//
-// Each unique combination of keys/values in each SeriesTag will result in a
-// unique Func. SeriesTags are not sorted, so keep the order consistent to avoid
-// unintentionally creating new unique Funcs.
-func (s *Scope) FuncNamed(name string, tags ...SeriesTag) *Func {
+func sourceName(namespace, name string, tags []SeriesTag) string {
 	var sourceNameSize int
-	sourceNameSize += 5 + len(name) + len(tags)*2
+	sourceNameSize += len(namespace) + len(name) + len(tags)*2
 	for _, tag := range tags {
 		sourceNameSize += len(tag.Key) + len(tag.Val)
 	}
 	var sourceName strings.Builder
 	sourceName.Grow(sourceNameSize)
-	sourceName.WriteString("func:")
+	sourceName.WriteString(namespace)
 	sourceName.WriteString(name)
 	for _, tag := range tags {
 		sourceName.WriteByte(',')
@@ -89,8 +83,17 @@ func (s *Scope) FuncNamed(name string, tags ...SeriesTag) *Func {
 		sourceName.WriteByte('=')
 		sourceName.WriteString(tag.Val)
 	}
+	return sourceName.String()
+}
 
-	source := s.newSource(sourceName.String(), func() StatSource {
+// FuncNamed retrieves or creates a Func named using the given name and
+// SeriesTags. See Func() for automatic name determination.
+//
+// Each unique combination of keys/values in each SeriesTag will result in a
+// unique Func. SeriesTags are not sorted, so keep the order consistent to avoid
+// unintentionally creating new unique Funcs.
+func (s *Scope) FuncNamed(name string, tags ...SeriesTag) *Func {
+	source := s.newSource(sourceName("func:", name, tags), func() StatSource {
 		key := NewSeriesKey("function").WithTag("name", name)
 		for _, tag := range tags {
 			key = key.WithTag(tag.Key, tag.Val)
@@ -121,8 +124,14 @@ func (s *Scope) Funcs(cb func(f *Func)) {
 }
 
 // Meter retrieves or creates a Meter named after the given name. See Event.
-func (s *Scope) Meter(name string) *Meter {
-	source := s.newSource(name, func() StatSource { return NewMeter(NewSeriesKey(name)) })
+func (s *Scope) Meter(name string, tags ...SeriesTag) *Meter {
+	source := s.newSource(sourceName("", name, tags), func() StatSource {
+		key := NewSeriesKey(name)
+		for _, tag := range tags {
+			key = key.WithTag(tag.Key, tag.Val)
+		}
+		return NewMeter(key)
+	})
 	m, ok := source.(*Meter)
 	if !ok {
 		panic(fmt.Sprintf("%s already used for another stats source: %#v",
@@ -133,8 +142,8 @@ func (s *Scope) Meter(name string) *Meter {
 
 // Event retrieves or creates a Meter named after the given name and then
 // calls Mark(1) on that meter.
-func (s *Scope) Event(name string) {
-	s.Meter(name).Mark(1)
+func (s *Scope) Event(name string, tags ...SeriesTag) {
+	s.Meter(name, tags...).Mark(1)
 }
 
 // DiffMeter retrieves or creates a DiffMeter after the given name and two
