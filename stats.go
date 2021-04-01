@@ -35,6 +35,12 @@ func (s SeriesKey) WithTag(key, value string) SeriesKey {
 	return s
 }
 
+// WithTags returns a copy of the SeriesKey with all of the tags set
+func (s SeriesKey) WithTags(tags ...SeriesTag) SeriesKey {
+	s.Tags = s.Tags.SetTags(tags...)
+	return s
+}
+
 // String returns a string representation of the series. For example, it returns
 // something like `measurement,tag0=val0,tag1=val1`.
 func (s SeriesKey) String() string {

@@ -66,6 +66,20 @@ func (t *TagSet) Set(key, value string) *TagSet {
 	return t.SetAll(map[string]string{key: value})
 }
 
+// SetTags returns a new tag set with the keys and values set by the tags slice.
+func (t *TagSet) SetTags(tags ...SeriesTag) *TagSet {
+	all := make(map[string]string)
+	if t != nil {
+		for key, value := range t.all {
+			all[key] = value
+		}
+	}
+	for _, tag := range tags {
+		all[tag.Key] = tag.Val
+	}
+	return &TagSet{all: all}
+}
+
 // SetAll returns a new tag set with the key value pairs in the map all set.
 func (t *TagSet) SetAll(kvs map[string]string) *TagSet {
 	all := make(map[string]string)
