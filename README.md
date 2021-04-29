@@ -2,7 +2,7 @@
 
 Package monkit is a flexible code instrumenting and data collection library.
 
-See documentation at https://godoc.org/gopkg.in/spacemonkeygo/monkit.v3
+See documentation at https://godoc.org/github.com/spacemonkeygo/monkit/v3
 
 Software is hard. Like, really hard.
 [Just the worst](http://www.stilldrinking.org/programming-sucks). Sometimes it
@@ -37,58 +37,64 @@ I'm going to try and sell you as fast as I can on this library.
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"net/http"
+  "context"
+  "fmt"
+  "log"
+  "math/rand"
+  "net/http"
+  "time"
 
-	"gopkg.in/spacemonkeygo/monkit.v3"
-	"gopkg.in/spacemonkeygo/monkit.v3/environment"
-	"gopkg.in/spacemonkeygo/monkit.v3/present"
+  "github.com/spacemonkeygo/monkit/v3"
+  "github.com/spacemonkeygo/monkit/v3/environment"
+  "github.com/spacemonkeygo/monkit/v3/present"
 )
 
-var (
-	mon = monkit.Package()
-)
+var mon = monkit.Package()
 
-func ComputeThing(ctx context.Context, arg1, arg2 int) (res int, err error) {
-	defer mon.Task()(&ctx)(&err)
+func main() {
+  environment.Register(monkit.Default)
 
-	timer := mon.Timer("subcomputation").Start()
-	res = arg1 + arg2
-	timer.Stop()
+  go http.ListenAndServe("127.0.0.1:9000", present.HTTP(monkit.Default))
 
-	if res == 3 {
-		mon.Event("hit 3")
-	}
-
-	mon.BoolVal("was-4").Observe(res == 4)
-	mon.IntVal("res").Observe(int64(res))
-	mon.DurationVal("took").Observe(t2.Sub(t1))
-	mon.Counter("calls").Inc(1)
-	mon.Gauge("arg1", func() float64 { return float64(arg1) })
-	mon.Meter("arg2").Mark(arg2)
-
-	return arg1 + arg2, nil
+  for {
+    time.Sleep(time.Second)
+    log.Println(DoStuff(context.Background()))
+  }
 }
 
 func DoStuff(ctx context.Context) (err error) {
-	defer mon.Task()(&ctx)(&err)
+  defer mon.Task()(&ctx)(&err)
 
-	result, err := ComputeThing(ctx, 1, 2)
-	if err != nil {
-		return err
-	}
+  result, err := ComputeThing(ctx, 1, 2)
+  if err != nil {
+    return err
+  }
 
-	fmt.Println(result)
-	return
+  fmt.Println(result)
+  return
 }
 
-func main() {
-	environment.Register(monkit.Default)
-	go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
-	log.Println(DoStuff(context.Background()))
+func ComputeThing(ctx context.Context, arg1, arg2 int) (res int, err error) {
+  defer mon.Task()(&ctx)(&err)
+
+  timer := mon.Timer("subcomputation").Start()
+  res = arg1 + arg2
+  timer.Stop()
+
+  if res == 3 {
+    mon.Event("hit 3")
+  }
+
+  mon.BoolVal("was-4").Observe(res == 4)
+  mon.IntVal("res").Observe(int64(res))
+  mon.DurationVal("took").Observe(time.Second + time.Duration(rand.Intn(int(10*time.Second))))
+  mon.Counter("calls").Inc(1)
+  mon.Gauge("arg1", func() float64 { return float64(arg1) })
+  mon.Meter("arg2").Mark(arg2)
+
+  return arg1 + arg2, nil
 }
+
 ```
 
 ## Metrics
@@ -295,9 +301,9 @@ make the instrumentation we're going to add to your process observable later.
 Import the basic monkit packages:
 
 ```go
-"gopkg.in/spacemonkeygo/monkit.v3"
-"gopkg.in/spacemonkeygo/monkit.v3/environment"
-"gopkg.in/spacemonkeygo/monkit.v3/present"
+"github.com/spacemonkeygo/monkit/v3"
+"github.com/spacemonkeygo/monkit/v3/environment"
+"github.com/spacemonkeygo/monkit/v3/present"
 ```
 
 and then register environmental statistics and kick off a goroutine in your
@@ -334,9 +340,9 @@ import (
   "net/url"
 
   "github.com/jtolds/webhelp"
-  "gopkg.in/spacemonkeygo/monkit.v3"
-  "gopkg.in/spacemonkeygo/monkit.v3/environment"
-  "gopkg.in/spacemonkeygo/monkit.v3/present"
+  "github.com/spacemonkeygo/monkit/v3"
+  "github.com/spacemonkeygo/monkit/v3/environment"
+  "github.com/spacemonkeygo/monkit/v3/present"
 )
 
 type VLite struct {
@@ -422,9 +428,9 @@ import (
   "net/url"
 
   "github.com/jtolds/webhelp"
-  "gopkg.in/spacemonkeygo/monkit.v3"
-  "gopkg.in/spacemonkeygo/monkit.v3/environment"
-  "gopkg.in/spacemonkeygo/monkit.v3/present"
+  "github.com/spacemonkeygo/monkit/v3"
+  "github.com/spacemonkeygo/monkit/v3/environment"
+  "github.com/spacemonkeygo/monkit/v3/present"
 )
 
 var mon = monkit.Package()
