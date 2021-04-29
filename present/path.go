@@ -91,6 +91,8 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 	first, rest := shift(path)
 	second, _ := shift(rest)
 	switch first {
+	case "":
+		return writeIndex, "text/html", nil
 	case "ps":
 		switch second {
 		case "", "text":
@@ -203,4 +205,38 @@ func shift(path string) (dir, left string) {
 		return path, ""
 	}
 	return path[:split], path[split:]
+}
+
+func writeIndex(w io.Writer) error {
+	_, err := w.Write([]byte(`<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Monkit</title>
+		<meta http-equiv="refresh" content="1">
+	</head>
+	<body>
+		<dl style="max-width: 80ch;">
+			<dt><a href="ps">/ps</a></dt>
+			<dt><a href="ps/json">/ps/json</a></dt>
+			<dt><a href="ps/dot">/ps/dot</a></dt>
+			<dd>Information about active spans.</dd>
+
+			<dt><a href="funcs">/funcs</a></dt>
+			<dt><a href="funcs/json">/funcs/json</a></dt>
+			<dt><a href="funcs/dot">/funcs/dot</a></dt>
+			<dd>Information about the functions and their relations.</dd>
+
+			<dt><a href="stats">/stats</a></dt>
+			<dt><a href="stats/json">/stats/json</a></dt>
+			<dt><a href="stats/svg">/stats/svg</a></dt>
+			<dd>Statistics about all observed functions, scopes and values.</dd>
+
+			<dt><a href="trace/json">/trace/json</a></dt>
+			<dt><a href="trace/svg">/trace/svg</a></dt>
+			<dd>Trace the next scope that matches one of the <code>?regex=</code> or <code>?trace_id=</code> query arguments. By default, regular expressions are matched ahead of time against all known Funcs, but perhaps the Func you want to trace hasn't been observed by the process yet, in which case the regex will fail to match anything. You can turn off this preselection behavior by providing <code>&preselect=false</code> as an additional query param. Be advised that until a trace completes, whether or not it has started, it adds a small amount of overhead (a comparison or two) to every monitored function.</dd>
+		</dl>
+	</body>
+</html>`))
+	return err
 }
