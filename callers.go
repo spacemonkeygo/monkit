@@ -53,11 +53,15 @@ func callerFunc(frames int) string {
 //
 // Input:
 //   "github.com/spacemonkeygo/monkit/v3.BenchmarkTask.func1"
+//   "main.DoThings.func1"
+//   "main.DoThings"
 // Output:
 //   funcname: "BenchmarkTask.func1"
+//   funcname: "DoThings.func1"
+//   funcname: "DoThings"
 func extractFuncName(fullyQualifiedName string) (funcname string, ok bool) {
 	lastSlashPos := strings.LastIndexByte(fullyQualifiedName, '/')
-	if lastSlashPos < 0 || lastSlashPos+1 >= len(fullyQualifiedName) {
+	if lastSlashPos+1 >= len(fullyQualifiedName) {
 		// fullyQualifiedName ended with slash.
 		return "", false
 	}

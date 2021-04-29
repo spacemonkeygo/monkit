@@ -13,6 +13,8 @@ func TestExtractFuncName(t *testing.T) {
 		{"a/v.", "", false},
 		{"a/v.x", "x", true},
 		{"github.com/spacemonkeygo/monkit/v3.BenchmarkTask.func1", "BenchmarkTask.func1", true},
+		{"main.DoThings.func1", "DoThings.func1", true},
+		{"main.DoThings", "DoThings", true},
 	} {
 		fn, ok := extractFuncName(test.in)
 		if fn != test.fn || ok != test.ok {
