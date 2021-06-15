@@ -20,7 +20,7 @@ func main() {
 	go http.ListenAndServe("127.0.0.1:9000", present.HTTP(monkit.Default))
 
 	for {
-		time.Sleep(time.Second)
+		time.Sleep(100 * time.Millisecond)
 		if err := DoStuff(context.Background()); err != nil {
 			fmt.Println("error", err)
 		}
@@ -28,7 +28,7 @@ func main() {
 }
 
 func DoStuff(ctx context.Context) (err error) {
-	defer mon.Task()(&ctx)(&err)
+	defer mon.Task()(&ctx, "query", []interface{}{[]byte{1, 2, 3}, "args"})(&err)
 
 	result, err := ComputeThing(ctx, 1, 2)
 	if err != nil {
@@ -56,6 +56,8 @@ func ComputeThing(ctx context.Context, arg1, arg2 int) (res int, err error) {
 	mon.Counter("calls").Inc(1)
 	mon.Gauge("arg1", func() float64 { return float64(arg1) })
 	mon.Meter("arg2").Mark(arg2)
+
+	time.Sleep(time.Second)
 
 	return arg1 + arg2, nil
 }
