@@ -15,8 +15,11 @@
 package monkit
 
 import (
+	"encoding/hex"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -104,9 +107,40 @@ func (s *Span) Children(cb func(s *Span)) {
 func (s *Span) Args() (rv []string) {
 	rv = make([]string, 0, len(s.args))
 	for _, arg := range s.args {
-		rv = append(rv, fmt.Sprintf("%#v", arg))
+		switch arg := arg.(type) {
+		case string:
+			rv = append(rv, strconv.Quote(arg))
+		case []uint8:
+			rv = append(rv, "[]uint8(0x"+hex.EncodeToString(arg)+")")
+		case []interface{}:
+			rv = append(rv, interfacesToString(arg))
+		default:
+			rv = append(rv, fmt.Sprintf("%#v", arg))
+		}
 	}
 	return rv
+}
+
+func interfacesToString(args []interface{}) string {
+	var b strings.Builder
+	b.WriteString("{")
+	for i, arg := range args {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		switch arg := arg.(type) {
+		case string:
+			b.WriteString(strconv.Quote(arg))
+		case []uint8:
+			b.WriteString("[]uint8(0x")
+			b.WriteString(hex.EncodeToString(arg))
+			b.WriteString(")")
+		default:
+			_, _ = fmt.Fprintf(&b, "%#v", arg)
+		}
+	}
+	b.WriteString("}")
+	return b.String()
 }
 
 // Id returns the Span id.
