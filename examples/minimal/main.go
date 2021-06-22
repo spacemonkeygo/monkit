@@ -28,7 +28,7 @@ func main() {
 }
 
 func DoStuff(ctx context.Context) (err error) {
-	defer mon.Task()(&ctx, "query", []interface{}{[]byte{1, 2, 3}, "args"})(&err)
+	defer mon.Task()(&ctx, "query", []interface{}{[]byte{1, 2, 3}, "args", time.Now()})(&err)
 
 	result, err := ComputeThing(ctx, 1, 2)
 	if err != nil {
