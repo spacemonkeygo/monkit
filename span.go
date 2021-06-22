@@ -114,6 +114,8 @@ func (s *Span) Args() (rv []string) {
 			rv = append(rv, "[]uint8(0x"+hex.EncodeToString(arg)+")")
 		case []interface{}:
 			rv = append(rv, interfacesToString(arg))
+		case time.Time:
+			rv = append(rv, "time.Time("+arg.Format(time.RFC3339Nano)+")")
 		default:
 			rv = append(rv, fmt.Sprintf("%#v", arg))
 		}
@@ -134,6 +136,10 @@ func interfacesToString(args []interface{}) string {
 		case []uint8:
 			b.WriteString("[]uint8(0x")
 			b.WriteString(hex.EncodeToString(arg))
+			b.WriteString(")")
+		case time.Time:
+			b.WriteString("time.Time(")
+			b.WriteString(arg.Format(time.RFC3339Nano))
 			b.WriteString(")")
 		default:
 			_, _ = fmt.Fprintf(&b, "%#v", arg)
