@@ -22,7 +22,7 @@ import (
 )
 
 // StatsOld is deprecated.
-var StatsOld = StatsText
+func StatsOld(r *monkit.Registry, w io.Writer) error { return StatsText(r, w) }
 
 // StatsText writes all of the name/value statistics pairs the Registry knows
 // to w in a text format.
