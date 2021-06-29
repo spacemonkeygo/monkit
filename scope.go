@@ -304,8 +304,12 @@ func (s *Scope) allNamedSources() (sources []namedSource) {
 
 // Stats implements the StatSource interface.
 func (s *Scope) Stats(cb func(key SeriesKey, field string, val float64)) {
+	cbWithScope := func(key SeriesKey, field string, val float64) {
+		cb(key.WithTag("scope", s.name), field, val)
+	}
+
 	for _, namedSource := range s.allNamedSources() {
-		namedSource.source.Stats(cb)
+		namedSource.source.Stats(cbWithScope)
 	}
 
 	s.mtx.Lock()
@@ -313,7 +317,7 @@ func (s *Scope) Stats(cb func(key SeriesKey, field string, val float64)) {
 	s.mtx.Unlock()
 
 	for _, source := range chains {
-		source.Stats(cb)
+		source.Stats(cbWithScope)
 	}
 }
 

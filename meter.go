@@ -51,11 +51,10 @@ type meterBucket struct {
 //   }
 //
 type Meter struct {
-	mtx       sync.Mutex
-	total     int64
-	lastTotal int64
-	slices    [ticksToKeep]meterBucket
-	key       SeriesKey
+	mtx    sync.Mutex
+	total  int64
+	slices [ticksToKeep]meterBucket
+	key    SeriesKey
 }
 
 // NewMeter constructs a Meter
@@ -116,48 +115,42 @@ func (e *Meter) tick(now time.Time) {
 	e.mtx.Unlock()
 }
 
-// stats returns the calculated values rate, total, and delta inside of a lock.
-// delta is only nonzero if resetDelta is true.
-func (e *Meter) stats(now time.Time, resetDelta bool) (rate float64, total, delta int64) {
+func (e *Meter) stats(now time.Time) (rate float64, total int64) {
 	current := int64(0)
 	e.mtx.Lock()
 	start := e.slices[0].start
 	for i := 0; i < ticksToKeep; i++ {
 		current += e.slices[i].count
 	}
-	total = e.total + current
-	if resetDelta {
-		delta = total - e.lastTotal
-		e.lastTotal = total
-	}
+	total = e.total
 	e.mtx.Unlock()
+	total += current
 	duration := now.Sub(start).Seconds()
 	if duration > 0 {
 		rate = float64(current) / duration
 	} else {
 		rate = 0
 	}
-	return rate, total, delta
+	return rate, total
 }
 
 // Rate returns the rate over the internal sliding window
 func (e *Meter) Rate() float64 {
-	rate, _, _ := e.stats(monotime.Now(), false)
+	rate, _ := e.stats(monotime.Now())
 	return rate
 }
 
 // Total returns the total over the internal sliding window
 func (e *Meter) Total() float64 {
-	_, total, _ := e.stats(monotime.Now(), false)
+	_, total := e.stats(monotime.Now())
 	return float64(total)
 }
 
 // Stats implements the StatSource interface
 func (e *Meter) Stats(cb func(key SeriesKey, field string, val float64)) {
-	rate, total, delta := e.stats(monotime.Now(), true)
+	rate, total := e.stats(monotime.Now())
 	cb(e.key, "rate", rate)
 	cb(e.key, "total", float64(total))
-	cb(e.key, "delta", float64(delta))
 }
 
 // DiffMeter is a StatSource that shows the difference between
@@ -183,8 +176,8 @@ func NewDiffMeter(key SeriesKey, meter1, meter2 *Meter) *DiffMeter {
 // Stats implements the StatSource interface
 func (m *DiffMeter) Stats(cb func(key SeriesKey, field string, val float64)) {
 	now := monotime.Now()
-	rate1, total1, _ := m.meter1.stats(now, false)
-	rate2, total2, _ := m.meter2.stats(now, false)
+	rate1, total1 := m.meter1.stats(now)
+	rate2, total2 := m.meter2.stats(now)
 	cb(m.key, "rate", rate1-rate2)
 	cb(m.key, "total", float64(total1-total2))
 }
