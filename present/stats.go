@@ -21,17 +21,8 @@ import (
 	"github.com/spacemonkeygo/monkit/v3"
 )
 
-// StatsOld writes all of the name/value statistics pairs the Registry knows
-// to w in a text format.
-func StatsOld(r *monkit.Registry, w io.Writer) (err error) {
-	r.Stats(func(key monkit.SeriesKey, field string, val float64) {
-		if err != nil {
-			return
-		}
-		_, err = fmt.Fprintf(w, "%s=%f\n", key.WithField(field), val)
-	})
-	return err
-}
+// StatsOld is deprecated.
+var StatsOld = StatsText
 
 // StatsText writes all of the name/value statistics pairs the Registry knows
 // to w in a text format.

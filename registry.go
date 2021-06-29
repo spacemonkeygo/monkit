@@ -23,9 +23,7 @@ type traceWatcherRef struct {
 	watcher func(*Trace)
 }
 
-// Registry encapsulates all of the top-level state for a monitoring system.
-// In general, only the Default registry is ever used.
-type Registry struct {
+type registryInternal struct {
 	// sync/atomic things
 	traceWatcher *traceWatcherRef
 
@@ -43,14 +41,36 @@ type Registry struct {
 	orphans   map[*Span]struct{}
 }
 
+// Registry encapsulates all of the top-level state for a monitoring system.
+// In general, only the Default registry is ever used.
+type Registry struct {
+	// A *Registry type is actually just a reference handle to *registryInternal.
+	// There may be multiple different *Registry types pointing at the same
+	// *registryInternal but with different transformer sets, to make
+	// WithTransformers work right.
+	*registryInternal
+
+	transformers []CallbackTransformer
+}
+
 // NewRegistry creates a NewRegistry, though you almost certainly just want
 // to use Default.
 func NewRegistry() *Registry {
 	return &Registry{
-		traceWatchers: map[int64]func(*Trace){},
-		scopes:        map[string]*Scope{},
-		spans:         map[*Span]struct{}{},
-		orphans:       map[*Span]struct{}{}}
+		registryInternal: &registryInternal{
+			traceWatchers: map[int64]func(*Trace){},
+			scopes:        map[string]*Scope{},
+			spans:         map[*Span]struct{}{},
+			orphans:       map[*Span]struct{}{}}}
+}
+
+// WithTransformers returns a copy of Registry but with the additional
+// CallbackTransformers applied to the Stats method.
+func (r *Registry) WithTransformers(t ...CallbackTransformer) *Registry {
+	return &Registry{
+		registryInternal: r.registryInternal,
+		transformers:     append(append([]CallbackTransformer(nil), r.transformers...), t...),
+	}
 }
 
 // Package creates a new monitoring Scope, named after the top level package.
@@ -208,11 +228,10 @@ func (r *Registry) Funcs(cb func(f *Func)) {
 
 // Stats implements the StatSource interface.
 func (r *Registry) Stats(cb func(key SeriesKey, field string, val float64)) {
-	r.Scopes(func(s *Scope) {
-		s.Stats(func(key SeriesKey, field string, val float64) {
-			cb(key.WithTag("scope", s.name), field, val)
-		})
-	})
+	for _, t := range r.transformers {
+		cb = t.Transform(cb)
+	}
+	r.Scopes(func(s *Scope) { s.Stats(cb) })
 }
 
 var _ StatSource = (*Registry)(nil)

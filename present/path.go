@@ -70,7 +70,6 @@ func curry(reg *monkit.Registry,
 // two) to every monitored function.
 func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 	f Result, contentType string, err error) {
-
 	defer func() {
 		if err != nil {
 			return
@@ -115,7 +114,7 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 
 	case "stats":
 		switch second {
-		case "", "text":
+		case "", "text", "old":
 			return func(w io.Writer) error {
 				return StatsText(reg, w)
 			}, "text/plain; charset=utf-8", nil
@@ -123,10 +122,6 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 			return func(w io.Writer) error {
 				return StatsJSON(reg, w)
 			}, "application/json; charset=utf-8", nil
-		case "old":
-			return func(w io.Writer) error {
-				return StatsOld(reg, w)
-			}, "text/plain; charset=utf-8", nil
 		}
 
 	case "trace":
