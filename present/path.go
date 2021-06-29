@@ -70,6 +70,7 @@ func curry(reg *monkit.Registry,
 // two) to every monitored function.
 func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 	f Result, contentType string, err error) {
+
 	defer func() {
 		if err != nil {
 			return

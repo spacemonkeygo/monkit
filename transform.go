@@ -65,15 +65,16 @@ func (dt *DeltaTransformer) Transform(cb func(SeriesKey, string, float64)) func(
 			return
 		}
 
-		dt.mtx.Lock()
-		defer dt.mtx.Unlock()
-
 		mapIndex := key.WithField(field)
+
+		dt.mtx.Lock()
 		lastTotal, found := dt.lastTotals[mapIndex]
+		dt.lastTotals[mapIndex] = val
+		dt.mtx.Unlock()
+
+		cb(key, field, val)
 		if found {
 			cb(key, "delta", val-lastTotal)
 		}
-		dt.lastTotals[mapIndex] = val
-		cb(key, field, val)
 	}
 }
