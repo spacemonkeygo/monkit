@@ -121,9 +121,17 @@ func newSpan(ctx context.Context, f *Func, args []interface{},
 		s.children.Iterate(func(child *Span) {
 			children = append(children, child)
 		})
+		s.children.Clear()
 		s.mtx.Unlock()
-		for _, child := range children {
-			child.orphan()
+
+		if s.parent != nil && !orphaned {
+			for _, child := range children {
+				s.parent.addChild(child)
+			}
+		} else {
+			for _, child := range children {
+				child.orphan()
+			}
 		}
 
 		if s.parent != nil {
