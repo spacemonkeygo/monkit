@@ -209,7 +209,6 @@ func writeIndex(w io.Writer) error {
 	<head>
 		<meta charset="utf-8">
 		<title>Monkit</title>
-		<meta http-equiv="refresh" content="1">
 	</head>
 	<body>
 		<dl style="max-width: 80ch;">
