@@ -16,14 +16,22 @@ package present
 
 import (
 	"bufio"
+	"context"
+	"encoding/json"
+	"fmt"
+	"html/template"
 	"io"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/spacemonkeygo/monkit/v3"
+	"github.com/spacemonkeygo/monkit/v3/collect"
 )
+
+const SampledKey = "sampled"
 
 // Result writes the expected data to io.Writer and returns any errors if
 // found.
@@ -189,10 +197,75 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 			return func(w io.Writer) error {
 				return TraceQueryJSON(reg, w, spanMatcher)
 			}, "application/json; charset=utf-8", nil
+		case "remote":
+			contentType = "application/json; charset=utf-8"
+			viz := query.Get("viz")
+			if viz != "" {
+				contentType = "application/html; charset=utf-8"
+			}
+			return func(w io.Writer) error {
+				if viz != "" {
+					_, err := w.Write([]byte("<!DOCTYPE html>\n"))
+					if err != nil {
+						return err
+					}
+				}
+
+				ctx, stop := keepAlive(context.TODO(), func(context.Context) error {
+					_, err := w.Write([]byte("\n"))
+					return err
+				})
+				defer stop()
+				var traceMtx sync.Mutex
+				var trace *monkit.Trace
+				collect.FindSpan(ctx, reg, func(s *monkit.Span) bool {
+					if !spanMatcher(s) {
+						return false
+					}
+					traceMtx.Lock()
+					defer traceMtx.Unlock()
+					if trace == nil {
+						trace = s.Trace()
+						trace.Set(SampledKey, true)
+					}
+					return true
+				})
+				if err != nil {
+					return err
+				}
+				if err := stop(); err != nil {
+					return err
+				}
+
+				traceMtx.Lock()
+				defer traceMtx.Unlock()
+
+				if viz == "" {
+					return json.NewEncoder(w).Encode(struct {
+						TraceId int64 `json:"trace_id"`
+					}{
+						TraceId: trace.Id(),
+					})
+				}
+
+				if !strings.HasPrefix(viz, "http:") && !strings.HasPrefix(viz, "https:") {
+					viz = "https://" + viz
+				}
+				if !strings.HasSuffix(viz, "/") {
+					viz += "/"
+				}
+				viz += fmt.Sprintf("trace/%d", trace.Id())
+				return vizRedirectHTML.Execute(w, viz)
+			}, contentType, nil
 		}
 	}
 	return nil, "", errNotFound.New("path not found: %s", path)
 }
+
+var vizRedirectHTML = template.Must(template.New("vizredirect").Parse(`
+<html><head>
+<meta http-equiv="refresh" content="0;url={{}}" />
+</head></html>`))
 
 func shift(path string) (dir, left string) {
 	path = strings.TrimLeft(path, "/")

@@ -23,7 +23,6 @@ package collect
 import (
 	_STDLIB_IMPORT_
 	"fmt"
-	"sync"
 
 	_OTHER_IMPORT_
 	"github.com/spacemonkeygo/monkit/v3"
@@ -42,40 +41,8 @@ func WatchForSpans(ctx context.Context, r *monkit.Registry,
 	collector := NewSpanCollector(matcher)
 	defer collector.Stop()
 
-	var mtx sync.Mutex
-	var cancelers []func()
-	existingTraces := map[*monkit.Trace]bool{}
-
-	canceler := r.ObserveTraces(func(t *monkit.Trace) {
-		mtx.Lock()
-		defer mtx.Unlock()
-		if existingTraces[t] {
-			return
-		}
-		existingTraces[t] = true
-		cancelers = append(cancelers, t.ObserveSpans(collector))
-	})
-	cancelers = append(cancelers, canceler)
-
-	// pick up live traces we can find
-	r.RootSpans(func(s *monkit.Span) {
-		mtx.Lock()
-		defer mtx.Unlock()
-		t := s.Trace()
-		if existingTraces[t] {
-			return
-		}
-		existingTraces[t] = true
-		cancelers = append(cancelers, t.ObserveSpans(collector))
-	})
-
-	defer func() {
-		mtx.Lock()
-		defer mtx.Unlock()
-		for _, canceler := range cancelers {
-			canceler()
-		}
-	}()
+	cancel := ObserveAllTraces(r, collector)
+	defer cancel()
 
 	select {
 	case <-ctx.Done():
@@ -107,4 +74,24 @@ func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
 		work(ctx)
 	}()
 	return collector.Spans()
+}
+
+// FindSpan will call matcher until matcher returns true. Due to
+// the nature of span creation, matcher is likely to be concurrently
+// called and therefore matcher may get more than one matching span.
+func FindSpan(ctx context.Context, r *monkit.Registry,
+	matcher func(s *monkit.Span) bool) {
+	if matcher == nil {
+		return
+	}
+
+	collector := newSpanFinder(matcher)
+	defer collector.Stop()
+
+	defer ObserveAllTraces(r, collector)()
+
+	select {
+	case <-ctx.Done():
+	case <-collector.Done():
+	}
 }

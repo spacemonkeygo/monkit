@@ -390,7 +390,7 @@ func unwrapError(err error) error {
 // 'matcher' to 'w' in SVG format.
 func TraceQuerySVG(reg *monkit.Registry, w io.Writer,
 	matcher func(*monkit.Span) bool) error {
-	spans, err := watchForSpansWithKeepalive(
+	spans, err := watchForSpansWithKeepalive(context.TODO(),
 		reg, w, matcher, []byte("\n"))
 	if err != nil {
 		return err
@@ -405,7 +405,7 @@ func TraceQuerySVG(reg *monkit.Registry, w io.Writer,
 func TraceQueryJSON(reg *monkit.Registry, w io.Writer,
 	matcher func(*monkit.Span) bool) (write_err error) {
 
-	spans, err := watchForSpansWithKeepalive(
+	spans, err := watchForSpansWithKeepalive(context.TODO(),
 		reg, w, matcher, []byte("\n"))
 	if err != nil {
 		return err
@@ -423,44 +423,19 @@ func SpansToJSON(w io.Writer, spans []*collect.FinishedSpan) error {
 	return lw.done()
 }
 
-func watchForSpansWithKeepalive(reg *monkit.Registry, w io.Writer,
+func watchForSpansWithKeepalive(ctx context.Context, reg *monkit.Registry, w io.Writer,
 	matcher func(s *monkit.Span) bool, keepalive []byte) (
-	spans []*collect.FinishedSpan, write_err error) {
+	spans []*collect.FinishedSpan, writeErr error) {
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	abortTimerCh := make(chan struct{})
-	var abortTimerChClosed bool
-	abortTimer := func() {
-		if !abortTimerChClosed {
-			abortTimerChClosed = true
-			close(abortTimerCh)
-		}
-	}
-	defer abortTimer()
-	go func() {
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				_, write_err = w.Write(keepalive)
-				if write_err != nil {
-					cancel()
-				}
-			case <-abortTimerCh:
-				return
-			}
-		}
-	}()
+	ctx, stop := keepAlive(ctx, func(context.Context) error {
+		_, err := w.Write(keepalive)
+		return err
+	})
+	defer stop()
 
 	spans, err := collect.WatchForSpans(ctx, reg, matcher)
-
-	abortTimer()
-	if write_err != nil {
-		return nil, write_err
+	if writeErr := stop(); writeErr != nil {
+		return nil, writeErr
 	}
-
 	return spans, err
 }

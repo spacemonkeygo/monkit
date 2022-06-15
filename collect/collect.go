@@ -17,6 +17,7 @@ package collect
 import (
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/spacemonkeygo/monkit/v3"
@@ -146,3 +147,42 @@ func (s StartTimeSorter) Less(i, j int) bool {
 }
 
 func (s StartTimeSorter) Sort() { sort.Sort(s) }
+
+type spanFinder struct {
+	doneFlag *int32
+	doneCh   chan struct{}
+	matcher  func(s *monkit.Span) bool
+	once     sync.Once
+}
+
+func newSpanFinder(matcher func(s *monkit.Span) bool) *spanFinder {
+	return &spanFinder{
+		doneFlag: new(int32),
+		doneCh:   make(chan struct{}),
+		matcher:  matcher,
+	}
+}
+
+func (m *spanFinder) Start(s *monkit.Span) {
+	if atomic.LoadInt32(m.doneFlag) != 0 {
+		return
+	}
+	if m.matcher(s) {
+		m.Stop()
+	}
+}
+
+func (m *spanFinder) Finish(s *monkit.Span, err error, panicked bool,
+	finish time.Time) {
+}
+
+func (m *spanFinder) Stop() {
+	m.once.Do(func() {
+		atomic.StoreInt32(m.doneFlag, 1)
+		close(m.doneCh)
+	})
+}
+
+func (m *spanFinder) Done() <-chan struct{} {
+	return m.doneCh
+}
