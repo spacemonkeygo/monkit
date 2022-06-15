@@ -16,6 +16,7 @@ package present
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -35,32 +36,39 @@ const keepAliveInterval = 30 * time.Second
 func keepAlive(ctx context.Context, ping func(context.Context) error) (
 	rctx context.Context, stop func() error) {
 
+	ping = catchPanics(ping)
+
 	rctx, cancel := context.WithCancel(ctx)
 	done := make(chan bool)
 	var once sync.Once
 	var mu sync.Mutex
 	var pingErr error
+	var stopped bool
 
 	ticker := time.NewTicker(keepAliveInterval)
 	go func() {
 		defer ticker.Stop()
-		defer mu.Unlock()
 
 		for {
-			mu.Lock()
 			select {
 			case <-done:
 				return
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+				mu.Lock()
+				if stopped || pingErr != nil {
+					mu.Unlock()
+					return
+				}
 				if err := ping(ctx); err != nil {
 					pingErr = err
+					mu.Unlock()
 					cancel()
 					return
 				}
+				mu.Unlock()
 			}
-			mu.Unlock()
 		}
 	}()
 
@@ -72,6 +80,22 @@ func keepAlive(ctx context.Context, ping func(context.Context) error) (
 		//    by the time stop returns.
 		mu.Lock()
 		defer mu.Unlock()
+		stopped = true
 		return pingErr
+	}
+}
+
+func catchPanics(cb func(context.Context) error) func(context.Context) error {
+	return func(ctx context.Context) (err error) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				if rerr, ok := rec.(error); ok {
+					err = rerr
+				} else {
+					err = fmt.Errorf("%v", rec)
+				}
+			}
+		}()
+		return cb(ctx)
 	}
 }
