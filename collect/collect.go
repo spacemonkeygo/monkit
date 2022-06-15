@@ -149,7 +149,7 @@ func (s StartTimeSorter) Less(i, j int) bool {
 func (s StartTimeSorter) Sort() { sort.Sort(s) }
 
 type spanFinder struct {
-	doneFlag *int32
+	doneFlag int32
 	doneCh   chan struct{}
 	matcher  func(s *monkit.Span) bool
 	once     sync.Once
@@ -157,14 +157,13 @@ type spanFinder struct {
 
 func newSpanFinder(matcher func(s *monkit.Span) bool) *spanFinder {
 	return &spanFinder{
-		doneFlag: new(int32),
-		doneCh:   make(chan struct{}),
-		matcher:  matcher,
+		doneCh:  make(chan struct{}),
+		matcher: matcher,
 	}
 }
 
 func (m *spanFinder) Start(s *monkit.Span) {
-	if atomic.LoadInt32(m.doneFlag) != 0 {
+	if atomic.LoadInt32(&m.doneFlag) != 0 {
 		return
 	}
 	if m.matcher(s) {
@@ -177,10 +176,9 @@ func (m *spanFinder) Finish(s *monkit.Span, err error, panicked bool,
 }
 
 func (m *spanFinder) Stop() {
-	m.once.Do(func() {
-		atomic.StoreInt32(m.doneFlag, 1)
+	if atomic.SwapInt32(&m.doneFlag, 1) == 0 {
 		close(m.doneCh)
-	})
+	}
 }
 
 func (m *spanFinder) Done() <-chan struct{} {
