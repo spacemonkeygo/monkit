@@ -32,6 +32,11 @@ type FinishedSpan struct {
 	Finish   time.Time
 }
 
+type spanParent struct {
+	parentId int64
+	ok       bool
+}
+
 // SpanCollector implements the SpanObserver interface. It stores all Spans
 // observed after it starts collecting, typically when matcher returns true.
 type SpanCollector struct {
@@ -45,7 +50,7 @@ type SpanCollector struct {
 	// mtx protected
 	mtx           sync.Mutex
 	root          *FinishedSpan
-	spansByParent map[*monkit.Span][]*FinishedSpan
+	spansByParent map[spanParent][]*FinishedSpan
 }
 
 // NewSpanCollector takes a matcher that will return true when a span is found
@@ -59,7 +64,7 @@ func NewSpanCollector(matcher func(s *monkit.Span) bool) (
 	return &SpanCollector{
 		matcher:       matcher,
 		done:          make(chan struct{}),
-		spansByParent: map[*monkit.Span][]*FinishedSpan{},
+		spansByParent: map[spanParent][]*FinishedSpan{},
 	}
 }
 
@@ -106,7 +111,9 @@ func (c *SpanCollector) Finish(s *monkit.Span, err error, panicked bool,
 		c.mtx.Unlock()
 		c.Stop()
 	} else {
-		c.spansByParent[s.Parent()] = append(c.spansByParent[s.Parent()], fs)
+		id, ok := s.ParentId()
+		key := spanParent{id, ok}
+		c.spansByParent[key] = append(c.spansByParent[key], fs)
 		c.mtx.Unlock()
 	}
 }
@@ -124,7 +131,7 @@ func (c *SpanCollector) Spans() (spans []*FinishedSpan) {
 	var walkSpans func(s *FinishedSpan)
 	walkSpans = func(s *FinishedSpan) {
 		spans = append(spans, s)
-		for _, child := range c.spansByParent[s.Span] {
+		for _, child := range c.spansByParent[spanParent{s.Span.Id(), true}] {
 			walkSpans(child)
 		}
 	}

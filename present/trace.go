@@ -161,8 +161,7 @@ func computeSpanTree(spans []*collect.FinishedSpan) map[int64]*spanInformation {
 			out[id].LargestTime = span.Finish
 		}
 
-		if parent := span.Span.Parent(); parent != nil {
-			pid := parent.Id()
+		if pid, ok := span.Span.ParentId(); ok {
 			out[id].Parent = pid
 
 			if pedges := out[pid]; pedges == nil {
@@ -202,15 +201,15 @@ func includeSpanInLayoutInformation(spanTree map[int64]*spanInformation, span *c
 	}
 	si.Layout = true
 
-	parSpan := span.Span.Parent()
-	if parSpan == nil || spanTree[parSpan.Id()] == nil {
+	parSpanId, ok := span.Span.ParentId()
+	if ok || spanTree[parSpanId] == nil {
 		return
 	}
 
-	psi, ok := spanTree[parSpan.Id()]
+	psi, ok := spanTree[parSpanId]
 	if !ok {
-		includeSpanInLayoutInformation(spanTree, spanTree[parSpan.Id()].Span)
-		psi = spanTree[parSpan.Id()]
+		includeSpanInLayoutInformation(spanTree, spanTree[parSpanId].Span)
+		psi = spanTree[parSpanId]
 	}
 
 	start := span.Span.Start()
@@ -248,7 +247,9 @@ func computeRow(spanTree map[int64]*spanInformation, si *spanInformation, starti
 func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 	var minStart, maxEnd time.Time
 
+	byId := make(map[int64]*collect.FinishedSpan)
 	for _, s := range spans {
+		byId[s.Span.Id()] = s
 		start := s.Span.Start()
 		finish := s.Finish
 		if minStart.IsZero() || start.Before(minStart) {
@@ -349,13 +350,14 @@ func SpansToSVG(w io.Writer, spans []*collect.FinishedSpan) error {
 		}
 		templateVals.FuncArgs = buf.String()
 
-		if parent := s.Span.Parent(); parent != nil {
+		if parentId, ok := s.Span.ParentId(); ok && byId[parentId] != nil {
 			row := 0
-			if pli := lis[parent.Id()]; pli != nil {
+			pli := lis[parentId]
+			if pli != nil {
 				row = pli.Row
 			}
-			templateVals.ParentId = parent.Id()
-			templateVals.ParentLeft = timeToX(parent.Start())
+			templateVals.ParentId = parentId
+			templateVals.ParentLeft = timeToX(byId[parentId].Span.Start())
 			templateVals.ParentMid = barHeight/2 + row*(barHeight+barSep)
 		}
 

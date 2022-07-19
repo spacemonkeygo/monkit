@@ -29,12 +29,13 @@ type Span struct {
 	mtx spinLock
 
 	// immutable things from construction
-	id     int64
-	start  time.Time
-	f      *Func
-	trace  *Trace
-	parent *Span
-	args   []interface{}
+	id       int64
+	start    time.Time
+	f        *Func
+	trace    *Trace
+	parent   *Span
+	parentId *int64
+	args     []interface{}
 	context.Context
 
 	// protected by mtx
@@ -55,8 +56,8 @@ func SpanFromCtx(ctx context.Context) *Span {
 	return nil
 }
 
-func newSpan(ctx context.Context, f *Func, args []interface{},
-	id int64, trace *Trace) (sctx context.Context, exit func(*error)) {
+func newSpan(ctx context.Context, f *Func, args []interface{}, trace *Trace,
+	parentId *int64) (sctx context.Context, exit func(*error)) {
 
 	var s, parent *Span
 	if s, ok := ctx.(*Span); ok && s != nil {
@@ -71,20 +72,27 @@ func newSpan(ctx context.Context, f *Func, args []interface{},
 			trace = parent.trace
 		}
 	} else if trace == nil {
-		trace = NewTrace(id)
+		trace = NewTrace(NewId())
 		f.scope.r.observeTrace(trace)
+	}
+
+	// if we're passed in an explicit parent id, then it's a remote trace,
+	// and so we should not have an implicit local parent.
+	if parentId != nil {
+		parent = nil
 	}
 
 	observer := trace.getObserver()
 
 	s = &Span{
-		id:      id,
-		start:   monotime.Now(),
-		f:       f,
-		trace:   trace,
-		parent:  parent,
-		args:    args,
-		Context: ctx,
+		id:       NewId(),
+		start:    monotime.Now(),
+		f:        f,
+		trace:    trace,
+		parent:   parent,
+		parentId: parentId,
+		args:     args,
+		Context:  ctx,
 	}
 
 	trace.incrementSpans()
@@ -207,7 +215,7 @@ func (s *Scope) Task(tags ...SeriesTag) Task {
 		initOnce.Do(func() {
 			f = s.FuncNamed(callerFunc(3), tags...)
 		})
-		s, exit := newSpan(*ctx, f, args, NewId(), nil)
+		s, exit := newSpan(*ctx, f, args, nil, nil)
 		if ctx != &unparented {
 			*ctx = s
 		}
@@ -233,22 +241,23 @@ func (f *Func) Task(ctx *context.Context, args ...interface{}) func(*error) {
 	if ctx == &taskSecret && taskArgs(f, args) {
 		return nil
 	}
-	s, exit := newSpan(*ctx, f, args, NewId(), nil)
+	s, exit := newSpan(*ctx, f, args, nil, nil)
 	if ctx != &unparented {
 		*ctx = s
 	}
 	return exit
 }
 
-// RemoteTrace is like Func.Task, except you can specify the trace and span id.
+// RemoteTrace is like Func.Task, except you can specify the trace and parent
+// span id.
 // Needed for things like the Zipkin plugin.
-func (f *Func) RemoteTrace(ctx *context.Context, spanId int64, trace *Trace,
+func (f *Func) RemoteTrace(ctx *context.Context, parentId int64, trace *Trace,
 	args ...interface{}) func(*error) {
 	ctx = cleanCtx(ctx)
 	if trace != nil {
 		f.scope.r.observeTrace(trace)
 	}
-	s, exit := newSpan(*ctx, f, args, spanId, trace)
+	s, exit := newSpan(*ctx, f, args, trace, &parentId)
 	if ctx != &unparented {
 		*ctx = s
 	}
@@ -264,34 +273,7 @@ func (f *Func) ResetTrace(ctx *context.Context,
 	}
 	trace := NewTrace(NewId())
 	f.scope.r.observeTrace(trace)
-	s, exit := newSpan(*ctx, f, args, trace.Id(), trace)
-	if ctx != &unparented {
-		*ctx = s
-	}
-	return exit
-}
-
-// RestartTrace is like Func.Task, except it always creates a new Trace and inherient
-// all tags from the existing trace.
-func (f *Func) RestartTrace(ctx *context.Context, args ...interface{}) func(*error) {
-	existingSpan := SpanFromCtx(*ctx)
-	if existingSpan == nil {
-		return f.ResetTrace(ctx, args)
-	}
-	existingTrace := existingSpan.Trace()
-	if existingTrace == nil {
-		return f.ResetTrace(ctx, args)
-	}
-
-	ctx = cleanCtx(ctx)
-	if ctx == &taskSecret && taskArgs(f, args) {
-		return nil
-	}
-	trace := NewTrace(NewId())
-	trace.copyFrom(existingTrace)
-	f.scope.r.observeTrace(trace)
-	s, exit := newSpan(*ctx, f, args, trace.Id(), trace)
-
+	s, exit := newSpan(*ctx, f, args, trace, nil)
 	if ctx != &unparented {
 		*ctx = s
 	}
