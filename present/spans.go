@@ -87,8 +87,8 @@ func outputTextSpan(w io.Writer, s *monkit.Span, indent string) (err error) {
 	if s.Orphaned() {
 		orphaned = ", orphaned"
 	}
-	_, err = fmt.Fprintf(w, "%s[%d] %s(%s) (elapsed: %s%s)\n",
-		indent, s.Id(), s.Func().FullName(), strings.Join(s.Args(), ", "),
+	_, err = fmt.Fprintf(w, "%s[%d,%d] %s(%s) (elapsed: %s%s)\n",
+		indent, s.Id(), s.Trace().Id(), s.Func().FullName(), strings.Join(s.Args(), ", "),
 		s.Duration(), orphaned)
 	if err != nil {
 		return err

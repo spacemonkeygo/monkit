@@ -41,8 +41,7 @@ func formatSpan(s *monkit.Span) interface{} {
 		Annotations [][]string `json:"annotations"`
 	}{}
 	js.Id = s.Id()
-	if s.Parent() != nil {
-		parent_id := s.Parent().Id()
+	if parent_id, ok := s.ParentId(); ok {
 		js.ParentId = &parent_id
 	}
 	js.Func.Package = s.Func().Scope().Name()
@@ -82,8 +81,7 @@ func formatFinishedSpan(s *collect.FinishedSpan) interface{} {
 		Annotations [][]string `json:"annotations"`
 	}{}
 	js.Id = s.Span.Id()
-	if s.Span.Parent() != nil {
-		parent_id := s.Span.Parent().Id()
+	if parent_id, ok := s.Span.ParentId(); ok {
 		js.ParentId = &parent_id
 	}
 	js.Func.Package = s.Span.Func().Scope().Name()

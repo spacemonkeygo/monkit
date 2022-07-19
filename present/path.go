@@ -31,7 +31,10 @@ import (
 	"github.com/spacemonkeygo/monkit/v3/collect"
 )
 
-const SampledKey = "sampled"
+const (
+	SampledKey   = "sampled"
+	SampledCBKey = "sampled-cb"
+)
 
 // Result writes the expected data to io.Writer and returns any errors if
 // found.
@@ -58,6 +61,7 @@ func curry(reg *monkit.Registry,
 //  * /stats/json         - returns the result of StatsJSON
 //  * /trace/svg          - returns the result of TraceQuerySVG
 //  * /trace/json         - returns the result of TraceQueryJSON
+//  * /trace/remote       - returns trace id or redirect
 //
 // The last two paths are worth discussing in more detail, as they take
 // query parameters. All trace endpoints require at least one of the following
@@ -198,13 +202,21 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 				return TraceQueryJSON(reg, w, spanMatcher)
 			}, "application/json; charset=utf-8", nil
 		case "remote":
-			contentType = "application/json; charset=utf-8"
 			viz := query.Get("viz")
-			if viz != "" {
-				contentType = "application/html; charset=utf-8"
+			if viz != "" && (!strings.HasPrefix(viz, "http:") && !strings.HasPrefix(viz, "https:")) {
+				viz = "http://" + viz
 			}
+			u, _ := url.Parse(viz)
+
+			sendJson := viz == "" || u == nil
+
+			contentType = "text/html; charset=utf-8"
+			if sendJson {
+				contentType = "application/json; charset=utf-8"
+			}
+
 			return func(w io.Writer) error {
-				if viz != "" {
+				if !sendJson {
 					_, err := w.Write([]byte("<!DOCTYPE html>\n"))
 					if err != nil {
 						return err
@@ -216,6 +228,7 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 					return err
 				})
 				defer stop()
+
 				var traceMtx sync.Mutex
 				var trace *monkit.Trace
 				collect.FindSpan(ctx, reg, func(s *monkit.Span) bool {
@@ -227,6 +240,9 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 					if trace == nil {
 						trace = s.Trace()
 						trace.Set(SampledKey, true)
+						if cb, exists := trace.Get(SampledCBKey).(func(*monkit.Trace)); exists {
+							cb(trace)
+						}
 					}
 					return true
 				})
@@ -240,7 +256,7 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 				traceMtx.Lock()
 				defer traceMtx.Unlock()
 
-				if viz == "" {
+				if sendJson {
 					return json.NewEncoder(w).Encode(struct {
 						TraceId int64 `json:"trace_id"`
 					}{
@@ -248,14 +264,11 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 					})
 				}
 
-				if !strings.HasPrefix(viz, "http:") && !strings.HasPrefix(viz, "https:") {
-					viz = "https://" + viz
-				}
-				if !strings.HasSuffix(viz, "/") {
-					viz += "/"
-				}
-				viz += fmt.Sprintf("trace/%d", trace.Id())
-				return vizRedirectHTML.Execute(w, viz)
+				q := u.Query()
+				q.Add("argv", fmt.Sprint(trace.Id()))
+				u.RawQuery = q.Encode()
+
+				return vizRedirectHTML.Execute(w, u.String())
 			}, contentType, nil
 		}
 	}
@@ -264,7 +277,7 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 
 var vizRedirectHTML = template.Must(template.New("vizredirect").Parse(`
 <html><head>
-<meta http-equiv="refresh" content="0;url={{}}" />
+<meta http-equiv="refresh" content="0;url={{ . }}" />
 </head></html>`))
 
 func shift(path string) (dir, left string) {

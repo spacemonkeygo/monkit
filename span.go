@@ -152,14 +152,21 @@ func interfacesToString(args []interface{}) string {
 // Id returns the Span id.
 func (s *Span) Id() int64 { return s.id }
 
+// ParentId returns the id of the parent Span, if it has a parent.
+func (s *Span) ParentId() (int64, bool) {
+	if s.parentId != nil {
+		return *s.parentId, true
+	} else if s.parent != nil {
+		return s.parent.id, true
+	}
+	return 0, false
+}
+
 // Func returns the Func that kicked off this Span.
 func (s *Span) Func() *Func { return s.f }
 
 // Trace returns the Trace this Span is associated with.
 func (s *Span) Trace() *Trace { return s.trace }
-
-// Parent returns the Parent Span.
-func (s *Span) Parent() *Span { return s.parent }
 
 // Annotations returns any added annotations created through the Span Annotate
 // method
