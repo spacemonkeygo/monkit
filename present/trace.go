@@ -202,7 +202,7 @@ func includeSpanInLayoutInformation(spanTree map[int64]*spanInformation, span *c
 	si.Layout = true
 
 	parSpanId, ok := span.Span.ParentId()
-	if ok || spanTree[parSpanId] == nil {
+	if !ok || spanTree[parSpanId] == nil {
 		return
 	}
 
