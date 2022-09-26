@@ -29,7 +29,7 @@ const (
 	traceStateHeader  = "tracestate"
 
 	// orphanSampling is a special k,v which can be added to the vendor specific tracestate header.
-	// it can turn on trace sampling on remote even without propagataing the parent trace
+	// it can turn on trace sampling on remote even without propagating the parent trace
 	// (traceparent must not contain zero IDs)
 	// useful when you use curl (no client side tracing), and would like to get traces from the server.
 	orphanSampling = "sampled=true"
