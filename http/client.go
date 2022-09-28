@@ -14,13 +14,13 @@ import (
 // TraceRequest will perform an HTTP request, creating a new Span for the HTTP
 // request and sending the Span in the HTTP request headers.
 // Compare to http.Client.Do.
-func TraceRequest(ctx context.Context, scope *monkit.Scope, cl Client, req *http.Request, sampled func(trace *monkit.Trace) bool) (
+func TraceRequest(ctx context.Context, scope *monkit.Scope, cl Client, req *http.Request) (
 	resp *http.Response, err error) {
 	defer scope.TaskNamed(req.Method)(&ctx)(&err)
 
 	s := monkit.SpanFromCtx(ctx)
 	s.Annotate("http.uri", req.URL.String())
-	TraceInfoFromSpan(s, sampled).SetHeader(req.Header)
+	TraceInfoFromSpan(s).SetHeader(req.Header)
 	resp, err = cl.Do(req)
 	if err != nil {
 		return resp, err

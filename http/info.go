@@ -16,6 +16,7 @@ package http
 
 import (
 	"fmt"
+	"github.com/spacemonkeygo/monkit/v3/present"
 	"strconv"
 	"strings"
 
@@ -53,7 +54,7 @@ type HeaderSetter interface {
 	Set(string, string)
 }
 
-// TraceInfoFromHeader will create a TraceInfo object given an http.Header or
+// TraceInfoFromHeader will create a TraceInfo object given a http.Header or
 // anything that matches the HeaderGetter interface.
 func TraceInfoFromHeader(header HeaderGetter) (rv TraceInfo) {
 	traceParent := header.Get(traceParentHeader)
@@ -101,10 +102,10 @@ func ref(v int64) *int64 {
 	return &v
 }
 
-func TraceInfoFromSpan(s *monkit.Span, sampledf func(trace *monkit.Trace) bool) TraceInfo {
+func TraceInfoFromSpan(s *monkit.Span) TraceInfo {
 	trace := s.Trace()
 
-	sampled := sampledf(trace)
+	sampled, _ := trace.Get(present.SampledKey).(bool)
 
 	if !sampled {
 		return TraceInfo{Sampled: sampled}
