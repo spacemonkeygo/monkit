@@ -5,23 +5,22 @@ package http
 
 import (
 	"fmt"
+	"github.com/spacemonkeygo/monkit/v3/present"
 	"net/http"
 
 	"github.com/spacemonkeygo/monkit/v3"
 )
 
 // TraceHandler wraps a HTTPHandler and import trace information from header.
-func TraceHandler(c http.Handler, scope *monkit.Scope, sampler func(trace *monkit.Trace)) http.Handler {
+func TraceHandler(c http.Handler, scope *monkit.Scope) http.Handler {
 	return traceHandler{
 		handler: c,
-		sampler: sampler,
 		scope:   scope,
 	}
 }
 
 type traceHandler struct {
 	handler http.Handler
-	sampler func(trace *monkit.Trace)
 	scope   *monkit.Scope
 }
 
@@ -44,7 +43,7 @@ func (t traceHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 	}
 
 	if info.Sampled {
-		t.sampler(trace)
+		trace.Set(present.SampledKey, true)
 	}
 	defer t.scope.Func().RemoteTrace(&ctx, parent, trace)(nil)
 

@@ -6,6 +6,7 @@ package http
 import (
 	"context"
 	"fmt"
+	"github.com/spacemonkeygo/monkit/v3/present"
 	"io"
 	"net"
 	"net/http"
@@ -26,12 +27,12 @@ func TestPropagation(t *testing.T) {
 
 	ctx := context.Background()
 	trace := monkit.NewTrace(monkit.NewId())
-	setSampled(trace)
+	trace.Set(present.SampledKey, true)
 
 	defer mon.Func().RemoteTrace(&ctx, 0, trace)(nil)
 
 	body, header := clientCallWithRetry(t, ctx, addr, func(ctx context.Context, request *http.Request) (*http.Response, error) {
-		return TraceRequest(ctx, monkit.ScopeNamed("client"), http.DefaultClient, request, getSampled)
+		return TraceRequest(ctx, monkit.ScopeNamed("client"), http.DefaultClient, request)
 	})
 
 	s := monkit.SpanFromCtx(ctx)
@@ -66,15 +67,6 @@ func TestForcedSample(t *testing.T) {
 	if header == "" {
 		t.Fatalf("tracestate should not be empty: %s", header)
 	}
-}
-
-func setSampled(trace *monkit.Trace) {
-	trace.Set("testsampled", true)
-}
-
-func getSampled(trace *monkit.Trace) bool {
-	sampled, ok := trace.Get("testsampled").(bool)
-	return ok && sampled
 }
 
 func clientCallWithRetry(t *testing.T, ctx context.Context, addr string, caller caller) (string, string) {
@@ -127,7 +119,7 @@ func startHTTPServer(t *testing.T) (addr string, def func()) {
 				}
 			})
 		}
-		_, _ = fmt.Fprintf(w, "%d/%s/%v", grandParent, "hello", s.Trace().Get("testsampled"))
+		_, _ = fmt.Fprintf(w, "%d/%s/%v", grandParent, "hello", s.Trace().Get(present.SampledKey))
 	})
 
 	listener, err := net.Listen("tcp", ":0")
@@ -136,9 +128,7 @@ func startHTTPServer(t *testing.T) (addr string, def func()) {
 		t.Fatal("Couldn't start tcp listener", err)
 	}
 
-	server := &http.Server{Addr: "localhost:5050", Handler: TraceHandler(mux, monkit.ScopeNamed("server"), func(trace *monkit.Trace) {
-		trace.Set("testsampled", true)
-	})}
+	server := &http.Server{Addr: "localhost:5050", Handler: TraceHandler(mux, monkit.ScopeNamed("server"))}
 
 	go func() {
 		_ = server.Serve(listener)

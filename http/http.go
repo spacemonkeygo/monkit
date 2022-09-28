@@ -18,7 +18,7 @@ import (
 	"net/http"
 )
 
-// Client is an interface that matches an http.Client
+// Client is an interface that matches a http.Client
 type Client interface {
 	Do(req *http.Request) (*http.Response, error)
 }
