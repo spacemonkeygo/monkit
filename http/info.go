@@ -16,11 +16,11 @@ package http
 
 import (
 	"fmt"
-	"github.com/spacemonkeygo/monkit/v3/present"
 	"strconv"
 	"strings"
 
 	"github.com/spacemonkeygo/monkit/v3"
+	"github.com/spacemonkeygo/monkit/v3/present"
 )
 
 // see: https://github.com/w3c/trace-context/blob/main/spec/20-http_request_header_format.md
