@@ -5,10 +5,10 @@ package http
 
 import (
 	"fmt"
-	"github.com/spacemonkeygo/monkit/v3/present"
 	"net/http"
 
 	"github.com/spacemonkeygo/monkit/v3"
+	"github.com/spacemonkeygo/monkit/v3/present"
 )
 
 // TraceHandler wraps a HTTPHandler and import trace information from header.
