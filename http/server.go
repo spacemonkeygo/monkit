@@ -54,11 +54,11 @@ func (t traceHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 	s := monkit.SpanFromCtx(ctx)
 	s.Annotate("http.uri", request.RequestURI)
 
-	wrapped := &responseWriterObserver{w: writer}
+	wrapped, statusCode := Wrap(writer)
 	if info.ParentId == nil && info.Sampled {
 		writer.Header().Set(traceStateHeader, fmt.Sprintf("traceid=%d,spanid=%d", s.Id(), s.Trace().Id()))
 	}
 	t.handler.ServeHTTP(wrapped, request.WithContext(s))
 
-	s.Annotate("http.responsecode", fmt.Sprint(wrapped.StatusCode()))
+	s.Annotate("http.responsecode", fmt.Sprint(statusCode()))
 }
