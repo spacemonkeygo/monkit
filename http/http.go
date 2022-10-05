@@ -23,6 +23,26 @@ type Client interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+var _ http.ResponseWriter = &responseWriterObserver{}
+
+// Wrap wraps original writer + provides func to retrieve statusCode, implements http.Flusher if original writer also did it.
+func Wrap(w http.ResponseWriter) (http.ResponseWriter, func() int) {
+	observer := &responseWriterObserver{
+		w: w,
+	}
+	flusher, isFlusher := w.(http.Flusher)
+	if isFlusher {
+		return struct {
+			http.ResponseWriter
+			http.Flusher
+		}{
+			ResponseWriter: observer,
+			Flusher:        flusher,
+		}, observer.StatusCode
+	}
+	return observer, observer.StatusCode
+}
+
 type responseWriterObserver struct {
 	w  http.ResponseWriter
 	sc int
