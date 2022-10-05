@@ -47,6 +47,10 @@ func (t traceHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 	}
 	defer t.scope.Func().RemoteTrace(&ctx, parent, trace)(nil)
 
+	if cb, exists := trace.Get(present.SampledCBKey).(func(*monkit.Trace)); exists {
+		cb(trace)
+	}
+
 	s := monkit.SpanFromCtx(ctx)
 	s.Annotate("http.uri", request.RequestURI)
 
