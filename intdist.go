@@ -178,6 +178,7 @@ func (d *IntDist) Stats(cb func(key SeriesKey, field string, val float64)) {
 		cb(d.key, "r10", d.toFloat64(d.Query(.1)))
 		cb(d.key, "r50", d.toFloat64(d.Query(.5)))
 		cb(d.key, "r90", d.toFloat64(d.Query(.9)))
+		cb(d.key, "r99", d.toFloat64(d.Query(.99)))
 		cb(d.key, "rmax", d.toFloat64(d.Query(1)))
 		cb(d.key, "recent", d.toFloat64(d.Recent))
 	}
