@@ -171,7 +171,6 @@ func (d *FloatDist) Stats(cb func(key SeriesKey, field string, val float64)) {
 	if count > 0 {
 		cb(d.key, "sum", d.toFloat64(d.Sum))
 		cb(d.key, "min", d.toFloat64(d.Low))
-		cb(d.key, "avg", d.toFloat64(d.FullAverage()))
 		cb(d.key, "max", d.toFloat64(d.High))
 		cb(d.key, "rmin", d.toFloat64(d.Query(0)))
 		cb(d.key, "ravg", d.toFloat64(d.ReservoirAverage()))
