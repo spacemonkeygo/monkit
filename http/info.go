@@ -23,11 +23,15 @@ import (
 	"github.com/spacemonkeygo/monkit/v3/present"
 )
 
-// see: https://github.com/w3c/trace-context/blob/main/spec/20-http_request_header_format.md
 const (
+	// see: https://github.com/w3c/trace-context/blob/main/spec/20-http_request_header_format.md
 	traceSampled      = byte(1)
 	traceParentHeader = "traceparent"
 	traceStateHeader  = "tracestate"
+
+	// see: https://github.com/w3c/trace-context/blob/main/spec/21-http_response_header_format.md
+	traceIDHeader = "trace-id"
+	childIDHeader = "child-id"
 
 	// orphanSampling is a special k,v which can be added to the vendor specific tracestate header.
 	// it can turn on trace sampling on remote even without propagating the parent trace
