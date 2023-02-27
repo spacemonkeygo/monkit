@@ -56,7 +56,7 @@ func (t traceHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 
 	wrapped, statusCode := Wrap(writer)
 	if info.ParentId == nil && info.Sampled {
-		writer.Header().Set(traceStateHeader, fmt.Sprintf("traceid=%d,spanid=%d", s.Id(), s.Trace().Id()))
+		writer.Header().Set(traceStateHeader, fmt.Sprintf("traceid=%x,spanid=%x", s.Trace().Id(), s.Id()))
 	}
 	t.handler.ServeHTTP(wrapped, request.WithContext(s))
 
