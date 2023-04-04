@@ -10,6 +10,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,7 +39,37 @@ func TestPropagation(t *testing.T) {
 
 	s := monkit.SpanFromCtx(ctx)
 
-	expected := fmt.Sprintf("%d/hello/true", s.Id())
+	expected := fmt.Sprintf("%d/hello/true (http.uri=/)", s.Id())
+
+	if string(body) != expected {
+		t.Fatalf("%s!=%s", string(body), expected)
+	}
+	if header != "" {
+		t.Fatalf("tracestate should be empty: %s", header)
+	}
+}
+
+func TestBaggage(t *testing.T) {
+	mon := monkit.Package()
+
+	addr, closeServer := startHTTPServer(t)
+
+	defer closeServer()
+
+	ctx := context.Background()
+	trace := monkit.NewTrace(monkit.NewId())
+	trace.Set(present.SampledKey, true)
+
+	defer mon.Func().RemoteTrace(&ctx, 0, trace)(nil)
+
+	body, header := clientCallWithRetry(t, ctx, addr, func(ctx context.Context, request *http.Request) (*http.Response, error) {
+		request.Header.Set(baggageHeader, "k=v")
+		return TraceRequest(ctx, monkit.ScopeNamed("client"), http.DefaultClient, request)
+	})
+
+	s := monkit.SpanFromCtx(ctx)
+
+	expected := fmt.Sprintf("%d/hello/true (http.uri=/,k=v)", s.Id())
 
 	if string(body) != expected {
 		t.Fatalf("%s!=%s", string(body), expected)
@@ -62,7 +94,7 @@ func TestForcedSample(t *testing.T) {
 	expected := "0/hello/true"
 
 	if string(body) != expected {
-		t.Fatalf("%s!=%s", string(body), expected)
+		t.Fatalf("%s!=%s (http.uri=/)", string(body), expected)
 	}
 	if header == "" {
 		t.Fatalf("tracestate should not be empty: %s", header)
@@ -110,6 +142,9 @@ func startHTTPServer(t *testing.T) (addr string, def func()) {
 
 		grandParent := int64(0)
 		parent, found := s.ParentId()
+
+		var annotations []string
+
 		if found {
 			// we are interested about the parent of the parent,
 			// created by the TraceHandler
@@ -117,9 +152,17 @@ func startHTTPServer(t *testing.T) (addr string, def func()) {
 				if s.Id() == parent {
 					grandParent, _ = s.ParentId()
 				}
+				ann := s.Annotations()
+				sort.Slice(ann, func(i, j int) bool {
+					return ann[i].Name < ann[j].Name
+				})
+				for _, a := range ann {
+					annotations = append(annotations, fmt.Sprintf("%s=%s", a.Name, a.Value))
+				}
 			})
 		}
-		_, _ = fmt.Fprintf(w, "%d/%s/%v", grandParent, "hello", s.Trace().Get(present.SampledKey))
+
+		_, _ = fmt.Fprintf(w, "%d/%s/%v (%s)", grandParent, "hello", s.Trace().Get(present.SampledKey), strings.Join(annotations, ","))
 	})
 
 	listener, err := net.Listen("tcp", ":0")
@@ -128,7 +171,7 @@ func startHTTPServer(t *testing.T) (addr string, def func()) {
 		t.Fatal("Couldn't start tcp listener", err)
 	}
 
-	server := &http.Server{Addr: "localhost:5050", Handler: TraceHandler(mux, monkit.ScopeNamed("server"))}
+	server := &http.Server{Addr: "localhost:5050", Handler: TraceHandler(mux, monkit.ScopeNamed("server"), "k")}
 
 	go func() {
 		_ = server.Serve(listener)

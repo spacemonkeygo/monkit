@@ -29,6 +29,9 @@ const (
 	traceParentHeader = "traceparent"
 	traceStateHeader  = "tracestate"
 
+	// see: https://www.w3.org/TR/baggage/
+	baggageHeader = "baggage"
+
 	// see: https://github.com/w3c/trace-context/blob/main/spec/21-http_response_header_format.md
 	traceIDHeader = "trace-id"
 	childIDHeader = "child-id"
@@ -46,6 +49,7 @@ type TraceInfo struct {
 	TraceId  *int64
 	ParentId *int64
 	Sampled  bool
+	Baggage  map[string]string
 }
 
 // HeaderGetter is an interface that http.Header matches for RequestFromHeader
@@ -60,9 +64,10 @@ type HeaderSetter interface {
 
 // TraceInfoFromHeader will create a TraceInfo object given a http.Header or
 // anything that matches the HeaderGetter interface.
-func TraceInfoFromHeader(header HeaderGetter) (rv TraceInfo) {
+func TraceInfoFromHeader(header HeaderGetter, allowedBaggage ...string) (rv TraceInfo) {
 	traceParent := header.Get(traceParentHeader)
 	traceState := header.Get(traceStateHeader)
+	baggage := header.Get(baggageHeader)
 
 	if traceParent != "" {
 		parts := strings.Split(traceParent, "-")
@@ -86,10 +91,22 @@ func TraceInfoFromHeader(header HeaderGetter) (rv TraceInfo) {
 			return rv
 		}
 
+		bm := map[string]string{}
+		if baggage != "" {
+			for _, kv := range strings.Split(baggage, ",") {
+				parts := strings.Split(kv, "=")
+				for _, b := range allowedBaggage {
+					if parts[0] == b {
+						bm[parts[0]] = parts[1]
+					}
+				}
+			}
+		}
 		return TraceInfo{
 			TraceId:  &traceID,
 			ParentId: &parentID,
 			Sampled:  (byte(flags) & traceSampled) == traceSampled,
+			Baggage:  bm,
 		}
 	}
 
@@ -139,6 +156,13 @@ func (r TraceInfo) SetHeader(header HeaderSetter) {
 		header.Set(traceStateHeader, orphanSampling)
 	}
 
+	var baggage []string
+	if r.Baggage != nil {
+		for k, v := range r.Baggage {
+			baggage = append(baggage, fmt.Sprintf("%s=%s", k, v))
+		}
+		header.Set(baggageHeader, strings.Join(baggage, ","))
+	}
 }
 
 // hexToUint64 reads a signed int64 that has been formatted as a hex uint64
