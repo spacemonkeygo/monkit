@@ -62,6 +62,27 @@ func TestSetHeader(t *testing.T) {
 			expectedState:  "sampled=true",
 		},
 		{
+			name: "sampled  with baggage",
+			info: TraceInfo{
+				TraceId:  ref(1),
+				ParentId: ref(16),
+				Sampled:  true,
+				Baggage: map[string]string{
+					"k": "v1",
+				},
+			},
+			expectedInfo: TraceInfo{
+				TraceId:  ref(1),
+				ParentId: ref(16),
+				Sampled:  true,
+				Baggage: map[string]string{
+					"k": "v1",
+				},
+			},
+			expectedParent: "00-0000000000000001-00000010-1",
+			expectedState:  "",
+		},
+		{
 			name: "no trace, no sampled",
 			info: TraceInfo{
 				TraceId:  nil,
@@ -88,11 +109,22 @@ func TestSetHeader(t *testing.T) {
 			if header.Get(traceStateHeader) != tc.expectedState {
 				t.Fatalf("%s!=%s", tc.expectedState, header.Get(traceParentHeader))
 			}
-			rv := TraceInfoFromHeader(header)
+			rv := TraceInfoFromHeader(header, "k")
 			checkEq(t, tc.expectedInfo.TraceId, rv.TraceId)
 			checkEq(t, tc.expectedInfo.ParentId, rv.ParentId)
 			if tc.expectedInfo.Sampled != rv.Sampled {
 				t.Fatalf("%v!=%v", tc.expectedInfo.Sampled, rv.Sampled)
+			}
+			for k, v := range rv.Baggage {
+				if tc.expectedInfo.Baggage[k] != v {
+					t.Fatalf("%v!=%v", tc.expectedInfo.Baggage[k], v)
+				}
+
+			}
+			for k, v := range tc.expectedInfo.Baggage {
+				if rv.Baggage[k] != v {
+					t.Fatalf("%v!=%v", rv.Baggage[k], v)
+				}
 			}
 		})
 
