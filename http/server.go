@@ -12,11 +12,11 @@ import (
 )
 
 // TraceHandler wraps a HTTPHandler and import trace information from header.
-func TraceHandler(c http.Handler, scope *monkit.Scope, baggageFilter ...string) http.Handler {
+func TraceHandler(c http.Handler, scope *monkit.Scope, allowedBaggage ...string) http.Handler {
 	return traceHandler{
-		handler:       c,
-		scope:         scope,
-		baggageFilter: baggageFilter,
+		handler:        c,
+		scope:          scope,
+		allowedBaggage: allowedBaggage,
 	}
 }
 
@@ -24,14 +24,14 @@ type traceHandler struct {
 	handler http.Handler
 	scope   *monkit.Scope
 
-	// baggageFilter defines the allowed `baggage: k=v` HTTP headers which are imported as scan annotations.
-	baggageFilter []string
+	// allowedBaggage defines the allowed `baggage: k=v` HTTP headers which are imported as scan annotations.
+	allowedBaggage []string
 }
 
 // ServeHTTP implements http.Handler with span propagation.
 func (t traceHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
-	info := TraceInfoFromHeader(request.Header, t.baggageFilter...)
+	info := TraceInfoFromHeader(request.Header, t.allowedBaggage...)
 
 	traceId := monkit.NewId()
 	if info.TraceId != nil {

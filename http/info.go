@@ -94,10 +94,12 @@ func TraceInfoFromHeader(header HeaderGetter, allowedBaggage ...string) (rv Trac
 		bm := map[string]string{}
 		if baggage != "" {
 			for _, kv := range strings.Split(baggage, ",") {
-				parts := strings.Split(kv, "=")
-				for _, b := range allowedBaggage {
-					if parts[0] == b {
-						bm[parts[0]] = parts[1]
+				if key, value, ok := strings.Cut(kv, "="); ok {
+					for _, b := range allowedBaggage {
+						if key == b {
+							bm[key] = value
+							break
+						}
 					}
 				}
 			}

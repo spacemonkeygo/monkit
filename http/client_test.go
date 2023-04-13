@@ -6,7 +6,6 @@ package http
 import (
 	"context"
 	"fmt"
-	"github.com/spacemonkeygo/monkit/v3/present"
 	"io"
 	"net"
 	"net/http"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	"github.com/spacemonkeygo/monkit/v3"
+	"github.com/spacemonkeygo/monkit/v3/present"
 )
 
 type caller func(ctx context.Context, request *http.Request) (*http.Response, error)
