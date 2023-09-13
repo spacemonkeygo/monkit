@@ -22,12 +22,12 @@ func elapsed() time.Duration {
 
 func queryPerformanceCounter() int64 {
 	var count int64
-	syscall.Syscall(queryPerformanceCounterProc.Addr(), 1, uintptr(unsafe.Pointer(&count)), 0, 0)
+	syscall.SyscallN(queryPerformanceCounterProc.Addr(), uintptr(unsafe.Pointer(&count)))
 	return count
 }
 
 func queryPerformanceFrequency() int64 {
 	var freq int64
-	syscall.Syscall(queryPerformanceFrequencyProc.Addr(), 1, uintptr(unsafe.Pointer(&freq)), 0, 0)
+	syscall.SyscallN(queryPerformanceFrequencyProc.Addr(), uintptr(unsafe.Pointer(&freq)))
 	return freq
 }

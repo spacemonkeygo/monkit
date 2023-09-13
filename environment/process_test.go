@@ -17,7 +17,7 @@
 package environment
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 )
 
@@ -27,7 +27,8 @@ func TestOpenProc(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	all, err := ioutil.ReadAll(f)
+
+	all, err := io.ReadAll(f)
 	if err != nil {
 		t.Fatal(err)
 	}

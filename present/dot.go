@@ -23,8 +23,7 @@ func escapeDotLabel(format string, args ...interface{}) string {
 	var rv []byte
 	for _, b := range []byte(val) {
 		switch {
-		case 'A' <= b && b <= 'Z', 'a' <= b && b <= 'z', '0' <= b && b <= '9',
-			128 <= b, ' ' == b:
+		case 'A' <= b && b <= 'Z', 'a' <= b && b <= 'z', '0' <= b && b <= '9', 128 <= b, ' ' == b:
 			rv = append(rv, b)
 		case b == '\n':
 			rv = append(rv, []byte(`\l`)...)
