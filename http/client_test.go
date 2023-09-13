@@ -72,7 +72,7 @@ func TestBaggage(t *testing.T) {
 	expected := fmt.Sprintf("%d/hello/true (http.uri=/,k=v)", s.Id())
 
 	if string(body) != expected {
-		t.Fatalf("%s!=%s", string(body), expected)
+		t.Fatalf("%q!=%q", string(body), expected)
 	}
 	if header != "" {
 		t.Fatalf("tracestate should be empty: %s", header)
@@ -81,8 +81,6 @@ func TestBaggage(t *testing.T) {
 
 // TestForcedSample checks if sampling can be turned on without having trace/span on client side.
 func TestForcedSample(t *testing.T) {
-	t.Skip("this is buggy")
-
 	addr, closeServer := startHTTPServer(t)
 
 	defer closeServer()
@@ -92,10 +90,10 @@ func TestForcedSample(t *testing.T) {
 		return http.DefaultClient.Do(request)
 	})
 
-	expected := "0/hello/true"
+	expected := "0/hello/true (http.uri=/)"
 
 	if string(body) != expected {
-		t.Fatalf("%q!=%q (http.uri=/)", string(body), expected)
+		t.Fatalf("%q!=%q", string(body), expected)
 	}
 	if header == "" {
 		t.Fatalf("tracestate should not be empty: %s", header)
@@ -130,7 +128,7 @@ func clientCall(ctx context.Context, addr string, caller caller) (string, string
 	if err != nil {
 		return "", "", err
 	}
-	return string(body), resp.Header.Get(traceStateHeader), nil
+	return string(body), resp.Header.Get(traceIDHeader), nil
 }
 
 func startHTTPServer(t *testing.T) (addr string, def func()) {
