@@ -16,7 +16,7 @@ package environment
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/spacemonkeygo/monkit/v3"
 )
@@ -83,7 +83,7 @@ type procSelfStat struct {
 }
 
 func readProcSelfStat(s *procSelfStat) error {
-	data, err := ioutil.ReadFile("/proc/self/stat")
+	data, err := os.ReadFile("/proc/self/stat")
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ type procSelfStatm struct {
 }
 
 func readProcSelfStatm(s *procSelfStatm) error {
-	data, err := ioutil.ReadFile("/proc/self/statm")
+	data, err := os.ReadFile("/proc/self/statm")
 	if err != nil {
 		return err
 	}

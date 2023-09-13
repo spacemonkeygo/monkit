@@ -94,7 +94,7 @@ func TestForcedSample(t *testing.T) {
 	expected := "0/hello/true"
 
 	if string(body) != expected {
-		t.Fatalf("%s!=%s (http.uri=/)", string(body), expected)
+		t.Fatalf("%q!=%q (http.uri=/)", string(body), expected)
 	}
 	if header == "" {
 		t.Fatalf("tracestate should not be empty: %s", header)

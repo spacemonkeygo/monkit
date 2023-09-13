@@ -159,7 +159,6 @@ type spanFinder struct {
 	doneFlag int32
 	doneCh   chan struct{}
 	matcher  func(s *monkit.Span) bool
-	once     sync.Once
 }
 
 func newSpanFinder(matcher func(s *monkit.Span) bool) *spanFinder {

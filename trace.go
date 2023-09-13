@@ -140,14 +140,6 @@ func (t *Trace) Set(key, val interface{}) {
 	t.mtx.Unlock()
 }
 
-// copyFrom replace all key/value on a trace with a new sets of key/value.
-func (t *Trace) copyFrom(s *Trace) {
-	vals := s.GetAll()
-	t.mtx.Lock()
-	defer t.mtx.Unlock()
-	t.vals = vals
-}
-
 func (t *Trace) incrementSpans() { atomic.AddInt64(&t.spanCount, 1) }
 func (t *Trace) decrementSpans() { atomic.AddInt64(&t.spanCount, -1) }
 
