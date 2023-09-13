@@ -91,10 +91,10 @@ func TestForcedSample(t *testing.T) {
 		return http.DefaultClient.Do(request)
 	})
 
-	expected := "0/hello/true"
+	expected := "0/hello/true (http.uri=/)"
 
 	if string(body) != expected {
-		t.Fatalf("%s!=%s (http.uri=/)", string(body), expected)
+		t.Fatalf("%q!=%q", string(body), expected)
 	}
 	if header == "" {
 		t.Fatalf("tracestate should not be empty: %s", header)
@@ -129,7 +129,7 @@ func clientCall(ctx context.Context, addr string, caller caller) (string, string
 	if err != nil {
 		return "", "", err
 	}
-	return string(body), resp.Header.Get(traceStateHeader), nil
+	return string(body), resp.Header.Get(traceIDHeader), nil
 }
 
 func startHTTPServer(t *testing.T) (addr string, def func()) {
