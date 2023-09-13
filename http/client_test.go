@@ -72,7 +72,7 @@ func TestBaggage(t *testing.T) {
 	expected := fmt.Sprintf("%d/hello/true (http.uri=/,k=v)", s.Id())
 
 	if string(body) != expected {
-		t.Fatalf("%s!=%s", string(body), expected)
+		t.Fatalf("%q!=%q", string(body), expected)
 	}
 	if header != "" {
 		t.Fatalf("tracestate should be empty: %s", header)
@@ -81,7 +81,6 @@ func TestBaggage(t *testing.T) {
 
 // TestForcedSample checks if sampling can be turned on without having trace/span on client side.
 func TestForcedSample(t *testing.T) {
-
 	addr, closeServer := startHTTPServer(t)
 
 	defer closeServer()

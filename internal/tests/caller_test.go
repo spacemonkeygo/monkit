@@ -28,6 +28,6 @@ func TestCallers(t *testing.T) {
 func assertEqual(t *testing.T, actual, expected float64) {
 	t.Helper()
 	if actual != expected {
-		t.Fatal(fmt.Sprintf("got %v, expected %v", actual, expected))
+		t.Fatalf("got %v, expected %v", actual, expected)
 	}
 }

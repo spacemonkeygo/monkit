@@ -14,6 +14,77 @@
 
 package collect
 
-//go:generate sh -c "m4 -D_STDLIB_IMPORT_='\"context\"' -D_OTHER_IMPORT_= -D_BUILD_TAG_='// +build go1.7' ctxgen.go.m4 > ctx17.go"
-//go:generate sh -c "m4 -D_STDLIB_IMPORT_= -D_OTHER_IMPORT_='\"golang.org/x/net/context\"' -D_BUILD_TAG_='// +build !go1.7' ctxgen.go.m4 > xctx.go"
-//go:generate gofmt -w -s ctx17.go xctx.go
+import (
+	"context"
+	"fmt"
+
+	"github.com/spacemonkeygo/monkit/v3"
+)
+
+// WatchForSpans will watch for spans that 'matcher' returns true for. As soon
+// as a trace generates a matched span, all spans from that trace that finish
+// from that point on are collected until the matching span completes. All
+// collected spans are returned.
+// To cancel this operation, simply cancel the ctx argument.
+// There is a small but permanent amount of overhead added by this function to
+// every trace that is started while this function is running. This only really
+// affects long-running traces.
+func WatchForSpans(ctx context.Context, r *monkit.Registry,
+	matcher func(s *monkit.Span) bool) (spans []*FinishedSpan, err error) {
+	collector := NewSpanCollector(matcher)
+	defer collector.Stop()
+
+	cancel := ObserveAllTraces(r, collector)
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-collector.Done():
+		return collector.Spans(), nil
+	}
+}
+
+// CollectSpans is kind of like WatchForSpans, except that it uses the current
+// span to figure out which trace to collect. It calls work(), then collects
+// from the current trace until work() returns. CollectSpans won't work unless
+// some ancestor function is also monitored and has modified the ctx.
+func CollectSpans(ctx context.Context, work func(ctx context.Context)) (
+	spans []*FinishedSpan) {
+	s := monkit.SpanFromCtx(ctx)
+	if s == nil {
+		work(ctx)
+		return nil
+	}
+	collector := NewSpanCollector(nil)
+	defer collector.Stop()
+	s.Trace().ObserveSpans(collector)
+	f := s.Func()
+	newF := f.Scope().FuncNamed(fmt.Sprintf("%s-TRACED", f.ShortName()))
+	func() {
+		defer newF.Task(&ctx)(nil)
+		collector.ForceStart(monkit.SpanFromCtx(ctx))
+		work(ctx)
+	}()
+	return collector.Spans()
+}
+
+// FindSpan will call matcher until matcher returns true. Due to
+// the nature of span creation, matcher is likely to be concurrently
+// called and therefore matcher may get more than one matching span.
+func FindSpan(ctx context.Context, r *monkit.Registry,
+	matcher func(s *monkit.Span) bool) {
+	if matcher == nil {
+		return
+	}
+
+	collector := newSpanFinder(matcher)
+	defer collector.Stop()
+
+	defer ObserveAllTraces(r, collector)()
+
+	select {
+	case <-ctx.Done():
+	case <-collector.Done():
+	}
+}

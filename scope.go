@@ -330,9 +330,3 @@ type namedSource struct {
 	name   string
 	source StatSource
 }
-
-type namedSourceList []namedSource
-
-func (l namedSourceList) Len() int           { return len(l) }
-func (l namedSourceList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
-func (l namedSourceList) Less(i, j int) bool { return l[i].name < l[j].name }
