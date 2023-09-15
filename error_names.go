@@ -17,8 +17,6 @@ package monkit
 import (
 	"context"
 	"io"
-	"net"
-	"os"
 	"sync"
 	"sync/atomic"
 )
@@ -90,25 +88,10 @@ func getErrorName(err error) string {
 	if isErrnoError(err) {
 		return "Errno"
 	}
-	switch err.(type) {
-	case *os.SyscallError:
-		return "Syscall Error"
-	case net.UnknownNetworkError:
-		return "Unknown Network Error"
-	case *net.AddrError:
-		return "Addr Error"
-	case net.InvalidAddrError:
-		return "Invalid Addr Error"
-	case *net.OpError:
-		return "Net Op Error"
-	case *net.ParseError:
-		return "Net Parse Error"
-	case *net.DNSError:
-		return "DNS Error"
-	case *net.DNSConfigError:
-		return "DNS Config Error"
-	case net.Error:
-		return "Network Error"
+
+	if name := getNetErrorName(err); name != "" {
+		return name
 	}
+
 	return "System Error"
 }

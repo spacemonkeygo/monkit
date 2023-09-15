@@ -1,0 +1,26 @@
+name: wasm
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  build:
+    runs-on: "ubuntu-latest"
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v4
+      with:
+        go-version: "1.21.x"
+    - uses: acifani/setup-tinygo@v1
+      with:
+        tinygo-version: "0.29.0"
+    - run: GOOS=wasip1 GOARCH=wasm go vet ./...
+    - run: GOOS=js GOARCH=wasm go vet ./...
+    - run: GOOS=wasip1 GOARCH=wasm go build -o go.wasip.wasm ./examples/wasm
+    - run: GOOS=js GOARCH=wasm go build -o go.js.wasm ./examples/wasm
+    - run: tinygo build -target wasm -o tiny.wasm ./examples/wasm
