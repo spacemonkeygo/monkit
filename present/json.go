@@ -36,10 +36,12 @@ func formatSpan(s *monkit.Span) interface{} {
 			Id int64 `json:"id"`
 		} `json:"trace"`
 		Start       int64      `json:"start"`
+		Elapsed     int64      `json:"elapsed"`
 		Orphaned    bool       `json:"orphaned"`
 		Args        []string   `json:"args"`
 		Annotations [][]string `json:"annotations"`
 	}{}
+
 	js.Id = s.Id()
 	if parent_id, ok := s.ParentId(); ok {
 		js.ParentId = &parent_id
@@ -48,6 +50,7 @@ func formatSpan(s *monkit.Span) interface{} {
 	js.Func.Name = s.Func().ShortName()
 	js.Trace.Id = s.Trace().Id()
 	js.Start = s.Start().UnixNano()
+	js.Elapsed = time.Since(s.Start()).Nanoseconds()
 	js.Orphaned = s.Orphaned()
 	js.Args = make([]string, 0, len(s.Args()))
 	for _, arg := range s.Args() {
