@@ -23,13 +23,12 @@ import (
 // (Func/FuncNamed) on a Scope. If you want to manage installation bookkeeping
 // yourself, create a FuncStats directly. Expected Func creation like:
 //
-//   var mon = monkit.Package()
+//	var mon = monkit.Package()
 //
-//   func MyFunc() {
-//     f := mon.Func()
-//     ...
-//   }
-//
+//	func MyFunc() {
+//	  f := mon.Func()
+//	  ...
+//	}
 type Func struct {
 	// sync/atomic things
 	FuncStats

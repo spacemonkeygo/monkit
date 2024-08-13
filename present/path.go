@@ -51,28 +51,29 @@ func curry(reg *monkit.Registry,
 // path, and optional query parameters, and returns a Result if possible.
 //
 // FromRequest understands the following paths:
-//  * /ps, /ps/text       - returns the result of SpansText
-//  * /ps/dot             - returns the result of SpansDot
-//  * /ps/json            - returns the result of SpansJSON
-//  * /funcs, /funcs/text - returns the result of FuncsText
-//  * /funcs/dot          - returns the result of FuncsDot
-//  * /funcs/json         - returns the result of FuncsJSON
-//  * /stats, /stats/text - returns the result of StatsText
-//  * /stats/json         - returns the result of StatsJSON
-//  * /trace/svg          - returns the result of TraceQuerySVG
-//  * /trace/json         - returns the result of TraceQueryJSON
-//  * /trace/remote       - returns trace id or redirect
+//   - /ps, /ps/text       - returns the result of SpansText
+//   - /ps/dot             - returns the result of SpansDot
+//   - /ps/json            - returns the result of SpansJSON
+//   - /funcs, /funcs/text - returns the result of FuncsText
+//   - /funcs/dot          - returns the result of FuncsDot
+//   - /funcs/json         - returns the result of FuncsJSON
+//   - /stats, /stats/text - returns the result of StatsText
+//   - /stats/json         - returns the result of StatsJSON
+//   - /trace/svg          - returns the result of TraceQuerySVG
+//   - /trace/json         - returns the result of TraceQueryJSON
+//   - /trace/remote       - returns trace id or redirect
 //
 // The last two paths are worth discussing in more detail, as they take
 // query parameters. All trace endpoints require at least one of the following
 // two query parameters:
-//  * regex    - If provided, the very next Span that crosses a Func that has
-//               a name that matches this regex will start a trace until that
-//               triggering Span ends, provided the trace_id matches.
-//  * trace_id - If provided, the very next Span on a trace with the given
-//               trace id will start a trace until the triggering Span ends,
-//               provided the regex matches. NOTE: the trace_id will be parsed
-//               in hex.
+//   - regex    - If provided, the very next Span that crosses a Func that has
+//     a name that matches this regex will start a trace until that
+//     triggering Span ends, provided the trace_id matches.
+//   - trace_id - If provided, the very next Span on a trace with the given
+//     trace id will start a trace until the triggering Span ends,
+//     provided the regex matches. NOTE: the trace_id will be parsed
+//     in hex.
+//
 // By default, regular expressions are matched ahead of time against all known
 // Funcs, but perhaps the Func you want to trace hasn't been observed by the
 // process yet, in which case the regex will fail to match anything. You can
