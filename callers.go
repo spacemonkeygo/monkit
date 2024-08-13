@@ -52,13 +52,16 @@ func callerFunc(frames int) string {
 // extractFuncName splits fully qualified function name:
 //
 // Input:
-//   "github.com/spacemonkeygo/monkit/v3.BenchmarkTask.func1"
-//   "main.DoThings.func1"
-//   "main.DoThings"
+//
+//	"github.com/spacemonkeygo/monkit/v3.BenchmarkTask.func1"
+//	"main.DoThings.func1"
+//	"main.DoThings"
+//
 // Output:
-//   funcname: "BenchmarkTask.func1"
-//   funcname: "DoThings.func1"
-//   funcname: "DoThings"
+//
+//	funcname: "BenchmarkTask.func1"
+//	funcname: "DoThings.func1"
+//	funcname: "DoThings"
 func extractFuncName(fullyQualifiedName string) (funcname string, ok bool) {
 	lastSlashPos := strings.LastIndexByte(fullyQualifiedName, '/')
 	if lastSlashPos+1 >= len(fullyQualifiedName) {

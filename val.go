@@ -23,14 +23,13 @@ import (
 // IntVal is a convenience wrapper around an IntDist. Constructed using
 // NewIntVal, though its expected usage is like:
 //
-//   var mon = monkit.Package()
+//	var mon = monkit.Package()
 //
-//   func MyFunc() {
-//     ...
-//     mon.IntVal("size").Observe(val)
-//     ...
-//   }
-//
+//	func MyFunc() {
+//	  ...
+//	  mon.IntVal("size").Observe(val)
+//	  ...
+//	}
 type IntVal struct {
 	mtx  sync.Mutex
 	dist IntDist
@@ -71,14 +70,13 @@ func (v *IntVal) Quantile(quantile float64) (rv int64) {
 // FloatVal is a convenience wrapper around an FloatDist. Constructed using
 // NewFloatVal, though its expected usage is like:
 //
-//   var mon = monkit.Package()
+//	var mon = monkit.Package()
 //
-//   func MyFunc() {
-//     ...
-//     mon.FloatVal("size").Observe(val)
-//     ...
-//   }
-//
+//	func MyFunc() {
+//	  ...
+//	  mon.FloatVal("size").Observe(val)
+//	  ...
+//	}
 type FloatVal struct {
 	mtx  sync.Mutex
 	dist FloatDist
@@ -120,14 +118,13 @@ func (v *FloatVal) Quantile(quantile float64) (rv float64) {
 // number of falses, and the disposition (number of trues minus number of
 // falses). Constructed using NewBoolVal, though its expected usage is like:
 //
-//   var mon = monkit.Package()
+//	var mon = monkit.Package()
 //
-//   func MyFunc() {
-//     ...
-//     mon.BoolVal("flipped").Observe(bool)
-//     ...
-//   }
-//
+//	func MyFunc() {
+//	  ...
+//	  mon.BoolVal("flipped").Observe(bool)
+//	  ...
+//	}
 type BoolVal struct {
 	trues  int64
 	falses int64
@@ -165,14 +162,13 @@ func (v *BoolVal) Stats(cb func(key SeriesKey, field string, val float64)) {
 // StructVal keeps track of a structure of data. Constructed using
 // NewStructVal, though its expected usage is like:
 //
-//   var mon = monkit.Package()
+//	var mon = monkit.Package()
 //
-//   func MyFunc() {
-//     ...
-//     mon.StructVal("stats").Observe(stats)
-//     ...
-//   }
-//
+//	func MyFunc() {
+//	  ...
+//	  mon.StructVal("stats").Observe(stats)
+//	  ...
+//	}
 type StructVal struct {
 	mtx    sync.Mutex
 	recent interface{}
@@ -207,14 +203,13 @@ func (v *StructVal) Stats(cb func(key SeriesKey, field string, val float64)) {
 // DurationVal is a convenience wrapper around an DurationVal. Constructed using
 // NewDurationVal, though its expected usage is like:
 //
-//   var mon = monkit.Package()
+//	var mon = monkit.Package()
 //
-//   func MyFunc() {
-//     ...
-//     mon.DurationVal("time").Observe(val)
-//     ...
-//   }
-//
+//	func MyFunc() {
+//	  ...
+//	  mon.DurationVal("time").Observe(val)
+//	  ...
+//	}
 type DurationVal struct {
 	mtx  sync.Mutex
 	dist DurationDist

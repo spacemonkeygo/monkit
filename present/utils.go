@@ -27,9 +27,10 @@ const keepAliveInterval = 30 * time.Second
 // from ctx and a stop method. The derived rctx is canceled if ping returns
 // a non-nil error. In the background after return, keepAlive will call ping
 // with ctx every keepAliveInterval until:
-//  1) ping returns an error, at which point rctx is canceled.
-//  2) stop is called. in this case rctx is left alone.
-//  3) ctx is canceled. rctx is also canceled as a consequence.
+//  1. ping returns an error, at which point rctx is canceled.
+//  2. stop is called. in this case rctx is left alone.
+//  3. ctx is canceled. rctx is also canceled as a consequence.
+//
 // stop is a no-op if the keepAlive loop has already been stopped. stop returns
 // the first error that ping returned, if ping returned an error before stop
 // was called.

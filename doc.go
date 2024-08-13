@@ -75,7 +75,7 @@ Example usage
 		log.Println(DoStuff(context.Background()))
 	}
 
-Metrics
+# Metrics
 
 We've got tools that capture distribution information (including quantiles)
 about int64, float64, and bool types. We have tools that capture data about
@@ -92,45 +92,45 @@ or any other time-series database.
 
 Here's a selection of live stats from one of our storage nodes:
 
-  env.os.fds      120.000000
-  env.os.proc.stat.Minflt 81155.000000
-  env.os.proc.stat.Cminflt        11789.000000
-  env.os.proc.stat.Majflt 10.000000
-  env.os.proc.stat.Cmajflt        6.000000
-  ...
+	env.os.fds      120.000000
+	env.os.proc.stat.Minflt 81155.000000
+	env.os.proc.stat.Cminflt        11789.000000
+	env.os.proc.stat.Majflt 10.000000
+	env.os.proc.stat.Cmajflt        6.000000
+	...
 
-  env.process.control     1.000000
-  env.process.crc 3819014369.000000
-  env.process.uptime      163225.292925
-  env.runtime.goroutines  52.000000
-  env.runtime.memory.Alloc        2414080.000000
-  ...
+	env.process.control     1.000000
+	env.process.crc 3819014369.000000
+	env.process.uptime      163225.292925
+	env.runtime.goroutines  52.000000
+	env.runtime.memory.Alloc        2414080.000000
+	...
 
-  env.rusage.Maxrss       26372.000000
-  ...
+	env.rusage.Maxrss       26372.000000
+	...
 
-  sm/flud/csl/client.(*CSLClient).Verify.current  0.000000
-  sm/flud/csl/client.(*CSLClient).Verify.success  788.000000
-  sm/flud/csl/client.(*CSLClient).Verify.error volume missing     91.000000
-  sm/flud/csl/client.(*CSLClient).Verify.error dial error 1.000000
-  sm/flud/csl/client.(*CSLClient).Verify.panics   0.000000
-  sm/flud/csl/client.(*CSLClient).Verify.success times min        0.102214
-  sm/flud/csl/client.(*CSLClient).Verify.success times avg        1.899133
-  sm/flud/csl/client.(*CSLClient).Verify.success times max        8.601230
-  sm/flud/csl/client.(*CSLClient).Verify.success times recent     2.673128
-  sm/flud/csl/client.(*CSLClient).Verify.failure times min        0.682881
-  sm/flud/csl/client.(*CSLClient).Verify.failure times avg        3.936571
-  sm/flud/csl/client.(*CSLClient).Verify.failure times max        6.102318
-  sm/flud/csl/client.(*CSLClient).Verify.failure times recent     2.208020
-  sm/flud/csl/server.store.avg    710800.000000
-  sm/flud/csl/server.store.count  271.000000
-  sm/flud/csl/server.store.max    3354194.000000
-  sm/flud/csl/server.store.min    467.000000
-  sm/flud/csl/server.store.recent 1661376.000000
-  sm/flud/csl/server.store.sum    192626890.000000
-  ...
+	sm/flud/csl/client.(*CSLClient).Verify.current  0.000000
+	sm/flud/csl/client.(*CSLClient).Verify.success  788.000000
+	sm/flud/csl/client.(*CSLClient).Verify.error volume missing     91.000000
+	sm/flud/csl/client.(*CSLClient).Verify.error dial error 1.000000
+	sm/flud/csl/client.(*CSLClient).Verify.panics   0.000000
+	sm/flud/csl/client.(*CSLClient).Verify.success times min        0.102214
+	sm/flud/csl/client.(*CSLClient).Verify.success times avg        1.899133
+	sm/flud/csl/client.(*CSLClient).Verify.success times max        8.601230
+	sm/flud/csl/client.(*CSLClient).Verify.success times recent     2.673128
+	sm/flud/csl/client.(*CSLClient).Verify.failure times min        0.682881
+	sm/flud/csl/client.(*CSLClient).Verify.failure times avg        3.936571
+	sm/flud/csl/client.(*CSLClient).Verify.failure times max        6.102318
+	sm/flud/csl/client.(*CSLClient).Verify.failure times recent     2.208020
+	sm/flud/csl/server.store.avg    710800.000000
+	sm/flud/csl/server.store.count  271.000000
+	sm/flud/csl/server.store.max    3354194.000000
+	sm/flud/csl/server.store.min    467.000000
+	sm/flud/csl/server.store.recent 1661376.000000
+	sm/flud/csl/server.store.sum    192626890.000000
+	...
 
-Call graphs
+# Call graphs
 
 This library generates call graphs of your live process for you.
 
@@ -147,7 +147,7 @@ Here's another example of one of our production nodes:
 
 https://raw.githubusercontent.com/spacemonkeygo/monkit/master/images/callgraph2.png
 
-Trace graphs
+# Trace graphs
 
 This library generates trace graphs of your live process for you directly,
 without requiring standing up some tracing system such as Zipkin (though you
@@ -166,7 +166,7 @@ a plugin that sends this data to Zipkin (http://github.com/spacemonkeygo/monkit-
 
 https://raw.githubusercontent.com/spacemonkeygo/monkit/master/images/trace.png
 
-History
+# History
 
 Before our crazy Go rewrite of everything (https://www.spacemonkey.com/blog/posts/go-space-monkey)
 (and before we had even seen Google's Dapper paper), we were a Python shop, and
@@ -182,7 +182,7 @@ contexts, and then realized we could get call graph information. We decided a
 refactor and then an all-out rethinking of our monitoring package was best,
 and so now we have this library.
 
-Aside about contexts
+# Aside about contexts
 
 Sometimes you really want callstack contextual information without having to
 pass arguments through everything on the call stack. In other languages, many
@@ -208,7 +208,7 @@ Painfully so. I hope to write more about it in the future, but Google also
 wrote up their thoughts about it (https://blog.golang.org/context), which you
 can go read. For now, just swallow your disgust and let's keep moving.
 
-Motivating program
+# Motivating program
 
 Let's make a super simple Varnish (https://www.varnish-cache.org/) clone.
 Open up gedit! (Okay just kidding, open whatever text editor you want.)
@@ -218,55 +218,55 @@ comments for where to add it if you'd like. For now, let's just make a
 barebones system that will proxy HTTP requests. We'll call it VLite, but
 maybe we should call it VReallyLite.
 
-  package main
+	  package main
 
-  import (
-	  "flag"
-	  "net/http"
-	  "net/http/httputil"
-	  "net/url"
-  )
+	  import (
+		  "flag"
+		  "net/http"
+		  "net/http/httputil"
+		  "net/url"
+	  )
 
-  type VLite struct {
-	  target *url.URL
-	  proxy  *httputil.ReverseProxy
-  }
-
-  func NewVLite(target *url.URL) *VLite {
-	  return &VLite{
-		  target: target,
-		  proxy:  httputil.NewSingleHostReverseProxy(target),
+	  type VLite struct {
+		  target *url.URL
+		  proxy  *httputil.ReverseProxy
 	  }
-  }
 
-  func (v *VLite) Proxy(w http.ResponseWriter, r *http.Request) {
-	  r.Host = v.target.Host // let the proxied server get the right vhost
-	  v.proxy.ServeHTTP(w, r)
-  }
-
-  func (v *VLite) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	  // here's where you'd put caching logic
-	  v.Proxy(w, r)
-  }
-
-  func main() {
-	  target := flag.String(
-		  "proxy",
-		  "http://hasthelargehadroncolliderdestroyedtheworldyet.com/",
-		  "server to cache")
-	  flag.Parse()
-	  targetURL, err := url.Parse(*target)
-	  if err != nil {
-		  panic(err)
+	  func NewVLite(target *url.URL) *VLite {
+		  return &VLite{
+			  target: target,
+			  proxy:  httputil.NewSingleHostReverseProxy(target),
+		  }
 	  }
-	  panic(http.ListenAndServe(":8080", NewVLite(targetURL)))
-  }
+
+	  func (v *VLite) Proxy(w http.ResponseWriter, r *http.Request) {
+		  r.Host = v.target.Host // let the proxied server get the right vhost
+		  v.proxy.ServeHTTP(w, r)
+	  }
+
+	  func (v *VLite) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+		  // here's where you'd put caching logic
+		  v.Proxy(w, r)
+	  }
+
+	  func main() {
+		  target := flag.String(
+			  "proxy",
+			  "http://hasthelargehadroncolliderdestroyedtheworldyet.com/",
+			  "server to cache")
+		  flag.Parse()
+		  targetURL, err := url.Parse(*target)
+		  if err != nil {
+			  panic(err)
+		  }
+		  panic(http.ListenAndServe(":8080", NewVLite(targetURL)))
+	  }
 
 Run and build this and open localhost:8080 in your browser. If you use the
 default proxy target, it should inform you that the world hasn't been
 destroyed yet.
 
-Adding basic instrumentation
+# Adding basic instrumentation
 
 The first thing you'll want to do is add the small amount of boilerplate to
 make the instrumentation we're going to add to your process observable later.
@@ -286,7 +286,7 @@ main method to serve debug requests:
 Rebuild, and then check out localhost:9000/stats (or
 localhost:9000/stats/json, if you prefer) in your browser!
 
-Request contexts
+# Request contexts
 
 Remember what I said about Google's contexts (https://blog.golang.org/context)?
 It might seem a bit overkill for such a small project, but it's time to add
@@ -298,149 +298,149 @@ webhelp library (https://godoc.org/github.com/jtolds/webhelp), but here is the
 code now refactored to receive and pass contexts through our two per-request
 calls.
 
-  package main
+	  package main
 
-  import (
-	  "context"
-	  "flag"
-	  "net/http"
-	  "net/http/httputil"
-	  "net/url"
+	  import (
+		  "context"
+		  "flag"
+		  "net/http"
+		  "net/http/httputil"
+		  "net/url"
 
-	  "github.com/jtolds/webhelp"
-	  "github.com/spacemonkeygo/monkit/v3"
-	  "github.com/spacemonkeygo/monkit/v3/environment"
-	  "github.com/spacemonkeygo/monkit/v3/present"
-  )
+		  "github.com/jtolds/webhelp"
+		  "github.com/spacemonkeygo/monkit/v3"
+		  "github.com/spacemonkeygo/monkit/v3/environment"
+		  "github.com/spacemonkeygo/monkit/v3/present"
+	  )
 
-  type VLite struct {
-	  target *url.URL
-	  proxy  *httputil.ReverseProxy
-  }
-
-  func NewVLite(target *url.URL) *VLite {
-	  return &VLite{
-		  target: target,
-		  proxy:  httputil.NewSingleHostReverseProxy(target),
+	  type VLite struct {
+		  target *url.URL
+		  proxy  *httputil.ReverseProxy
 	  }
-  }
 
-  func (v *VLite) Proxy(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	  r.Host = v.target.Host // let the proxied server get the right vhost
-	  v.proxy.ServeHTTP(w, r)
-  }
-
-  func (v *VLite) HandleHTTP(ctx context.Context, w webhelp.ResponseWriter, r *http.Request) error {
-	  // here's where you'd put caching logic
-	  v.Proxy(ctx, w, r)
-	  return nil
-  }
-
-  func main() {
-	  target := flag.String(
-		  "proxy",
-		  "http://hasthelargehadroncolliderdestroyedtheworldyet.com/",
-		  "server to cache")
-	  flag.Parse()
-	  targetURL, err := url.Parse(*target)
-	  if err != nil {
-		  panic(err)
+	  func NewVLite(target *url.URL) *VLite {
+		  return &VLite{
+			  target: target,
+			  proxy:  httputil.NewSingleHostReverseProxy(target),
+		  }
 	  }
-	  environment.Register(monkit.Default)
-	  go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
-	  panic(webhelp.ListenAndServe(":8080", NewVLite(targetURL)))
-  }
+
+	  func (v *VLite) Proxy(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+		  r.Host = v.target.Host // let the proxied server get the right vhost
+		  v.proxy.ServeHTTP(w, r)
+	  }
+
+	  func (v *VLite) HandleHTTP(ctx context.Context, w webhelp.ResponseWriter, r *http.Request) error {
+		  // here's where you'd put caching logic
+		  v.Proxy(ctx, w, r)
+		  return nil
+	  }
+
+	  func main() {
+		  target := flag.String(
+			  "proxy",
+			  "http://hasthelargehadroncolliderdestroyedtheworldyet.com/",
+			  "server to cache")
+		  flag.Parse()
+		  targetURL, err := url.Parse(*target)
+		  if err != nil {
+			  panic(err)
+		  }
+		  environment.Register(monkit.Default)
+		  go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
+		  panic(webhelp.ListenAndServe(":8080", NewVLite(targetURL)))
+	  }
 
 You can create a new context for a request however you want. One reason to use
 something like webhelp is that the cancelation feature of Contexts is hooked
 up to the HTTP request getting canceled.
 
-Monitor some requests
+# Monitor some requests
 
 Let's start to get statistics about how many requests we receive! First, this
 package (main) will need to get a monitoring Scope. Add this global definition
 right after all your imports, much like you'd create a logger with many logging
 libraries:
 
-  var mon = monkit.Package()
+	var mon = monkit.Package()
 
 Now, make the error return value of HandleHTTP named (so, (err error)), and add
 this defer line as the very first instruction of HandleHTTP:
 
-  func (v *VLite) HandleHTTP(ctx context.Context, w webhelp.ResponseWriter, r *http.Request) (err error) {
-	  defer mon.Task()(&ctx)(&err)
+	  func (v *VLite) HandleHTTP(ctx context.Context, w webhelp.ResponseWriter, r *http.Request) (err error) {
+		  defer mon.Task()(&ctx)(&err)
 
 Let's also add the same line (albeit modified for the lack of error) to
 Proxy, replacing &err with nil:
 
-  func (v *VLite) Proxy(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	  defer mon.Task()(&ctx)(nil)
+	  func (v *VLite) Proxy(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+		  defer mon.Task()(&ctx)(nil)
 
 You should now have something like:
 
-  package main
+	  package main
 
-  import (
-	  "context"
-	  "flag"
-	  "net/http"
-	  "net/http/httputil"
-	  "net/url"
+	  import (
+		  "context"
+		  "flag"
+		  "net/http"
+		  "net/http/httputil"
+		  "net/url"
 
-	  "github.com/jtolds/webhelp"
-	  "github.com/spacemonkeygo/monkit/v3"
-	  "github.com/spacemonkeygo/monkit/v3/environment"
-	  "github.com/spacemonkeygo/monkit/v3/present"
-  )
+		  "github.com/jtolds/webhelp"
+		  "github.com/spacemonkeygo/monkit/v3"
+		  "github.com/spacemonkeygo/monkit/v3/environment"
+		  "github.com/spacemonkeygo/monkit/v3/present"
+	  )
 
-  var mon = monkit.Package()
+	  var mon = monkit.Package()
 
-  type VLite struct {
-	  target *url.URL
-	  proxy  *httputil.ReverseProxy
-  }
-
-  func NewVLite(target *url.URL) *VLite {
-	  return &VLite{
-		  target: target,
-		  proxy:  httputil.NewSingleHostReverseProxy(target),
+	  type VLite struct {
+		  target *url.URL
+		  proxy  *httputil.ReverseProxy
 	  }
-  }
 
-  func (v *VLite) Proxy(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-    defer mon.Task()(&ctx)(nil)
-	  r.Host = v.target.Host // let the proxied server get the right vhost
-	  v.proxy.ServeHTTP(w, r)
-  }
-
-  func (v *VLite) HandleHTTP(ctx context.Context, w webhelp.ResponseWriter, r *http.Request) (err error) {
-    defer mon.Task()(&ctx)(&err)
-	  // here's where you'd put caching logic
-	  v.Proxy(ctx, w, r)
-	  return nil
-  }
-
-  func main() {
-	  target := flag.String(
-		  "proxy",
-		  "http://hasthelargehadroncolliderdestroyedtheworldyet.com/",
-		  "server to cache")
-	  flag.Parse()
-	  targetURL, err := url.Parse(*target)
-	  if err != nil {
-		  panic(err)
+	  func NewVLite(target *url.URL) *VLite {
+		  return &VLite{
+			  target: target,
+			  proxy:  httputil.NewSingleHostReverseProxy(target),
+		  }
 	  }
-	  environment.Register(monkit.Default)
-	  go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
-	  panic(webhelp.ListenAndServe(":8080", NewVLite(targetURL)))
-  }
+
+	  func (v *VLite) Proxy(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	    defer mon.Task()(&ctx)(nil)
+		  r.Host = v.target.Host // let the proxied server get the right vhost
+		  v.proxy.ServeHTTP(w, r)
+	  }
+
+	  func (v *VLite) HandleHTTP(ctx context.Context, w webhelp.ResponseWriter, r *http.Request) (err error) {
+	    defer mon.Task()(&ctx)(&err)
+		  // here's where you'd put caching logic
+		  v.Proxy(ctx, w, r)
+		  return nil
+	  }
+
+	  func main() {
+		  target := flag.String(
+			  "proxy",
+			  "http://hasthelargehadroncolliderdestroyedtheworldyet.com/",
+			  "server to cache")
+		  flag.Parse()
+		  targetURL, err := url.Parse(*target)
+		  if err != nil {
+			  panic(err)
+		  }
+		  environment.Register(monkit.Default)
+		  go http.ListenAndServe("localhost:9000", present.HTTP(monkit.Default))
+		  panic(webhelp.ListenAndServe(":8080", NewVLite(targetURL)))
+	  }
 
 We'll unpack what's going on here, but for now:
 
- * Rebuild and restart!
- * Trigger a full refresh at localhost:8080 to make sure your new HTTP
-   handler runs
- * Visit localhost:9000/stats and then localhost:9000/funcs
+  - Rebuild and restart!
+  - Trigger a full refresh at localhost:8080 to make sure your new HTTP
+    handler runs
+  - Visit localhost:9000/stats and then localhost:9000/funcs
 
 For this new funcs dataset, if you want a graph, you can download a dot
 graph at localhost:9000/funcs/dot and json information from
@@ -448,29 +448,29 @@ localhost:9000/funcs/json.
 
 You should see something like:
 
-  [3693964236144930897] main.(*VLite).HandleHTTP
-    parents: entry
-    current: 0, highwater: 1, success: 2, errors: 0, panics: 0
-    success times:
-      0.00: 63.930436ms
-      0.10: 70.482159ms
-      0.25: 80.309745ms
-      0.50: 96.689054ms
-      0.75: 113.068363ms
-      0.90: 122.895948ms
-      0.95: 126.17181ms
-      1.00: 129.447675ms
-      avg: 96.689055ms
-    failure times:
-      0.00: 0
-      0.10: 0
-      0.25: 0
-      0.50: 0
-      0.75: 0
-      0.90: 0
-      0.95: 0
-      1.00: 0
-      avg: 0
+	[3693964236144930897] main.(*VLite).HandleHTTP
+	  parents: entry
+	  current: 0, highwater: 1, success: 2, errors: 0, panics: 0
+	  success times:
+	    0.00: 63.930436ms
+	    0.10: 70.482159ms
+	    0.25: 80.309745ms
+	    0.50: 96.689054ms
+	    0.75: 113.068363ms
+	    0.90: 122.895948ms
+	    0.95: 126.17181ms
+	    1.00: 129.447675ms
+	    avg: 96.689055ms
+	  failure times:
+	    0.00: 0
+	    0.10: 0
+	    0.25: 0
+	    0.50: 0
+	    0.75: 0
+	    0.90: 0
+	    0.95: 0
+	    1.00: 0
+	    avg: 0
 
 with a similar report for the Proxy method, or a graph like:
 
@@ -491,7 +491,7 @@ Cool, eh?
 
 How it works
 
-  defer mon.Task()(&ctx)(&err)
+	defer mon.Task()(&ctx)(&err)
 
 is an interesting line of code - there's three function calls. If you look at
 the Go spec, all of the function calls will run at the time the function starts
@@ -504,17 +504,17 @@ are inspecting runtime.Caller to determine the name of the function. Because
 this is a heavy operation, you can actually store the result of mon.Task() and
 reuse it somehow else if you prefer, so instead of
 
-  func MyFunc(ctx context.Context) (err error) {
-	  defer mon.Task()(&ctx)(&err)
-  }
+	  func MyFunc(ctx context.Context) (err error) {
+		  defer mon.Task()(&ctx)(&err)
+	  }
 
 you could instead use
 
-  var myFuncMon = mon.Task()
+	  var myFuncMon = mon.Task()
 
-  func MyFunc(ctx context.Context) (err error) {
-	  defer myFuncMon(&ctx)(&err)
-  }
+	  func MyFunc(ctx context.Context) (err error) {
+		  defer myFuncMon(&ctx)(&err)
+	  }
 
 which is more performant every time after the first time. runtime.Caller only
 gets called once.
@@ -531,7 +531,7 @@ don't want a context. You just lose callgraph information.
 The last function call stops all the stop watches ad makes a note of any
 observed errors or panics (it repanics after observing them).
 
-Tracing
+# Tracing
 
 Turns out, we don't even need to change our program anymore to get rich tracing
 information!
@@ -545,7 +545,7 @@ you should see a relatively uninteresting but super promising svg.
 
 Let's make the trace more interesting. Add a
 
-  time.Sleep(200 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 to your HandleHTTP method, rebuild, and restart. Load localhost:8080, then
 start a new request to your trace URL, then reload localhost:8080 again. Flip
@@ -567,7 +567,7 @@ next!
 Make sure to check out what the addition of the time.Sleep call did to the
 other reports.
 
-Plugins
+# Plugins
 
 It's easy to write plugins for monkit! Check out our first one that exports
 data to Zipkin (http://zipkin.io/)'s Scribe API:
@@ -575,6 +575,5 @@ data to Zipkin (http://zipkin.io/)'s Scribe API:
 https://github.com/spacemonkeygo/monkit-zipkin
 
 We plan to have more (for HTrace, OpenTracing, etc, etc), soon!
-
 */
 package monkit // import "github.com/spacemonkeygo/monkit/v3"

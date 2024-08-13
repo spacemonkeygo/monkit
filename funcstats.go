@@ -25,13 +25,12 @@ import (
 // Should be created with NewFuncStats, though expected creation is through a
 // Func object:
 //
-//   var mon = monkit.Package()
+//	var mon = monkit.Package()
 //
-//   func MyFunc() {
-//     f := mon.Func()
-//     ...
-//   }
-//
+//	func MyFunc() {
+//	  f := mon.Func()
+//	  ...
+//	}
 type FuncStats struct {
 	// sync/atomic things
 	current         int64
@@ -195,11 +194,10 @@ func (f *FuncStats) FailureTimes() *DurationDist {
 // function to be called at the end of the function execution. Expected usage
 // like:
 //
-//   func MyFunc() (err error) {
-//     defer funcStats.Observe()(&err)
-//     ...
-//   }
-//
+//	func MyFunc() (err error) {
+//	  defer funcStats.Observe()(&err)
+//	  ...
+//	}
 func (f *FuncStats) Observe() func(errptr *error) {
 	f.start(nil)
 	start := monotime.Now()

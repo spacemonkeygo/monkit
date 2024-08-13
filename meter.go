@@ -39,17 +39,16 @@ type meterBucket struct {
 // Implements the StatSource interface. You should construct using NewMeter,
 // though expected usage is like:
 //
-//   var (
-//     mon   = monkit.Package()
-//     meter = mon.Meter("meter")
-//   )
+//	var (
+//	  mon   = monkit.Package()
+//	  meter = mon.Meter("meter")
+//	)
 //
-//   func MyFunc() {
-//     ...
-//     meter.Mark(4) // 4 things happened
-//     ...
-//   }
-//
+//	func MyFunc() {
+//	  ...
+//	  meter.Mark(4) // 4 things happened
+//	  ...
+//	}
 type Meter struct {
 	mtx    sync.Mutex
 	total  int64
@@ -156,13 +155,12 @@ func (e *Meter) Stats(cb func(key SeriesKey, field string, val float64)) {
 // DiffMeter is a StatSource that shows the difference between
 // the rates of two meters. Expected usage like:
 //
-//   var (
-//     mon = monkit.Package()
-//     herps = mon.Meter("herps")
-//     derps = mon.Meter("derps")
-//     herpToDerp = mon.DiffMeter("herp_to_derp", herps, derps)
-//   )
-//
+//	var (
+//	  mon = monkit.Package()
+//	  herps = mon.Meter("herps")
+//	  derps = mon.Meter("derps")
+//	  herpToDerp = mon.DiffMeter("herp_to_derp", herps, derps)
+//	)
 type DiffMeter struct {
 	meter1, meter2 *Meter
 	key            SeriesKey

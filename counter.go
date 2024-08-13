@@ -25,12 +25,11 @@ import (
 // may be more convenient to use the Counter accessor on a given Scope.
 // Expected creation is like:
 //
-//   var mon = monkit.Package()
+//	var mon = monkit.Package()
 //
-//   func MyFunc() {
-//     mon.Counter("beans").Inc(1)
-//   }
-//
+//	func MyFunc() {
+//	  mon.Counter("beans").Inc(1)
+//	}
 type Counter struct {
 	mtx            sync.Mutex
 	val, low, high int64

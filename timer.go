@@ -25,15 +25,15 @@ import (
 // construct with NewTimer(), though the expected usage is from a Scope like
 // so:
 //
-//   var mon = monkit.Package()
+//	var mon = monkit.Package()
 //
-//   func MyFunc() {
-//     ...
-//     timer := mon.Timer("event")
-//     // perform event
-//     timer.Stop()
-//     ...
-//   }
+//	func MyFunc() {
+//	  ...
+//	  timer := mon.Timer("event")
+//	  // perform event
+//	  timer.Stop()
+//	  ...
+//	}
 //
 // Timers implement StatSource.
 type Timer struct {

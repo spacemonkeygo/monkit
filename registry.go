@@ -76,7 +76,7 @@ func (r *Registry) WithTransformers(t ...CallbackTransformer) *Registry {
 // Package creates a new monitoring Scope, named after the top level package.
 // It's expected that you'll have something like
 //
-//   var mon = monkit.Package()
+//	var mon = monkit.Package()
 //
 // at the top of each package.
 func (r *Registry) Package() *Scope {
