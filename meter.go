@@ -74,9 +74,9 @@ func (e *Meter) Reset(new_total int64) {
 	e.mtx.Lock()
 	e.total = new_total
 	now := monotime.Now()
-	for _, slice := range e.slices {
-		slice.count = 0
-		slice.start = now
+	for i := range e.slices {
+		e.slices[i].count = 0
+		e.slices[i].start = now
 	}
 	e.mtx.Unlock()
 }
