@@ -16,14 +16,17 @@ package monkit
 
 import "reflect"
 
-var f64Type = reflect.TypeOf(float64(0))
+var (
+	f64Type  = reflect.TypeOf(float64(0))
+	boolType = reflect.TypeOf(bool(false))
+)
 
 type emptyStatSource struct{}
 
 func (emptyStatSource) Stats(cb func(key SeriesKey, field string, val float64)) {}
 
 // StatSourceFromStruct uses the reflect package to implement the Stats call
-// across all float64-castable fields of the struct.
+// across all float64-castable and bool-castable fields of the struct.
 func StatSourceFromStruct(key SeriesKey, structData interface{}) StatSource {
 	val := deref(reflect.ValueOf(structData))
 
@@ -45,6 +48,12 @@ func StatSourceFromStruct(key SeriesKey, structData interface{}) StatSource {
 
 			} else if field_type.ConvertibleTo(f64Type) {
 				cb(key, typ.Field(i).Name, field.Convert(f64Type).Float())
+			} else if field_type.ConvertibleTo(boolType) {
+				if field.Convert(boolType).Bool() {
+					cb(key, typ.Field(i).Name, 1)
+				} else {
+					cb(key, typ.Field(i).Name, 0)
+				}
 			}
 		}
 	})
