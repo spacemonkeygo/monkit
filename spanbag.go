@@ -23,6 +23,11 @@ type spanBag struct {
 	rest  map[*Span]int32
 }
 
+func (b *spanBag) Clear() {
+	b.first = nil
+	b.rest = nil
+}
+
 func (b *spanBag) Add(s *Span) {
 	if b.first == nil {
 		b.first = s
