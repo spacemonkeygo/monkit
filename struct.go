@@ -14,7 +14,10 @@
 
 package monkit
 
-import "reflect"
+import (
+	"reflect"
+	"strings"
+)
 
 var (
 	f64Type  = reflect.TypeOf(float64(0))
@@ -36,9 +39,17 @@ func StatSourceFromStruct(key SeriesKey, structData interface{}) StatSource {
 	}
 
 	return StatSourceFunc(func(cb func(key SeriesKey, field string, val float64)) {
+	nextField:
 		for i := 0; i < typ.NumField(); i++ {
 			field := deref(val.Field(i))
 			field_type := field.Type()
+
+			parts := strings.Split(typ.Field(i).Tag.Get("monkit"), ",")
+			for _, part := range parts {
+				if part == "ignore" {
+					continue nextField
+				}
+			}
 
 			if field_type.Kind() == reflect.Struct && field.CanInterface() {
 				child_source := StatSourceFromStruct(key, field.Interface())
