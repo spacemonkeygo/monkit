@@ -233,6 +233,29 @@ func (s *Scope) DurationVal(name string, tags ...SeriesTag) *DurationVal {
 	return m
 }
 
+// RawValk retrieves or creates a RawVal with a given key and aggregations.
+func (s *Scope) RawValk(key SeriesKey, aggregations ...Aggregate) *RawVal {
+	source := s.newSource(key.String(), func() StatSource {
+		return NewRawVal(key, aggregations...)
+	})
+	m, ok := source.(*RawVal)
+	if !ok {
+		panic(fmt.Sprintf("%s already used for another stats source: %#v", key, source))
+	}
+	return m
+}
+
+// RawVal retrieves or creates a RawVal after the given name and tags.
+func (s *Scope) RawVal(name string, tags ...SeriesTag) *RawVal {
+	return s.RawValk(NewSeriesKey(name).WithTags(tags...))
+}
+
+// RawValf retrieves or creates a RawVal after the given printf-formatted
+// name.
+func (s *Scope) RawValf(template string, args ...interface{}) *RawVal {
+	return s.RawVal(fmt.Sprintf(template, args...))
+}
+
 // Timer retrieves or creates a Timer after the given name.
 func (s *Scope) Timer(name string, tags ...SeriesTag) *Timer {
 	source := s.newSource(sourceName("", name, tags), func() StatSource {

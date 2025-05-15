@@ -50,6 +50,8 @@ func ComputeThing(ctx context.Context, arg1, arg2 int) (res int, err error) {
 		mon.Event("hit 3")
 	}
 
+	mon.RawVal("raw").Observe(1.0)
+	mon.RawValk(monkit.NewSeriesKey("rawk").WithTag("foo", "bar"), monkit.Sum, monkit.Count).Observe(1.0)
 	mon.BoolVal("was-4").Observe(res == 4)
 	mon.IntVal("res").Observe(int64(res))
 	mon.DurationVal("took").Observe(time.Second + time.Duration(rand.Intn(int(10*time.Second))))

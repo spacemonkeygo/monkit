@@ -246,3 +246,84 @@ func (v *DurationVal) Quantile(quantile float64) (rv time.Duration) {
 	v.mtx.Unlock()
 	return rv
 }
+
+// Aggregate can implement additional aggregation for collected values.
+type Aggregate func() (observe func(val float64), stat func() (field string, val float64))
+
+// RawVal is a simple wrapper around a float64 value without any aggregation
+// (histogram, sum, etc). Constructed using NewRawVal, though its expected usage is like:
+//
+//	var mon = monkit.Package()
+//
+//	func MyFunc() {
+//	  ...
+//	  mon.RawVal("value").Observe(val)
+//	  ...
+//	}
+type RawVal struct {
+	mtx       sync.Mutex
+	value     float64
+	key       SeriesKey
+	stats     []func() (field string, val float64)
+	observers []func(val float64)
+}
+
+// NewRawVal creates a RawVal
+func NewRawVal(key SeriesKey, aggregations ...Aggregate) *RawVal {
+	val := &RawVal{key: key}
+	for _, agg := range aggregations {
+		observe, stat := agg()
+		val.stats = append(val.stats, stat)
+		val.observers = append(val.observers, observe)
+	}
+	return val
+}
+
+// Observe sets the current value
+func (v *RawVal) Observe(val float64) {
+	v.mtx.Lock()
+	v.value = val
+	for _, o := range v.observers {
+		o(val)
+	}
+	v.mtx.Unlock()
+}
+
+// Stats implements the StatSource interface.
+func (v *RawVal) Stats(cb func(key SeriesKey, field string, val float64)) {
+	v.mtx.Lock()
+	cb(v.key, "recent", v.value)
+	v.mtx.Unlock()
+	for _, s := range v.stats {
+		field, value := s()
+		cb(v.key, field, value)
+	}
+}
+
+// Get returns the current value
+func (v *RawVal) Get() float64 {
+	v.mtx.Lock()
+	value := v.value
+	v.mtx.Unlock()
+	return value
+}
+
+// Count is a value aggregator that counts the number of times the value is measured.
+func Count() (observe func(val float64), stat func() (field string, val float64)) {
+	var counter int
+	return func(val float64) {
+			counter++
+		}, func() (field string, val float64) {
+			return "count", float64(counter)
+		}
+}
+
+// Sum is a value aggregator that summarizes the values measured.
+func Sum() (observe func(val float64), stat func() (field string, val float64)) {
+	var sum int
+	return func(val float64) {
+			sum += int(val)
+		}, func() (field string, val float64) {
+			return "sum", float64(sum)
+		}
+}
