@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
-	"fmt"
 	"io"
 	"strings"
 	"text/template"
@@ -454,7 +453,7 @@ func watchForSpansWithMinDuration(ctx context.Context, reg *monkit.Registry, w i
 			return nil, err
 		}
 		if len(spans) == 0 {
-			return nil, fmt.Errorf("no spans collected")
+			continue
 		}
 
 		// Check root span duration
