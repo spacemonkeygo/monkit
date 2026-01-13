@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/spacemonkeygo/monkit/v3/collect"
@@ -73,6 +74,11 @@ func curry(reg *monkit.Registry,
 //     trace id will start a trace until the triggering Span ends,
 //     provided the regex matches. NOTE: the trace_id will be parsed
 //     in hex.
+//   - min_duration - Optional. If provided, only traces where the matched span
+//     has a duration >= this value will be returned. Shorter
+//     traces will be discarded and the wait will continue.
+//     Format: Go duration string (e.g., "2s", "500ms", "1m30s").
+//     Only supported for /trace/svg and /trace/json endpoints.
 //
 // By default, regular expressions are matched ahead of time against all known
 // Funcs, but perhaps the Func you want to trace hasn't been observed by the
@@ -193,14 +199,28 @@ func FromRequest(reg *monkit.Registry, path string, query url.Values) (
 			}
 		}
 
+		var minDuration time.Duration
+		if minDurationStr := query.Get("min_duration"); minDurationStr != "" {
+			var err error
+			minDuration, err = time.ParseDuration(minDurationStr)
+			if err != nil {
+				return nil, "", errBadRequest.New("invalid min_duration %#v: %v",
+					minDurationStr, err)
+			}
+			if minDuration < 0 {
+				return nil, "", errBadRequest.New("min_duration must be non-negative: %v",
+					minDuration)
+			}
+		}
+
 		switch second {
 		case "svg":
 			return func(w io.Writer) error {
-				return TraceQuerySVG(reg, w, spanMatcher)
+				return TraceQuerySVG(reg, w, spanMatcher, minDuration)
 			}, "image/svg+xml; charset=utf-8", nil
 		case "json":
 			return func(w io.Writer) error {
-				return TraceQueryJSON(reg, w, spanMatcher)
+				return TraceQueryJSON(reg, w, spanMatcher, minDuration)
 			}, "application/json; charset=utf-8", nil
 		case "remote":
 			viz := query.Get("viz")
@@ -316,7 +336,7 @@ func writeIndex(w io.Writer) error {
 
 			<dt><a href="trace/json">/trace/json</a></dt>
 			<dt><a href="trace/svg">/trace/svg</a></dt>
-			<dd>Trace the next scope that matches one of the <code>?regex=</code> or <code>?trace_id=</code> query arguments. By default, regular expressions are matched ahead of time against all known Funcs, but perhaps the Func you want to trace hasn't been observed by the process yet, in which case the regex will fail to match anything. You can turn off this preselection behavior by providing <code>&preselect=false</code> as an additional query param. Be advised that until a trace completes, whether or not it has started, it adds a small amount of overhead (a comparison or two) to every monitored function.</dd>
+			<dd>Trace the next scope that matches one of the <code>?regex=</code> or <code>?trace_id=</code> query arguments. By default, regular expressions are matched ahead of time against all known Funcs, but perhaps the Func you want to trace hasn't been observed by the process yet, in which case the regex will fail to match anything. You can turn off this preselection behavior by providing <code>&preselect=false</code> as an additional query param. Optionally, use <code>&min_duration=</code> (e.g., "2s", "500ms") to filter for traces that exceed a minimum duration. Be advised that until a trace completes, whether or not it has started, it adds a small amount of overhead (a comparison or two) to every monitored function.</dd>
 		</dl>
 	</body>
 </html>`))

@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	"fmt"
 	"io"
 	"strings"
 	"text/template"
@@ -391,9 +392,18 @@ func unwrapError(err error) error {
 // TraceQuerySVG uses WatchForSpans to write all Spans from 'reg' matching
 // 'matcher' to 'w' in SVG format.
 func TraceQuerySVG(reg *monkit.Registry, w io.Writer,
-	matcher func(*monkit.Span) bool) error {
-	spans, err := watchForSpansWithKeepalive(context.TODO(),
-		reg, w, matcher, []byte("\n"))
+	matcher func(*monkit.Span) bool, minDuration time.Duration) error {
+	var spans []*collect.FinishedSpan
+	var err error
+
+	if minDuration > 0 {
+		spans, err = watchForSpansWithMinDuration(
+			context.TODO(), reg, w, matcher, minDuration, []byte("\n"))
+	} else {
+		spans, err = watchForSpansWithKeepalive(
+			context.TODO(), reg, w, matcher, []byte("\n"))
+	}
+
 	if err != nil {
 		return err
 	}
@@ -405,10 +415,19 @@ func TraceQuerySVG(reg *monkit.Registry, w io.Writer,
 // TraceQueryJSON uses WatchForSpans to write all Spans from 'reg' matching
 // 'matcher' to 'w' in JSON format.
 func TraceQueryJSON(reg *monkit.Registry, w io.Writer,
-	matcher func(*monkit.Span) bool) (write_err error) {
+	matcher func(*monkit.Span) bool, minDuration time.Duration) (write_err error) {
 
-	spans, err := watchForSpansWithKeepalive(context.TODO(),
-		reg, w, matcher, []byte("\n"))
+	var spans []*collect.FinishedSpan
+	var err error
+
+	if minDuration > 0 {
+		spans, err = watchForSpansWithMinDuration(
+			context.TODO(), reg, w, matcher, minDuration, []byte("\n"))
+	} else {
+		spans, err = watchForSpansWithKeepalive(
+			context.TODO(), reg, w, matcher, []byte("\n"))
+	}
+
 	if err != nil {
 		return err
 	}
@@ -423,6 +442,30 @@ func SpansToJSON(w io.Writer, spans []*collect.FinishedSpan) error {
 		lw.elem(formatFinishedSpan(s))
 	}
 	return lw.done()
+}
+
+func watchForSpansWithMinDuration(ctx context.Context, reg *monkit.Registry, w io.Writer,
+	matcher func(s *monkit.Span) bool, minDuration time.Duration, keepalive []byte) (
+	spans []*collect.FinishedSpan, err error) {
+
+	for {
+		spans, err = watchForSpansWithKeepalive(ctx, reg, w, matcher, keepalive)
+		if err != nil {
+			return nil, err
+		}
+		if len(spans) == 0 {
+			return nil, fmt.Errorf("no spans collected")
+		}
+
+		// Check root span duration
+		rootSpan := spans[0]
+		duration := rootSpan.Finish.Sub(rootSpan.Span.Start())
+		if duration >= minDuration {
+			return spans, nil
+		}
+
+		// Duration threshold not met, continue watching for another trace
+	}
 }
 
 func watchForSpansWithKeepalive(ctx context.Context, reg *monkit.Registry, w io.Writer,
