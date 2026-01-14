@@ -102,6 +102,9 @@ func (s *Span) Children(cb func(s *Span)) {
 	}
 }
 
+// RawArgs returns the arguments given to the Task that created this Span.
+func (s *Span) RawArgs() []interface{} { return s.args }
+
 // Args returns the list of strings associated with the args given to the
 // Task that created this Span.
 func (s *Span) Args() (rv []string) {
