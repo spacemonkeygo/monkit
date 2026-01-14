@@ -110,6 +110,14 @@ func newSpan(ctx context.Context, f *Func, args []interface{}, trace *Trace,
 		sctx = observer.Start(sctx, s)
 	}
 
+	var finishers []SpanPluginFinisher
+	if plugins := s.f.scope.r.getSpanPlugins(); plugins != nil {
+		finishers = make([]SpanPluginFinisher, len(plugins))
+		for i, plugin := range plugins {
+			finishers[i] = plugin.Start(s)
+		}
+	}
+
 	return sctx, func(errptr *error) {
 		rec := recover()
 		panicked := rec != nil
@@ -149,6 +157,10 @@ func newSpan(ctx context.Context, f *Func, args []interface{}, trace *Trace,
 		// was called
 		if observer := trace.getObserver(); observer != nil {
 			observer.Finish(sctx, s, err, panicked, finish)
+		}
+
+		for _, finisher := range finishers {
+			finisher.Finish(err, panicked, finish)
 		}
 
 		if panicked {

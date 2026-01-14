@@ -17,6 +17,7 @@ package monkit
 import (
 	"sort"
 	"sync"
+	"sync/atomic"
 )
 
 type traceWatcherRef struct {
@@ -39,6 +40,8 @@ type registryInternal struct {
 
 	orphanMtx sync.Mutex
 	orphans   map[*Span]struct{}
+
+	plugins atomic.Pointer[[]SpanPlugin]
 }
 
 // Registry encapsulates all of the top-level state for a monitoring system.
