@@ -160,7 +160,7 @@ func newSpan(ctx context.Context, f *Func, args []interface{}, trace *Trace,
 		}
 
 		for _, finisher := range finishers {
-			finisher.Finish(err, panicked, finish)
+			finisher.Finish(s, err, panicked, finish)
 		}
 
 		if panicked {

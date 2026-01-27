@@ -17,7 +17,7 @@ package monkit
 import "time"
 
 type SpanPluginFinisher interface {
-	Finish(err error, panicked bool, done time.Time)
+	Finish(span *Span, err error, panicked bool, done time.Time)
 }
 
 type SpanPlugin interface {
