@@ -291,12 +291,28 @@ func (v *RawVal) Observe(val float64) {
 
 // Stats implements the StatSource interface.
 func (v *RawVal) Stats(cb func(key SeriesKey, field string, val float64)) {
+	type datum struct {
+		field string
+		value float64
+	}
+	var data []datum
+	if len(v.stats) < 8 {
+		var buf [8]datum
+		data = buf[:len(v.stats)]
+	} else {
+		data = make([]datum, len(v.stats))
+	}
 	v.mtx.Lock()
-	cb(v.key, "recent", v.value)
-	v.mtx.Unlock()
-	for _, s := range v.stats {
+	for i, s := range v.stats {
 		field, value := s()
-		cb(v.key, field, value)
+		data[i] = datum{field, value}
+	}
+	recent := v.value
+	v.mtx.Unlock()
+
+	cb(v.key, "recent", recent)
+	for _, d := range data {
+		cb(v.key, d.field, d.value)
 	}
 }
 
@@ -320,10 +336,10 @@ func Count() (observe func(val float64), stat func() (field string, val float64)
 
 // Sum is a value aggregator that summarizes the values measured.
 func Sum() (observe func(val float64), stat func() (field string, val float64)) {
-	var sum int
+	var sum float64
 	return func(val float64) {
-			sum += int(val)
+			sum += val
 		}, func() (field string, val float64) {
-			return "sum", float64(sum)
+			return "sum", sum
 		}
 }
